@@ -1,0 +1,62 @@
+name: Observability CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  monitoring:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: order-stock-load-monitor-ci
+      APP_PORT: '18084'
+      LOAD_DISPOSABLE: 'true'
+      COMPOSE_FILE: compose.yaml:monitoring/compose.observability.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Generate private disposable environment
+        run: |
+          umask 077
+          app_password=$(openssl rand -hex 24)
+          root_password=$(openssl rand -hex 24)
+          grafana_password=$(openssl rand -hex 24)
+          echo "::add-mask::$app_password"
+          echo "::add-mask::$root_password"
+          echo "::add-mask::$grafana_password"
+          printf 'MYSQL_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\nGRAFANA_ADMIN_PASSWORD=%s\nMONITORING_EXPIRATION_POLL_INTERVAL=PT1S\n' "$app_password" "$root_password" "$grafana_password" > "$RUNNER_TEMP/monitoring.env"
+      - name: Start isolated stack
+        run: docker compose --env-file "$RUNNER_TEMP/monitoring.env" up --build --wait --wait-timeout 240
+      - name: Validate scrape configuration
+        run: docker compose --env-file "$RUNNER_TEMP/monitoring.env" exec -T prometheus promtool check config /etc/prometheus/prometheus.yml
+      - name: Exercise concurrent orders
+        run: python3 scripts/load-orders.py --project "$COMPOSE_PROJECT_NAME" --env-file "$RUNNER_TEMP/monitoring.env" --concurrency 32 --requests 100 --output build/monitoring-load.json
+      - name: Verify metrics against committed DB outcomes and scheduled expiration
+        run: python3 scripts/verify-observability.py --project "$COMPOSE_PROJECT_NAME" --env-file "$RUNNER_TEMP/monitoring.env" --output build/monitoring-report.json
+      - name: Upload aggregate evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: monitoring-summary
+          path: |
+            build/monitoring-load.json
+            build/monitoring-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Show failure logs
+        if: failure()
+        run: docker compose --env-file "$RUNNER_TEMP/monitoring.env" logs --no-color --tail 80 app prometheus grafana
+      - name: Remove disposable stack
+        if: always()
+        run: docker compose --env-file "$RUNNER_TEMP/monitoring.env" down --volumes --remove-orphans

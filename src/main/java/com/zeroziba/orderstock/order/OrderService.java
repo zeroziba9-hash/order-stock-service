@@ -1,6 +1,7 @@
 package com.zeroziba.orderstock.order;
 
 import com.zeroziba.orderstock.common.ApiException;
+import com.zeroziba.orderstock.monitoring.OrderMetrics;
 import com.zeroziba.orderstock.product.Product;
 import com.zeroziba.orderstock.product.ProductRepository;
 import java.util.Comparator;
@@ -21,13 +22,15 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final Clock clock;
     private final OrderExpirationProperties expiration;
+    private final OrderMetrics metrics;
 
     public OrderService(ProductRepository productRepository, OrderRepository orderRepository,
-            Clock clock, OrderExpirationProperties expiration) {
+            Clock clock, OrderExpirationProperties expiration, OrderMetrics metrics) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.clock = clock;
         this.expiration = expiration;
+        this.metrics = metrics;
     }
 
     @Transactional
@@ -51,6 +54,7 @@ public class OrderService {
                 now, now.plus(expiration.paymentWindow()));
         // 저장 실패는 RuntimeException으로 전파되어 재고 변경과 주문 전체가 롤백된다.
         orderRepository.saveAndFlush(order);
+        metrics.afterCommit(OrderMetrics.Outcome.CREATED);
         return OrderResponse.from(order);
     }
 
@@ -98,6 +102,7 @@ public class OrderService {
         }
         // 취소 상태와 재고 복구를 함께 반영한다. DB 오류는 전체 트랜잭션을 롤백한다.
         orderRepository.flush();
+        metrics.afterCommit(OrderMetrics.Outcome.CANCELLED);
         return OrderResponse.from(order);
     }
 

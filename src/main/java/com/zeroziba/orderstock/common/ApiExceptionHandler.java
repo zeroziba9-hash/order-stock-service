@@ -1,5 +1,7 @@
 package com.zeroziba.orderstock.common;
 
+import com.zeroziba.orderstock.monitoring.OrderMetrics;
+
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +13,15 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    private final OrderMetrics metrics;
+
+    public ApiExceptionHandler(OrderMetrics metrics) { this.metrics = metrics; }
 
     public record ApiError(String code, String message) { }
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleBusinessError(ApiException exception) {
+        if (exception.getCode().equals("INSUFFICIENT_STOCK")) { metrics.insufficientStockResponse(); }
         return ResponseEntity.status(exception.getStatus())
                 .body(new ApiError(exception.getCode(), exception.getMessage()));
     }

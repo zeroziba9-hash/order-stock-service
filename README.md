@@ -20,11 +20,12 @@
 | 다른 회원의 주문 접근 | 세션 인증, 소유자 조건 조회, CSRF | 타인 상세·이력 접근 거부와 세션 만료 검증 |
 | 운영·복구 | prod 보호, Caddy HTTPS, 별도 빈 DB 복원 | Compose·TLS·백업 복원 CI |
 | API와 문서 불일치 | 실제 보안 필터·MySQL 테스트에서 REST Docs 생성 | 필드 계약 검증, 토큰 마스킹 검사, HTML 생성 CI |
+| 처리 결과와 실행 상태 관측 | 커밋 후 주문 지표, 내부 관리 포트, Prometheus·Grafana | 롤백·동시 요청·실제 만료와 13개 패널 쿼리 CI |
 
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
-HTML/CSS/JavaScript · Docker Compose · Caddy · GitHub Actions를 사용합니다.
+HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 189개 통과, 데스크톱·모바일 Chromium E2E 16개 통과(일반 14 + 자동 만료 2).
+**확인된 결과:** 백엔드 테스트 198개 통과, 데스크톱·모바일 Chromium E2E 16개 통과(일반 14 + 자동 만료 2).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 테스트 조건과 실제 측정값은 [설계·검증 포트폴리오](docs/portfolio.md)에 정리했습니다.
 브라우저·부하·배포 검증의 추가 코드는 각각 [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1),
@@ -48,6 +49,7 @@ docker compose up --build --wait --wait-timeout 240
 - [인증](docs/auth.md) · [주문 API](docs/order-api.md) · [주문 규칙](docs/order-rules.md)
 - [멱등 요청](docs/idempotency.md) · [모의 결제](docs/payments.md) · [모의 환불](docs/refunds.md)
 - [미결제 주문 자동 만료](docs/order-expiration.md)
+- [주문 지표·Prometheus·Grafana 로컬 대시보드](docs/observability.md)
 - [웹 프론트](docs/frontend.md) · [HTTPS 배포](docs/https-deployment.md) · [백업·복원](docs/backup-restore.md)
 
 <details>

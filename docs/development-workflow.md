@@ -13,10 +13,11 @@
 | `feat/deployment-verification` | HTTPS 배포 결과 점검·CI·운영 기록 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
 | `docs/portfolio` | README·아키텍처·설계 근거·검증 문서 | [PR #4](https://github.com/zeroziba9-hash/order-stock-service/pull/4) |
 | `feat/order-expiration` | 미결제 주문 자동 만료·V8→V9 업그레이드·브라우저 검증 | [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5) |
+| `feat/verified-api-docs` | 실제 MySQL·인증 응답의 REST Docs와 독립 HTML | [PR #6](https://github.com/zeroziba9-hash/order-stock-service/pull/6) |
 
-위 PR #1~#5는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+위 PR #1~#6은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
 #5와 이후 기능은 앞 작업이 병합된 최신 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
-API 계약 문서화는 `feat/verified-api-docs`에서 진행합니다.
+커밋 후 주문 지표와 로컬 대시보드는 `feat/observability`에서 진행합니다.
 
 ## 새 작업 시작
 
