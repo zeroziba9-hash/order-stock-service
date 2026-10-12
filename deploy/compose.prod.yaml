@@ -1,0 +1,88 @@
+name: order-stock-prod
+
+services:
+  db:
+    image: mysql:8.4
+    command: ["--mysqlx=OFF"]
+    environment:
+      MYSQL_DATABASE: order_stock_prod
+      MYSQL_USER: order_prod
+      MYSQL_PASSWORD: ${PROD_MYSQL_PASSWORD:?Set PROD_MYSQL_PASSWORD in the production env file}
+      MYSQL_ROOT_PASSWORD: ${PROD_MYSQL_ROOT_PASSWORD:?Set PROD_MYSQL_ROOT_PASSWORD in the production env file}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks: [backend]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --protocol=TCP --host=127.0.0.1
+          --user="$${MYSQL_USER}" --database="$${MYSQL_DATABASE}"
+          --execute='SELECT 1' > /dev/null 2>&1
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 30
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: &rotating-logs
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    build:
+      context: ..
+      target: runtime
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # This database is on this host's private Docker network, with no published port.
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/order_stock_prod?serverTimezone=UTC&allowPublicKeyRetrieval=true&sslMode=DISABLED
+      SPRING_DATASOURCE_USERNAME: order_prod
+      SPRING_DATASOURCE_PASSWORD: ${PROD_MYSQL_PASSWORD:?Set PROD_MYSQL_PASSWORD in the production env file}
+      SERVER_ADDRESS: 0.0.0.0
+      PORT: "8080"
+    networks: [frontend, backend]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *rotating-logs
+
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN to your public DNS hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy:/etc/caddy:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [frontend]
+    depends_on:
+      app:
+        condition: service_healthy
+    # The admin endpoint stays on the proxy container's loopback and is never published.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--output-document=/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 20
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *rotating-logs
+
+networks:
+  frontend:
+  backend:
+    internal: true
+
+volumes:
+  mysql-data:
+  caddy-data:
+  caddy-config:

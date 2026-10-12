@@ -4,7 +4,8 @@
 실제 배포 서버와 도메인은 아직 연결하지 않았습니다.
 이 문서는 Java 17 실행 JAR와 Linux systemd를 기준으로 합니다.
 본인 컴퓨터에서 앱과 DB를 함께 실행하는 방법은 [Docker Compose 안내](docker.md)를 참고하세요.
-Compose는 로컬 학습용이며 이 문서의 운영 `prod` 구성과 구분합니다.
+루트의 `compose.yaml`은 로컬 학습용입니다.
+Docker로 운영 배포할 때는 별도의 [운영 Compose·Caddy HTTPS 안내](https-deployment.md)를 사용하세요.
 
 ## 환경별 동작
 
@@ -125,7 +126,9 @@ curl --fail http://127.0.0.1:8080/actuator/health/readiness
 별도 포트·테스트 DB로 실제 운영 프로필을 실행하여 비밀 설정 누락 시 시작 거부,
 Secure 쿠키, 상태 확인 API, 로그인 후 모의 결제·환불 차단과 이력 조회를 검증했습니다.
 기본 `local`의 실제 결제·환불 흐름과 재시작 후 데이터 보존도 확인했습니다.
-GitHub 호스팅 러너의 결과는 위 CI 링크에서 확인합니다. Linux systemd·HTTPS 프록시 배포는 아직 수행하지 않았습니다.
+GitHub 호스팅 러너의 결과는 위 CI 링크에서 확인합니다. Linux systemd·외부 서버 배포는 아직 수행하지 않았습니다.
 Docker Desktop의 WSL 2 Linux 엔진에서도 소스 이미지 빌드, 실제 HTTP 인증·주문·결제·환불,
 컨테이너 재생성 후 DB 데이터 보존을 검증했습니다. 구성과 별도 CI는 [Docker 안내](docker.md)에 정리합니다.
-다음 단계는 배포 서버 선택과 HTTPS·운영 DB 연결입니다.
+별도 운영 Compose·Caddy 구성에서는 임시 로컬 CA를 사용한 HTTPS, Secure 세션·CSRF,
+실제 주문·취소와 모의 결제·환불 차단을 검증했습니다. 공개 인증서 발급 검증과는 구분합니다.
+다음 단계는 배포 서버·도메인 연결과 공개 인증서·백업 복원 확인입니다.

@@ -72,6 +72,7 @@ DB 준비 대기는 [Compose의 `service_healthy`](https://docs.docker.com/compo
 
 이 Compose 파일은 본인 컴퓨터에서 HTTP로 실습하기 위한 구성입니다.
 외부 서버에 그대로 공개하지 마세요. 실제 운영은 [배포 안내](deployment.md)의 `prod`·HTTPS·운영 DB 구성을 사용합니다.
+운영 Docker 구성은 [HTTPS 배포 안내](https-deployment.md)의 별도 Compose 파일을 사용합니다.
 Docker 이미지를 단독 실행할 때는 기본 `prod`이며, 운영 접속 정보를 주지 않으면 시작을 거부합니다.
 
 ## 인증·주문 실습

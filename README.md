@@ -35,6 +35,7 @@ Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
 기본 `local` 프로필에서 기존 실습을 계속할 수 있습니다. `prod` 프로필은 별도 DB 환경 변수와 Secure 쿠키를 요구하며
 모의 결제·환불 쓰기를 차단합니다. GitHub Actions 워크플로는 MySQL 통합 테스트와 실행 JAR 빌드를 구성합니다.
 운영 실행·CI·검증 범위는 [배포 안내](docs/deployment.md)를 참고하세요.
+Docker 운영 구성과 Caddy HTTPS 연결 절차는 [HTTPS 배포 안내](docs/https-deployment.md)에 정리했습니다.
 
 주문 요청 예시와 오류 응답은 [주문 API 실습](docs/order-api.md)을 참고하세요.
 
@@ -175,7 +176,7 @@ MySQL 실행 후, 최초 한 번 테스트 전용 DB를 준비합니다.
 ## 다음 단계
 
 1. Backend CI와 Docker Compose CI의 테스트·빌드·데이터 보존 검증을 유지합니다.
-2. 실제 배포 서버·도메인 선택 후 HTTPS와 운영 DB를 연결합니다.
+2. 실제 배포 서버·도메인 선택 후 준비된 운영 Compose·Caddy로 HTTPS를 연결하고 공개 인증서·백업 복원을 확인합니다.
 
 기존 익명 주문과 요청 키는 소유자 없이 보존하며, 신규 회원에게 자동 귀속하지 않습니다.
 현재 세션은 메모리에 보관하므로 서버 재시작 시 다시 로그인해야 합니다.

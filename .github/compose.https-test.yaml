@@ -1,0 +1,7 @@
+# Test-only override: localhost automatically uses Caddy's local CA, without public ACME requests.
+# Explicit replacement prevents production ports 80/443 from being retained by Compose's merge rules.
+services:
+  proxy:
+    ports: !override
+      - "127.0.0.1:18081:80"
+      - "127.0.0.1:18443:443"

@@ -62,3 +62,56 @@ jobs:
       - name: Clean up disposable CI containers and volume
         if: always()
         run: docker compose down --volumes --remove-orphans
+
+  https:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: order-stock-https-ci
+      COMPOSE_FILE: deploy/compose.prod.yaml:.github/compose.https-test.yaml
+      APP_DOMAIN: localhost
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Reject missing production database passwords
+        run: |
+          if docker compose --env-file deploy/compose.prod.env.example config --quiet > /dev/null 2>&1; then
+            echo 'Production Compose must reject missing passwords.'
+            exit 1
+          fi
+      - name: Generate disposable production database passwords
+        run: |
+          app_password=$(openssl rand -hex 24)
+          root_password=$(openssl rand -hex 24)
+          echo "::add-mask::$app_password"
+          echo "::add-mask::$root_password"
+          printf 'PROD_MYSQL_PASSWORD=%s\nPROD_MYSQL_ROOT_PASSWORD=%s\n' "$app_password" "$root_password" >> "$GITHUB_ENV"
+      - name: Validate production Compose and build image
+        run: |
+          docker compose config --quiet
+          docker compose build --pull
+      - name: Start production stack behind local HTTPS
+        run: |
+          docker compose up --no-build --wait --wait-timeout 240
+          docker compose exec -T proxy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          test "$(docker compose exec -T app printenv SPRING_PROFILES_ACTIVE)" = 'prod'
+          test "$(docker compose exec -T app id -u)" = '10001'
+          test "$(docker network inspect "${COMPOSE_PROJECT_NAME}_backend" --format '{{.Internal}}')" = 'true'
+          for service in app db; do
+            docker inspect "$(docker compose ps -q "$service")" --format '{{json .NetworkSettings.Ports}}' |
+              python3 -c 'import json, sys; ports = json.load(sys.stdin); assert ports and all(not bindings for bindings in ports.values())'
+          done
+      - name: Verify TLS and production HTTP behavior
+        run: |
+          docker compose cp proxy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/order-stock-root.crt"
+          python3 .github/scripts/https-smoke.py --ca-file "$RUNNER_TEMP/order-stock-root.crt"
+      - name: Show HTTPS stack state and failure logs
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail 150
+      - name: Clean up disposable HTTPS containers and volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans

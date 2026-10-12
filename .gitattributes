@@ -3,3 +3,4 @@
 *.jar binary
 /Dockerfile text eol=lf
 *.sh text eol=lf
+/deploy/caddy/Caddyfile text eol=lf
