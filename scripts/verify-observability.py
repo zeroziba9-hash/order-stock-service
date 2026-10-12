@@ -114,9 +114,13 @@ def main():
     assert len(provisioned["dashboard"]["panels"]) == len(dashboard["panels"])
     assert provisioned["meta"]["canSave"] is False
     assert provisioned["meta"]["canEdit"] is False
-    proxy = read(grafana + "/api/datasources/proxy/uid/stockroom-prometheus/api/v1/query?"
-                 + urllib.parse.urlencode({"query": 'up{job="stockroom"}'}))
-    assert float(proxy["data"]["result"][0]["value"][1]) == 1
+    def datasource_ready():
+        proxy = read(grafana + "/api/datasources/proxy/uid/stockroom-prometheus/api/v1/query?"
+                     + urllib.parse.urlencode({"query": 'up{job="stockroom"}'}))
+        rows = proxy["data"]["result"]
+        return bool(rows) and float(rows[0]["value"][1]) == 1
+    # A ready dashboard does not imply that the data-source plugin is ready yet.
+    eventually(datasource_ready)
     report = {"format": "stockroom-monitoring-v1", "allChecksPassed": True,
               "committedEvents": {outcome: events(outcome) for outcome in ["created", "replayed", "cancelled", "expired"]},
               "insufficientStockResponses": 90, "expirationRollbacks": 0,

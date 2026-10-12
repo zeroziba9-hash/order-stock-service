@@ -37,6 +37,7 @@ docker compose -p order-stock-monitor-local --env-file .local/monitoring.env -f 
 - Prometheus: [localhost:19090](http://localhost:19090/)
 
 Grafana는 로그인 없이 **Viewer**로 조회합니다. 관리자는 `monitor-admin`이며 비밀번호는 방금 만든 개인 환경 파일에만 보관합니다.
+이미지에 포함된 플러그인을 사용하고 시작 시 추가 설치·자동 갱신을 끕니다. 대시보드 등록 뒤에도 데이터 소스 준비는 별도 확인합니다.
 파일·값을 Git이나 이슈에 첨부하지 않습니다. Grafana·Prometheus는 호스트의 `127.0.0.1`에만 연결하고,
 앱 관리 포트 9091은 호스트에 게시하지 않습니다. 앱과 수집기를 연결하는 내부 네트워크에서만 사용합니다.
 기본 앱 포트의 `/actuator/prometheus`는 로그인 여부와 관계없이 403입니다.
@@ -88,7 +89,7 @@ HTTP 409 재고 부족은 예상 도메인 응답이며 5xx 비율에 넣지 않
 짧은 최초 부하의 지연은 클라이언트 리포트로 확인하고, 서버 지표의 성능 비교는 응답 유형별 예열과 지속·반복 트래픽을 사용합니다.
 낮은 트래픽의 짧은 데모 결과를 운영 용량으로 해석하지 않습니다.
 
-Prometheus 원본 샘플은 최대 24시간·256MB로 제한합니다. 알림 전송, 장기 저장, 실제 서버 장애 대응은 아직 포함하지 않습니다.
+Prometheus 보존 정책은 24시간·256MB입니다. WAL·head 데이터로 실제 볼륨은 더 커질 수 있습니다. 알림 전송, 장기 저장, 실제 서버 장애 대응은 아직 포함하지 않습니다.
 만료 롤백 카운터는 개별 만료 트랜잭션만 다루며 후보 조회 실패·스케줄러 중단 전체를 탐지하지 않습니다.
 
 ## 자동 검증
@@ -117,3 +118,4 @@ CI에서만 스케줄러 점검 간격을 1초로 줄이며 기본은 60초입�
 - [Spring Boot: Monitoring over HTTP](https://docs.spring.io/spring-boot/4.0/reference/actuator/monitoring.html)
 - [Prometheus 다운로드·LTS](https://prometheus.io/download/)
 - [Grafana 파일 provisioning](https://grafana.com/docs/grafana/latest/administration/provisioning/)
+- [Grafana 플러그인 시작·자동 갱신 설정](https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/#plugins)
