@@ -82,6 +82,38 @@ curl --head http://api.example.com/products
 HTTP 요청은 같은 도메인의 HTTPS로 전환되어야 합니다. 인증서 검증을 끄는 `-k`를 붙이지 않습니다.
 인증서 발급이 실패하면 DNS·80/443 도달 여부와 프록시 로그를 확인합니다.
 
+### 배포 결과 자동 확인
+
+Python 3.10 이상이 있는 서버 밖의 컴퓨터에서 실행합니다.
+
+```bash
+python3 scripts/verify-deployment.py --url https://api.example.com --output build/deployment-check.json
+```
+
+HTTP→HTTPS 전환, 인증서 신뢰·호스트 이름, HTML·CSS·JS, readiness, 상품 형식,
+운영 모의 기능 비활성화, 비로그인 주문 접근 차단을 총 9개 GET 요청으로 확인합니다.
+회원·주문을 만들거나 운영 DB를 초기화하지 않습니다. 예상과 다른 응답은 실패로 종료합니다.
+결과에는 체크 항목·상태 코드·원본 주소만 기록하며 쿠키·응답 본문은 기록하지 않습니다.
+성공 결과는 실행한 컴퓨터에서 해당 주소에 도달했다는 뜻이며 전 세계 DNS 전파·인증서 자동 갱신·로그인 성공을 보증하지 않습니다.
+
+로컬 CI에서만 `--local-test-ca`와 `--local-test-http-url`로 테스트 인증서를 전달합니다.
+이 모드는 `localhost:18443`·`localhost:18081`로 제한되고 결과에 `local-test`로 표시됩니다.
+실제 배포 주소는 시스템 CA로 검증하며 인증서 검증을 끄는 옵션은 없습니다.
+
+### 배포 기록
+
+첫 공개 배포 때 다음 정보를 개인 접속 정보 없이 기록합니다. 아직 실제 서버가 연결되지 않았으므로 공개 배포 완료로 표시하지 않습니다.
+
+| 항목 | 기록할 내용 |
+|---|---|
+| 릴리스 | 배포한 Git 커밋 SHA, 이미지 ID, 배포 시각 |
+| 공개 주소 | 본인 HTTPS 도메인과 외부에서 실행한 위 검증 JSON |
+| 백업 | 배포 전 백업 시각, 체크섬 검증, 서버 밖 보관 및 빈 DB 복원 결과 |
+| 장애 대응 | 직전 검증 이미지와 환경 설정, 마이그레이션 호환 여부 |
+
+앱 이미지 롤백과 DB 복원은 별개입니다. DB 변경이 이전 앱과 호환되는지 확인한 후 롤백하며
+Flyway 이력을 삭제하거나 운영 볼륨을 지워 되돌리지 않습니다.
+
 ```bash
 docker compose --env-file deploy/compose.prod.env -f deploy/compose.prod.yaml logs --tail 100 proxy
 docker compose --env-file deploy/compose.prod.env -f deploy/compose.prod.yaml logs --tail 100 app

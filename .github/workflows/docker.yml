@@ -107,6 +107,15 @@ jobs:
         run: |
           docker compose cp proxy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/order-stock-root.crt"
           python3 .github/scripts/https-smoke.py --ca-file "$RUNNER_TEMP/order-stock-root.crt"
+      - name: Check reusable deployment verifier against the disposable HTTPS origin
+        run: |
+          python3 scripts/verify-deployment.py --url https://localhost:18443 --local-test-ca "$RUNNER_TEMP/order-stock-root.crt" --local-test-http-url http://localhost:18081 --output build/deployment-check.json
+      - name: Upload deployment check summary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deployment-check
+          path: build/deployment-check.json
+          retention-days: 7
       - name: Show HTTPS stack state and failure logs
         if: failure()
         run: |
