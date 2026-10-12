@@ -1,0 +1,84 @@
+{
+  "format": "order-stock-load-v1",
+  "measuredAtUtc": "2026-10-12T18:26:13.402798+00:00",
+  "python": "3.12.14",
+  "clientPlatform": "Windows",
+  "seedStock": 10,
+  "method": "closed-loop; authentication, DB inspection and cleanup excluded from request latencies",
+  "rounds": [
+    {
+      "concurrency": 1,
+      "oversell": {
+        "requests": 100,
+        "concurrency": 1,
+        "elapsedSeconds": 1.632,
+        "requestsPerSecond": 61.29,
+        "p50Ms": 8.02,
+        "p95Ms": 32.99,
+        "p99Ms": 39.48,
+        "maxMs": 74.4,
+        "statusCounts": {
+          "201": 10,
+          "409": 90
+        },
+        "mysqlRowLockDelta": {
+          "Innodb_row_lock_time": 0,
+          "Innodb_row_lock_waits": 0
+        },
+        "checks": {
+          "created": 10,
+          "expectedStockRejections": 90,
+          "remainingStock": 0,
+          "databaseOrderCount": 10,
+          "oversold": false
+        }
+      },
+      "idempotency": {
+        "requests": 100,
+        "concurrency": 1,
+        "elapsedSeconds": 1.582,
+        "requestsPerSecond": 63.19,
+        "p50Ms": 8.22,
+        "p95Ms": 31.85,
+        "p99Ms": 32.99,
+        "maxMs": 34.13,
+        "statusCounts": {
+          "201": 1,
+          "200": 99
+        },
+        "mysqlRowLockDelta": {
+          "Innodb_row_lock_time": 0,
+          "Innodb_row_lock_waits": 0
+        },
+        "checks": {
+          "newOrders": 1,
+          "replays": 99,
+          "stockDecreasedBy": 1
+        }
+      },
+      "cancellation": {
+        "requests": 100,
+        "concurrency": 1,
+        "elapsedSeconds": 0.945,
+        "requestsPerSecond": 105.87,
+        "p50Ms": 4.2,
+        "p95Ms": 27.39,
+        "p99Ms": 29.07,
+        "maxMs": 29.54,
+        "statusCounts": {
+          "200": 100
+        },
+        "mysqlRowLockDelta": {
+          "Innodb_row_lock_time": 0,
+          "Innodb_row_lock_waits": 0
+        },
+        "checks": {
+          "sameCancellationTimestamp": true,
+          "stockRestoredBy": 1,
+          "finalStock": 10
+        }
+      }
+    }
+  ],
+  "allInvariantsPassed": true
+}

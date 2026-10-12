@@ -1,0 +1,84 @@
+{
+  "format": "order-stock-load-v1",
+  "measuredAtUtc": "2026-10-12T18:30:38.606425+00:00",
+  "python": "3.12.14",
+  "clientPlatform": "Windows",
+  "seedStock": 10,
+  "method": "closed-loop; authentication, DB inspection and cleanup excluded from request latencies",
+  "rounds": [
+    {
+      "concurrency": 32,
+      "oversell": {
+        "requests": 100,
+        "concurrency": 32,
+        "elapsedSeconds": 0.776,
+        "requestsPerSecond": 128.93,
+        "p50Ms": 69.34,
+        "p95Ms": 241.14,
+        "p99Ms": 257.38,
+        "maxMs": 258.54,
+        "statusCounts": {
+          "409": 90,
+          "201": 10
+        },
+        "mysqlRowLockDelta": {
+          "Innodb_row_lock_time": 4429,
+          "Innodb_row_lock_waits": 97
+        },
+        "checks": {
+          "created": 10,
+          "expectedStockRejections": 90,
+          "remainingStock": 0,
+          "databaseOrderCount": 10,
+          "oversold": false
+        }
+      },
+      "idempotency": {
+        "requests": 100,
+        "concurrency": 32,
+        "elapsedSeconds": 0.549,
+        "requestsPerSecond": 182.05,
+        "p50Ms": 80.96,
+        "p95Ms": 103.03,
+        "p99Ms": 105.74,
+        "maxMs": 106.74,
+        "statusCounts": {
+          "200": 99,
+          "201": 1
+        },
+        "mysqlRowLockDelta": {
+          "Innodb_row_lock_time": 4474,
+          "Innodb_row_lock_waits": 99
+        },
+        "checks": {
+          "newOrders": 1,
+          "replays": 99,
+          "stockDecreasedBy": 1
+        }
+      },
+      "cancellation": {
+        "requests": 100,
+        "concurrency": 32,
+        "elapsedSeconds": 0.394,
+        "requestsPerSecond": 254.12,
+        "p50Ms": 30.84,
+        "p95Ms": 46.87,
+        "p99Ms": 50.13,
+        "maxMs": 55.67,
+        "statusCounts": {
+          "200": 100
+        },
+        "mysqlRowLockDelta": {
+          "Innodb_row_lock_time": 1712,
+          "Innodb_row_lock_waits": 98
+        },
+        "checks": {
+          "sameCancellationTimestamp": true,
+          "stockRestoredBy": 1,
+          "finalStock": 10
+        }
+      }
+    }
+  ],
+  "allInvariantsPassed": true
+}
