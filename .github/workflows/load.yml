@@ -1,0 +1,54 @@
+name: Order Concurrency CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  load:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: order-stock-load-ci
+      APP_PORT: '18084'
+      LOAD_DISPOSABLE: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Generate disposable DB environment
+        run: |
+          umask 077
+          app_password=$(openssl rand -hex 24)
+          root_password=$(openssl rand -hex 24)
+          echo "::add-mask::$app_password"
+          echo "::add-mask::$root_password"
+          printf 'MYSQL_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\n' "$app_password" "$root_password" > "$RUNNER_TEMP/order-stock-load.env"
+      - name: Start disposable application and database
+        run: docker compose --env-file "$RUNNER_TEMP/order-stock-load.env" up --build --wait --wait-timeout 240
+      - name: Verify oversell, replay and cancellation under concurrent HTTP requests
+        run: |
+          python3 scripts/load-orders.py --project "$COMPOSE_PROJECT_NAME" --env-file "$RUNNER_TEMP/order-stock-load.env" --concurrency 32 --requests 100 --output build/load-report.json
+      - name: Upload aggregate measurements
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: order-load-summary
+          path: build/load-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Show failure logs
+        if: failure()
+        run: docker compose --env-file "$RUNNER_TEMP/order-stock-load.env" logs --no-color --tail 80
+      - name: Remove disposable stack
+        if: always()
+        run: docker compose --env-file "$RUNNER_TEMP/order-stock-load.env" down --volumes --remove-orphans
