@@ -3,9 +3,10 @@
 Java/Spring 백엔드 포트폴리오를 위한 단계별 프로젝트입니다.
 
 [GitHub 저장소](https://github.com/zeroziba9-hash/order-stock-service) ·
-[Backend CI 실행 내역](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml)
+[Backend CI 실행 내역](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) ·
+[Docker Compose CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml)
 
-## 현재 단계: 주문·결제·환불과 배포·CI 준비
+## 현재 단계: 주문·결제·환불과 Docker 실행·CI
 
 Java 17, Spring Boot 4.0.8, MySQL 8.4, Spring Data JPA, Flyway를 사용합니다.
 Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
@@ -38,6 +39,18 @@ Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
 주문 요청 예시와 오류 응답은 [주문 API 실습](docs/order-api.md)을 참고하세요.
 
 ### 실행
+
+다른 컴퓨터에서 시작한다면 [Docker Compose 실행 안내](docs/docker.md)를 따라 앱과 MySQL을 함께 실행할 수 있습니다.
+`.env.example`을 `.env`로 복사해 두 DB 비밀번호를 채운 뒤 실행합니다.
+
+```powershell
+docker compose up --build --wait --wait-timeout 240
+```
+
+Docker 실행 주소는 [상품 목록](http://localhost:18080/products)과
+[준비 상태](http://localhost:18080/actuator/health/readiness)입니다.
+기존 로컬 DB와 별도 볼륨을 사용하며, 모의 결제·환불을 포함한 로컬 실습용 구성입니다.
+Java·MySQL 직접 실행은 아래 안내를 사용하세요.
 
 이 컴퓨터에는 프로젝트 전용 MySQL DB와 로컬 접속 파일이 준비되어 있습니다.
 VS Code에서 이 폴더를 열고 PowerShell 터미널에서 실행합니다.
@@ -161,7 +174,7 @@ MySQL 실행 후, 최초 한 번 테스트 전용 DB를 준비합니다.
 
 ## 다음 단계
 
-1. GitHub CI 실행 결과를 확인하고 테스트·빌드 성공 상태를 유지합니다.
+1. Backend CI와 Docker Compose CI의 테스트·빌드·데이터 보존 검증을 유지합니다.
 2. 실제 배포 서버·도메인 선택 후 HTTPS와 운영 DB를 연결합니다.
 
 기존 익명 주문과 요청 키는 소유자 없이 보존하며, 신규 회원에게 자동 귀속하지 않습니다.

@@ -1,0 +1,64 @@
+name: Docker Compose CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: order-stock-ci
+      APP_PORT: '18080'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Reject missing database passwords
+        run: |
+          if docker compose --env-file /dev/null config --quiet > /dev/null 2>&1; then
+            echo 'Compose must reject missing passwords.'
+            exit 1
+          fi
+      - name: Generate disposable database passwords
+        run: |
+          app_password=$(openssl rand -hex 24)
+          root_password=$(openssl rand -hex 24)
+          echo "::add-mask::$app_password"
+          echo "::add-mask::$root_password"
+          printf 'MYSQL_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\n' "$app_password" "$root_password" >> "$GITHUB_ENV"
+      - name: Validate Compose and build container image
+        run: |
+          docker compose config --quiet
+          docker compose build --pull
+      - name: Start stack and wait for authenticated database and app readiness
+        run: |
+          docker compose up --no-build --wait --wait-timeout 240
+          test "$(docker compose exec -T app id -u)" = '10001'
+          docker inspect "$(docker compose ps -q db)" --format '{{json .NetworkSettings.Ports}}' |
+            python3 -c 'import json, sys; ports = json.load(sys.stdin); assert ports and all(not bindings for bindings in ports.values())'
+      - name: Exercise real HTTP business flows
+        run: python3 .github/scripts/compose-smoke.py prepare --state-file "$RUNNER_TEMP/compose-state.json"
+      - name: Recreate containers with the existing database volume
+        run: |
+          docker compose down
+          docker compose up --no-build --wait --wait-timeout 240
+          python3 .github/scripts/compose-smoke.py verify --state-file "$RUNNER_TEMP/compose-state.json"
+      - name: Show container state and failure logs
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail 150
+      - name: Clean up disposable CI containers and volume
+        if: always()
+        run: docker compose down --volumes --remove-orphans
