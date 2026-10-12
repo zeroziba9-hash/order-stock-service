@@ -1,0 +1,78 @@
+# 공개 요청은 바로 실행할 수 있습니다.
+# 주문 예제는 인증된 클라이언트의 sessionId와 최신 csrfToken 변수가 필요합니다.
+# 회원가입·로그인부터 실행하려면 docs/auth.md의 PowerShell 실습을 사용하세요.
+# 쿠키와 토큰의 실제 값을 이 파일에 저장하지 마세요.
+
+### 서버가 정상 실행 중인지 확인
+GET http://localhost:8080/actuator/health
+
+### 첫 상품 목록 API
+GET http://localhost:8080/products
+Accept: application/json
+
+### CSRF 토큰과 세션 쿠키 받기 (로그인 전·후 각각 새 토큰을 받습니다.)
+GET http://localhost:8080/auth/csrf
+
+### 주문 생성 — 같은 키·내용은 기존 주문 반환. 새 주문에는 키를 바꾸세요.
+POST http://localhost:8080/orders
+Content-Type: application/json
+Idempotency-Key: manual-demo-001
+Cookie: JSESSIONID={{sessionId}}
+X-CSRF-TOKEN: {{csrfToken}}
+
+{
+  "productId": 1,
+  "quantity": 2
+}
+
+### 주문 상세 — 생성 응답의 orderId로 변경하세요.
+GET http://localhost:8080/orders/1
+Accept: application/json
+Cookie: JSESSIONID={{sessionId}}
+
+### 미결제 주문 취소 — 실제 주문 번호로 변경하세요. 반복 요청해도 재고는 한 번만 복구됩니다.
+POST http://localhost:8080/orders/1/cancel
+Accept: application/json
+Cookie: JSESSIONID={{sessionId}}
+X-CSRF-TOKEN: {{csrfToken}}
+
+### 모의 결제 — 미결제 주문 번호로 변경하세요. 새 시도에는 새 키, 응답 유실 재시도에는 같은 키.
+POST http://localhost:8080/orders/1/payments
+Content-Type: application/json
+Idempotency-Key: payment-demo-001
+Cookie: JSESSIONID={{sessionId}}
+X-CSRF-TOKEN: {{csrfToken}}
+
+{
+  "result": "SUCCESS"
+}
+
+### 결제 이력 조회 — 본인 주문 번호로 변경하세요.
+GET http://localhost:8080/orders/1/payments
+Cookie: JSESSIONID={{sessionId}}
+
+### 모의 전액 환불과 주문 취소 — 결제 완료 주문 번호로 변경하세요. 반복 요청은 같은 키.
+POST http://localhost:8080/orders/1/refunds
+Content-Type: application/json
+Idempotency-Key: refund-demo-001
+Cookie: JSESSIONID={{sessionId}}
+X-CSRF-TOKEN: {{csrfToken}}
+
+{
+  "result": "SUCCESS"
+}
+
+### 환불 이력 조회 — 본인 주문 번호로 변경하세요.
+GET http://localhost:8080/orders/1/refunds
+Cookie: JSESSIONID={{sessionId}}
+
+### 재고 부족 응답 확인
+POST http://localhost:8080/orders
+Content-Type: application/json
+Cookie: JSESSIONID={{sessionId}}
+X-CSRF-TOKEN: {{csrfToken}}
+
+{
+  "productId": 1,
+  "quantity": 2147483647
+}

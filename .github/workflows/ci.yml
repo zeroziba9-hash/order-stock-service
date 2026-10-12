@@ -1,0 +1,69 @@
+name: Backend CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: order_stock_test
+          MYSQL_USER: order_test
+          MYSQL_PASSWORD: ci-only-password
+          MYSQL_ROOT_PASSWORD: ci-root-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      # Disposable CI account, restricted to the test schema. No production secrets are used.
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/order_stock_test?serverTimezone=UTC&allowPublicKeyRetrieval=true&sslMode=DISABLED
+      SPRING_DATASOURCE_USERNAME: order_test
+      SPRING_DATASOURCE_PASSWORD: ci-only-password
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Java 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle and validate wrapper
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+      - name: Test and build executable JAR
+        run: bash ./gradlew --no-daemon test bootJar
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/test/
+            build/test-results/test/*.xml
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload executable JAR
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: order-stock-service
+          path: build/libs/order-stock-service-0.0.1-SNAPSHOT.jar
+          if-no-files-found: error
+          retention-days: 7
