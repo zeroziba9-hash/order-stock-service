@@ -57,3 +57,6 @@ backups/
 /e2e/playwright-expiration-report/
 /e2e/expiration-results/
 /.upgrade-baseline/
+
+### Python verification script caches ###
+__pycache__/
