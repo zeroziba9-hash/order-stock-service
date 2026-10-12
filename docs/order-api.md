@@ -1,5 +1,7 @@
 # 주문 API 실습
 
+실제 테스트 응답으로 생성하는 HTML 계약 가이드는 [API 문서 생성·열기](api-documentation.md)를 참고하세요.
+
 먼저 [인증 실습](auth.md)의 1~3번으로 로그인하고 같은 터미널의 `$session`을 사용하세요.
 주문 생성·취소에는 로그인 후 발급받은 CSRF 토큰이 필요합니다.
 
@@ -37,6 +39,8 @@ $order | ConvertTo-Json -Depth 5
   "cancelledAt": null,
   "paidAt": null,
   "refundedAt": null,
+  "expiresAt": "2026-10-12T03:30:00Z",
+  "expiredAt": null,
   "items": [
     {
       "productId": 1,

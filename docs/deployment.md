@@ -36,7 +36,7 @@ Docker로 운영 배포할 때는 별도의 [운영 Compose·Caddy HTTPS 안내]
 Ubuntu에서 Java 17과 일회용 MySQL 8.4 컨테이너를 준비한 후 다음을 실행합니다.
 
 ```bash
-bash ./gradlew --no-daemon test bootJar
+bash ./gradlew --no-daemon test asciidoctor bootJar
 ```
 
 테스트 DB는 `order_stock_test`, 계정은 해당 스키마에만 접근하는 `order_test`입니다.
@@ -45,7 +45,8 @@ bash ./gradlew --no-daemon test bootJar
 각 통합 테스트는 DB 이름을 확인하고 테스트 데이터만 정리합니다.
 
 실패해도 HTML·JUnit XML 보고서를 `test-reports` 아티팩트에 올립니다.
-성공한 경우 실행 JAR를 `order-stock-service` 아티팩트에 올리며 보관 기간은 7일입니다.
+성공한 경우 실행 JAR를 `order-stock-service`, [생성 API 가이드](api-documentation.md)를 `api-documentation`
+아티팩트에 올리며 보관 기간은 7일입니다.
 워크플로는 저장소 읽기 권한만 사용하며 자동 배포는 하지 않습니다.
 외부 액션은 확인된 커밋 SHA로 고정했고, Gradle 배포 ZIP의 SHA-256도 고정했습니다.
 
@@ -60,7 +61,7 @@ GitHub에 프로젝트를 올린 다음 **Actions → Backend CI**에서 결과�
 
 ```powershell
 .\scripts\start-db.ps1
-.\gradlew.bat test bootJar
+.\gradlew.bat test asciidoctor bootJar
 ```
 
 결과는 `build/libs/order-stock-service-0.0.1-SNAPSHOT.jar`입니다.
