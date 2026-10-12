@@ -28,7 +28,9 @@ test('unpaid orders expire through the real scheduler and return stock', async (
     { timeout: 15000 }).toBe('EXPIRED');
   await detail.getByRole('button', { name: '닫기', exact: true }).click();
   await page.reload();
-  await page.getByRole('link', { name: '내 주문', exact: true }).click();
+  await expect(page.getByRole('button', { name: '로그아웃', exact: true })).toBeVisible();
+  // The navigation's accessible name includes the asynchronously loaded order count.
+  await page.locator('#orders-nav').click();
   await expect(card.locator('.status')).toHaveText('주문 만료');
   await expect(card.getByRole('button', { name: '주문 취소', exact: true })).toHaveCount(0);
   await card.getByRole('button', { name: '상세·이력 보기 ↗', exact: true }).click();
