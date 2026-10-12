@@ -1,0 +1,9 @@
+# Disposable fixture source only. Recovery runs the original prod profile behind HTTPS.
+services:
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+      MANAGEMENT_ENDPOINT_HEALTH_GROUP_READINESS_INCLUDE: readinessState,db
+    ports:
+      - "127.0.0.1:18082:8080"

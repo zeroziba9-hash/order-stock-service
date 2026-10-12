@@ -104,16 +104,15 @@ docker compose --env-file deploy/compose.prod.env -f deploy/compose.prod.yaml lo
 운영 절차에 사용하지 않습니다. Caddy의 인증서 데이터도 캐시가 아닌 영속 데이터입니다.
 [Caddy 공식 이미지 안내](https://hub.docker.com/_/caddy)를 참고하세요.
 
-업데이트 전에는 DB를 백업합니다. 아래 명령은 Linux 셸에서 실행하며 백업에는 회원 정보와 비밀번호 해시 등이
-포함되므로 저장소 밖의 접근 제한된 경로에 보관합니다. 예시는 서버가 마련된 뒤 실제 복원까지 검증해야 합니다.
+업데이트 전에는 [운영 DB 백업·복원 안내](backup-restore.md)를 따라 백업합니다.
+Linux에서 다음 도구를 실행하면 저장소 밖에 압축 SQL·메타데이터·체크섬을 함께 보관합니다.
 
 ```bash
-umask 077
-docker compose --env-file deploy/compose.prod.env -f deploy/compose.prod.yaml exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysqldump --user="$MYSQL_USER" --single-transaction --no-tablespaces --set-gtid-purged=OFF "$MYSQL_DATABASE"' > /secure-backups/order-stock-prod.sql
+bash scripts/production-db.sh backup deploy/compose.prod.env /secure-backups/order-stock
 ```
 
-백업 디렉터리는 먼저 준비하고, 기존 백업을 덮어쓰지 않도록 파일명에 시각이나 배포 버전을 넣습니다.
-명령 실패 여부와 백업 내용을 확인하고 다른 위치에도 보관합니다. 볼륨만 같은 서버에 두는 것은 백업이 아닙니다.
+명령 실패 여부와 백업 내용을 확인하고 서버 밖에도 암호화하여 보관합니다. 새 폴더의 권한은 700, 파일은 600입니다.
+복원은 별도의 빈 DB를 대상으로 하며 데이터가 있는 DB나 실행 중인 앱이 있는 프로젝트에는 쓰지 않습니다.
 검증한 새 커밋으로 소스를 바꾼 뒤 다음을 실행합니다.
 
 ```bash
@@ -139,4 +138,5 @@ DB 계정 변경과 환경 파일 변경을 함께 관리해야 합니다.
 
 CI는 자동 배포하거나 공개 ACME 인증서를 발급하지 않습니다.
 Windows의 Docker Desktop·WSL 2에서도 동일 구성의 HTTPS 인증·주문·운영 보호 동작을 검증했습니다.
-실제 외부 서버에서의 공개 인증서 발급·갱신, DNS·방화벽, 백업 복원은 서버가 마련된 뒤 확인해야 합니다.
+별도 CI 작업은 백업을 다른 빈 MySQL 볼륨에 복원한 후 HTTPS API로 실제 데이터를 비교합니다.
+실제 외부 서버에서의 공개 인증서 발급·갱신, DNS·방화벽과 백업 보관·복구 절차는 서버가 마련된 뒤 확인해야 합니다.

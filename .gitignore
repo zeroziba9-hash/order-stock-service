@@ -45,3 +45,7 @@ out/
 *.env.*
 !*.env.example
 *.log
+
+### Database backup archives ###
+backups/
+*.sql.gz

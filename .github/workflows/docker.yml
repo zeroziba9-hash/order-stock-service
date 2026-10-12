@@ -115,3 +115,27 @@ jobs:
       - name: Clean up disposable HTTPS containers and volumes
         if: always()
         run: docker compose down --volumes --remove-orphans
+
+  backup-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check backup scripts
+        run: |
+          bash -n scripts/production-db.sh .github/scripts/verify-backup-restore.sh
+          shellcheck scripts/production-db.sh .github/scripts/verify-backup-restore.sh
+      - name: Prepare private recovery test environment
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/order-stock-recovery"
+          app_password=$(openssl rand -hex 24)
+          root_password=$(openssl rand -hex 24)
+          echo "::add-mask::$app_password"
+          echo "::add-mask::$root_password"
+          printf 'APP_DOMAIN=localhost\nPROD_MYSQL_PASSWORD=%s\nPROD_MYSQL_ROOT_PASSWORD=%s\n' "$app_password" "$root_password" > "$RUNNER_TEMP/order-stock-recovery/test.env"
+      - name: Verify recovery into a separate database and production app
+        run: bash .github/scripts/verify-backup-restore.sh "$RUNNER_TEMP/order-stock-recovery/test.env" "$RUNNER_TEMP/order-stock-recovery"

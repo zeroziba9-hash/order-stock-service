@@ -6,18 +6,21 @@ import json
 import os
 from pathlib import Path
 import secrets
+import ssl
 import urllib.parse
 import urllib.request
 import uuid
 
 
-BASE_URL = f"http://127.0.0.1:{int(os.environ.get('APP_PORT', '18080'))}"
+BASE_URL = os.environ.get("SMOKE_BASE_URL", f"http://127.0.0.1:{int(os.environ.get('APP_PORT', '18080'))}")
 
 
 class Client:
     def __init__(self):
         self.opener = urllib.request.build_opener(
-            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
+            urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=os.environ.get("SMOKE_CA_FILE"))),
+            urllib.request.ProxyHandler({}),
         )
 
     def request(self, path, *, data=None, form=None, key=None, expected=200):
@@ -90,6 +93,7 @@ def prepare(state_path):
     state_path.write_text(json.dumps({
         "account": account,
         "orders": [cancelled, refunded],
+        "request": {"payload": payload, "key": key},
         "products": client.request("/products"),
         "payment": payment,
         "refund": refund,
@@ -105,11 +109,14 @@ def verify(state_path):
     assert client.request("/products") == state["products"]
     for order in state["orders"]:
         assert client.request(f"/orders/{order['orderId']}") == order
+    request = state["request"]
+    assert client.request("/orders", data=request["payload"], key=request["key"]) == state["orders"][0]
+    assert client.request("/products") == state["products"]
     refunded = state["orders"][1]
     path = f"/orders/{refunded['orderId']}"
     assert client.request(path + "/payments") == [state["payment"]]
     assert client.request(path + "/refunds") == [state["refund"]]
-    print("PASS: account, stock, orders and payment/refund history survived Compose down/up")
+    print("PASS: account, stock, orders and payment/refund history match the saved snapshot")
 
 
 if __name__ == "__main__":
