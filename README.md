@@ -1,12 +1,55 @@
-# 한정 수량 주문·재고 서비스
+# STOCKROOM — 한정 수량 주문·재고 서비스
 
-Java/Spring 백엔드 포트폴리오를 위한 단계별 프로젝트입니다.
+동시 주문과 네트워크 재시도에도 재고·주문 상태를 일관되게 유지하는 Java/Spring 백엔드 포트폴리오입니다.
+상품 조회부터 회원가입·로그인·주문·취소와 로컬 모의 결제·환불까지 웹 화면에서 실행합니다.
 
 [GitHub 저장소](https://github.com/zeroziba9-hash/order-stock-service) ·
 [Backend CI 실행 내역](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) ·
 [Docker Compose CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml)
 
-## 현재 단계: 주문·결제·환불과 웹 프론트·Docker 실행·CI
+![STOCKROOM 데스크톱 상품 화면](docs/images/storefront.jpg)
+
+## 핵심 설계와 검증
+
+| 문제 | 구현 | 확인 방법 |
+|---|---|---|
+| 한정 재고에 동시 주문 | 상품 행 잠금, 주문·재고 단일 트랜잭션 | 실제 MySQL 동시 요청, 실패 시 전체 롤백 |
+| 응답 유실 뒤 주문 재시도 | 회원별 멱등 키, 같은 요청은 기존 주문 반환 | 같은 키 동시 요청과 브라우저 응답 유실 재현 |
+| 반복 취소·환불 | 주문 잠금과 상태 전이, 재고 한 번만 복구 | 동시 취소·환불·결제 경쟁 검증 |
+| 다른 회원의 주문 접근 | 세션 인증, 소유자 조건 조회, CSRF | 타인 상세·이력 접근 거부와 세션 만료 검증 |
+| 운영·복구 | prod 보호, Caddy HTTPS, 별도 빈 DB 복원 | Compose·TLS·백업 복원 CI |
+
+Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
+HTML/CSS/JavaScript · Docker Compose · Caddy · GitHub Actions를 사용합니다.
+
+**확인된 결과:** 백엔드 테스트 154개 통과, 데스크톱·모바일 Chromium E2E 14개 통과.
+별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
+테스트 조건과 실제 측정값은 [설계·검증 포트폴리오](docs/portfolio.md)에 정리했습니다.
+브라우저·부하·배포 검증의 추가 코드는 각각 [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1),
+[PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2),
+[PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3)에서 독립적으로 검토할 수 있습니다.
+
+## 실행과 읽을 문서
+
+[Docker 실행](docs/docker.md)에 따라 `.env`를 준비한 뒤 저장소 루트에서 실행합니다.
+
+```powershell
+docker compose up --build --wait --wait-timeout 240
+```
+
+로컬 화면은 [http://localhost:18080/](http://localhost:18080/)입니다.
+외부 공개 서버·도메인은 아직 연결하지 않았습니다. 실제 결제 연동은 없으며 모의 쓰기는 운영에서 차단합니다.
+
+- [설계 선택·정합성·측정·면접 설명](docs/portfolio.md)
+- [기능 브랜치·PR 작업 규칙](docs/development-workflow.md)
+- [인증](docs/auth.md) · [주문 API](docs/order-api.md) · [주문 규칙](docs/order-rules.md)
+- [멱등 요청](docs/idempotency.md) · [모의 결제](docs/payments.md) · [모의 환불](docs/refunds.md)
+- [웹 프론트](docs/frontend.md) · [HTTPS 배포](docs/https-deployment.md) · [백업·복원](docs/backup-restore.md)
+
+<details>
+<summary>단계별 실습·Java 직접 실행·테스트 상세</summary>
+
+## 주문·결제·환불과 웹 프론트·Docker 실행·CI
 
 Java 17, Spring Boot 4.0.8, MySQL 8.4, Spring Data JPA, Flyway를 사용합니다.
 Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
@@ -185,10 +228,13 @@ MySQL 실행 후, 최초 한 번 테스트 전용 DB를 준비합니다.
 
 ## 다음 단계
 
-1. Backend CI와 Docker Compose CI의 테스트·HTTPS·데이터 보존·별도 DB 복구 검증을 유지합니다.
-2. 실제 배포 서버·도메인 선택 후 공개 HTTPS와 백업 보관·복구 절차를 확인합니다.
+1. 기능별 PR에서 브라우저 E2E·부하 검증·배포 점검을 검토하고 CI 통과를 확인합니다.
+2. 실제 서버·도메인 연결 후 공개 HTTPS와 서버 밖 백업·복구를 확인합니다.
+3. 충분한 실행 시간·반복 측정과 서버 계측을 추가한 뒤 성능 개선을 비교합니다.
 
 기존 익명 주문과 요청 키는 소유자 없이 보존하며, 신규 회원에게 자동 귀속하지 않습니다.
 현재 세션은 메모리에 보관하므로 서버 재시작 시 다시 로그인해야 합니다.
 
 주문 규칙은 [주문 규칙 문서](docs/order-rules.md)에 정리합니다.
+
+</details>
