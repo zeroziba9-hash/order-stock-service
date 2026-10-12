@@ -86,6 +86,8 @@ tasks.named('asciidoctor') {
 	dependsOn tasks.named('verifyApiSnippets')
 	inputs.dir layout.buildDirectory.dir('generated-snippets')
 	configurations 'asciidoctorExt'
+	inputs.file 'src/docs/asciidoc/docinfo.html'
+	attributes 'docinfodir': file('src/docs/asciidoc').absolutePath
 	outputDir = layout.buildDirectory.dir('docs/api').get().asFile
 	// Missing snippets and rendering warnings must fail CI, not publish broken docs.
 	logDocuments = true
