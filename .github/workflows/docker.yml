@@ -46,7 +46,7 @@ jobs:
           docker compose up --no-build --wait --wait-timeout 240
           test "$(docker compose exec -T app id -u)" = '10001'
           docker inspect "$(docker compose ps -q db)" --format '{{json .NetworkSettings.Ports}}' |
-            python3 -c 'import json, sys; ports = json.load(sys.stdin); assert ports and all(not bindings for bindings in ports.values())'
+            python3 -c 'import json, sys; ports = json.load(sys.stdin); assert isinstance(ports, dict) and all(not bindings for bindings in ports.values())'
       - name: Exercise real HTTP business flows
         run: python3 .github/scripts/compose-smoke.py prepare --state-file "$RUNNER_TEMP/compose-state.json"
       - name: Recreate containers with the existing database volume
@@ -101,7 +101,7 @@ jobs:
           test "$(docker network inspect "${COMPOSE_PROJECT_NAME}_backend" --format '{{.Internal}}')" = 'true'
           for service in app db; do
             docker inspect "$(docker compose ps -q "$service")" --format '{{json .NetworkSettings.Ports}}' |
-              python3 -c 'import json, sys; ports = json.load(sys.stdin); assert ports and all(not bindings for bindings in ports.values())'
+              python3 -c 'import json, sys; ports = json.load(sys.stdin); assert isinstance(ports, dict) and all(not bindings for bindings in ports.values())'
           done
       - name: Verify TLS and production HTTP behavior
         run: |
