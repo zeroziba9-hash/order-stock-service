@@ -4,6 +4,8 @@ import com.zeroziba.orderstock.common.ApiException;
 import com.zeroziba.orderstock.product.Product;
 import com.zeroziba.orderstock.product.ProductRepository;
 import java.util.Comparator;
+import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,20 @@ public class OrderService {
         // 저장 실패는 RuntimeException으로 전파되어 재고 변경과 주문 전체가 롤백된다.
         orderRepository.saveAndFlush(order);
         return OrderResponse.from(order);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderListResponse findRecent(long userId, Long beforeId) {
+        requireUser(userId);
+        if (beforeId != null && beforeId < 1) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "이전 주문 ID는 1 이상이어야 합니다.");
+        }
+        List<Long> ids = orderRepository.findRecentIds(userId, beforeId, PageRequest.of(0, 21));
+        boolean hasMore = ids.size() > 20;
+        List<Long> page = ids.stream().limit(20).toList();
+        List<OrderResponse> orders = page.isEmpty() ? List.of()
+                : orderRepository.findByUserIdAndIdInOrderByIdDesc(userId, page).stream().map(OrderResponse::from).toList();
+        return new OrderListResponse(orders, hasMore ? page.get(page.size() - 1) : null);
     }
 
     @Transactional(readOnly = true)

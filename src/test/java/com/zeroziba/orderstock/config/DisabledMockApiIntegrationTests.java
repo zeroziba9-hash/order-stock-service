@@ -16,6 +16,7 @@ import com.zeroziba.orderstock.product.Product;
 import com.zeroziba.orderstock.product.ProductRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +54,12 @@ class DisabledMockApiIntegrationTests {
         for (String table : new String[]{"refund_attempts", "payment_attempts", "order_requests", "order_items", "purchase_orders", "products", "app_users"}) {
             jdbc.update("DELETE FROM " + table);
         }
+    }
+
+    @Test
+    void storefrontHidesDisabledMockOperations() throws Exception {
+        mvc.perform(get("/storefront/config")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.mockPayments").value(false)).andExpect(jsonPath("$.mockRefunds").value(false));
     }
 
     @ParameterizedTest

@@ -109,6 +109,8 @@ def verify(state_path):
     assert client.request("/products") == state["products"]
     for order in state["orders"]:
         assert client.request(f"/orders/{order['orderId']}") == order
+    page = client.request("/orders")
+    assert page == {"orders": list(reversed(state["orders"])), "nextBeforeId": None}
     request = state["request"]
     assert client.request("/orders", data=request["payload"], key=request["key"]) == state["orders"][0]
     assert client.request("/products") == state["products"]

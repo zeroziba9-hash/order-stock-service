@@ -67,6 +67,12 @@ class AuthIntegrationTests {
 
     @Test
     void productAndHealthStayPublicWhileOrdersRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/")).andExpect(status().isOk());
+        mockMvc.perform(get("/assets/store.js")).andExpect(status().isOk());
+        mockMvc.perform(get("/assets/store.css")).andExpect(status().isOk());
+        mockMvc.perform(get("/storefront/config")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.mockPayments").value(true)).andExpect(jsonPath("$.mockRefunds").value(true));
+        mockMvc.perform(get("/orders")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/products")).andExpect(status().isOk());
         mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
         mockMvc.perform(get("/auth/me")).andExpect(status().isUnauthorized())

@@ -42,7 +42,7 @@ public class SecurityConfig {
         http.authenticationProvider(provider)
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products", "/actuator/health", "/actuator/health/liveness",
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/storefront/config", "/products", "/actuator/health", "/actuator/health/liveness",
                                 "/actuator/health/readiness", "/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
                         .anyRequest().authenticated())

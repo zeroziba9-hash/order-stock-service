@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -39,6 +40,12 @@ public class OrderController {
             return ResponseEntity.ok().location(location).header("Idempotency-Replayed", "true").body(result.order());
         }
         return ResponseEntity.created(location).header("Idempotency-Replayed", "false").body(result.order());
+    }
+
+    @GetMapping
+    public OrderListResponse findRecent(@AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam(required = false) Long beforeId) {
+        return orderService.findRecent(user.getId(), beforeId);
     }
 
     @GetMapping("/{orderId}")

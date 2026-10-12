@@ -79,6 +79,42 @@ class OrderIntegrationTests {
     }
 
     @Test
+    void listsOnlyOwnOrdersWithBoundedCursorPages() throws Exception {
+        Product product = productRepository.saveAndFlush(new Product("목록 테스트", 1000, 30));
+        long otherId = TestAccounts.create(jdbcTemplate, "other-list@example.test");
+        orderService.create(otherId, new CreateOrderRequest(product.getId(), 1));
+        List<Long> ids = new ArrayList<>();
+        for (int i = 0; i < 22; i++) {
+            ids.add(orderService.create(testUserId, new CreateOrderRequest(product.getId(), 1)).orderId());
+        }
+        orderService.create(otherId, new CreateOrderRequest(product.getId(), 1));
+        mockMvc.perform(get("/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orders.length()").value(20))
+                .andExpect(jsonPath("$.orders[0].orderId").value(ids.get(21)))
+                .andExpect(jsonPath("$.orders[19].orderId").value(ids.get(2)))
+                .andExpect(jsonPath("$.orders[0].items[0].productName").value("목록 테스트"))
+                .andExpect(jsonPath("$.nextBeforeId").value(ids.get(2)));
+        mockMvc.perform(get("/orders").param("beforeId", ids.get(2).toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orders.length()").value(2))
+                .andExpect(jsonPath("$.orders[0].orderId").value(ids.get(1)))
+                .andExpect(jsonPath("$.orders[1].orderId").value(ids.get(0)))
+                .andExpect(jsonPath("$.nextBeforeId").isEmpty());
+        assertThat(orderService.findRecent(otherId, null).orders()).hasSize(2);
+    }
+
+    @Test
+    void emptyOrderPageAndInvalidCursorAreHandled() throws Exception {
+        mockMvc.perform(get("/orders"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.orders").isEmpty())
+                .andExpect(jsonPath("$.nextBeforeId").isEmpty());
+        for (String cursor : new String[]{"0", "-1", "abc", "9223372036854775808"}) {
+            mockMvc.perform(get("/orders").param("beforeId", cursor)).andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
     void createsOrderWithServerPriceAndDecreasesStock() throws Exception {
         Product product = productRepository.saveAndFlush(new Product("주문 테스트 머그컵", 15000, 10));
         var result = mockMvc.perform(post("/orders").with(csrf()).contentType(MediaType.APPLICATION_JSON)

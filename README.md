@@ -6,7 +6,7 @@ Java/Spring 백엔드 포트폴리오를 위한 단계별 프로젝트입니다.
 [Backend CI 실행 내역](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) ·
 [Docker Compose CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml)
 
-## 현재 단계: 주문·결제·환불과 Docker 실행·CI
+## 현재 단계: 주문·결제·환불과 웹 프론트·Docker 실행·CI
 
 Java 17, Spring Boot 4.0.8, MySQL 8.4, Spring Data JPA, Flyway를 사용합니다.
 Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
@@ -38,6 +38,15 @@ Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
 Docker 운영 구성과 Caddy HTTPS 연결 절차는 [HTTPS 배포 안내](docs/https-deployment.md)에 정리했습니다.
 운영 DB 도구와 새 DB 복구 검증은 [백업·복원 안내](docs/backup-restore.md)를 참고하세요.
 
+## 웹 화면
+
+실행 후 [STOCKROOM 프론트](http://localhost:18080/)에서 상품 조회 → 회원가입·로그인 → 수량 선택·주문 → 내 주문·취소를 체험할 수 있습니다.
+주문 상세에서 결제·환불 이력을 확인하며, 로컬 환경에서는 실제 금액이 청구되지 않는 모의 결제·전액 환불도 실행합니다.
+운영 환경에서는 모의 결제·환불 버튼을 숨기고 서버에서도 해당 쓰기를 차단합니다.
+별도 프론트 서버 없이 Spring Boot가 HTML·CSS·JavaScript를 제공하며 모바일 화면도 지원합니다.
+직접 Java로 실행한 경우 [8080 프론트](http://localhost:8080/)를 사용합니다.
+구성과 검증 방법은 [프론트 안내](docs/frontend.md)에 정리했습니다.
+
 주문 요청 예시와 오류 응답은 [주문 API 실습](docs/order-api.md)을 참고하세요.
 
 ### 실행
@@ -49,7 +58,7 @@ Docker 운영 구성과 Caddy HTTPS 연결 절차는 [HTTPS 배포 안내](docs/
 docker compose up --build --wait --wait-timeout 240
 ```
 
-Docker 실행 주소는 [상품 목록](http://localhost:18080/products)과
+Docker 실행 주소는 [웹 화면](http://localhost:18080/), [상품 API](http://localhost:18080/products)와
 [준비 상태](http://localhost:18080/actuator/health/readiness)입니다.
 기존 로컬 DB와 별도 볼륨을 사용하며, 모의 결제·환불을 포함한 로컬 실습용 구성입니다.
 Java·MySQL 직접 실행은 아래 안내를 사용하세요.

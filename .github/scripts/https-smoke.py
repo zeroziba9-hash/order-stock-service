@@ -81,6 +81,10 @@ def verify(ca_file):
     client = Client(ca_file)
     assert client.request("/actuator/health/readiness") == {"status": "UP"}
     assert client.request("/auth/me", expected=401)["code"] == "AUTH_REQUIRED"
+    assert client.request("/orders", expected=401)["code"] == "AUTH_REQUIRED"
+    assert client.request("/storefront/config") == {"mockPayments": False, "mockRefunds": False}
+    with client.opener.open(HTTPS_URL + "/", timeout=15) as response:
+        assert response.status == 200 and "STOCKROOM" in response.read().decode("utf-8")
     account = {"email": f"https-{uuid.uuid4().hex}@example.com", "password": secrets.token_hex(16)}
     assert client.request("/auth/register", data=account, csrf=False, expected=403)["code"] == "ACCESS_DENIED"
     client.request("/auth/register", data=account, expected=201)
@@ -113,6 +117,7 @@ def verify(ca_file):
     cancelled = client.request(path + "/cancel", data={})
     assert cancelled["status"] == "CANCELLED"
     assert client.request(path + "/cancel", data={}) == cancelled
+    assert client.request("/orders") == {"orders": [cancelled], "nextBeforeId": None}
     stock = next(p["stock"] for p in client.request("/products") if p["id"] == product["id"])
     assert stock == product["stock"]
     client.request("/auth/logout", data={}, expected=204)
