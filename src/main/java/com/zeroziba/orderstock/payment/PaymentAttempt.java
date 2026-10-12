@@ -2,7 +2,6 @@ package com.zeroziba.orderstock.payment;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 
 @Entity
@@ -26,12 +25,13 @@ public class PaymentAttempt {
 
     protected PaymentAttempt() { }
 
-    public PaymentAttempt(long orderId, String requestKey, long amount, MockPaymentRequest.Result result) {
+    public PaymentAttempt(long orderId, String requestKey, long amount, MockPaymentRequest.Result result,
+            LocalDateTime createdAt) {
         this.orderId = orderId;
         this.requestKey = requestKey;
         this.amount = amount;
         this.status = result == MockPaymentRequest.Result.SUCCESS ? Status.SUCCEEDED : Status.FAILED;
-        this.createdAt = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        this.createdAt = createdAt.truncatedTo(ChronoUnit.MICROS);
     }
 
     public Long getId() { return id; }

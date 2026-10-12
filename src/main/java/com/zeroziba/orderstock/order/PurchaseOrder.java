@@ -23,7 +23,7 @@ import java.util.List;
 @Table(name = "purchase_orders")
 public class PurchaseOrder {
 
-    public enum Status { CREATED, PAID, CANCELLED, REFUNDED }
+    public enum Status { CREATED, PAID, CANCELLED, REFUNDED, EXPIRED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,16 +52,27 @@ public class PurchaseOrder {
     @Column
     private LocalDateTime refundedAt;
 
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
+
+    @Column
+    private LocalDateTime expiredAt;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> items = new ArrayList<>();
 
     protected PurchaseOrder() { }
 
-    public PurchaseOrder(long userId, Product product, int quantity, long totalAmount) {
+    public PurchaseOrder(long userId, Product product, int quantity, long totalAmount,
+            LocalDateTime createdAt, LocalDateTime expiresAt) {
+        if (!expiresAt.isAfter(createdAt)) {
+            throw new IllegalArgumentException("Payment deadline must follow order creation");
+        }
         this.userId = userId;
         this.totalAmount = totalAmount;
         this.status = Status.CREATED;
-        this.createdAt = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        this.createdAt = createdAt.truncatedTo(ChronoUnit.MICROS);
+        this.expiresAt = expiresAt.truncatedTo(ChronoUnit.MICROS);
         this.items.add(new OrderItem(this, product, quantity));
     }
 
@@ -72,10 +83,12 @@ public class PurchaseOrder {
     public LocalDateTime getCancelledAt() { return cancelledAt; }
     public LocalDateTime getPaidAt() { return paidAt; }
     public LocalDateTime getRefundedAt() { return refundedAt; }
+    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public LocalDateTime getExpiredAt() { return expiredAt; }
     public List<OrderItem> getItems() { return List.copyOf(items); }
 
     public boolean cancel() {
-        if (status == Status.CANCELLED || status == Status.REFUNDED) {
+        if (status == Status.CANCELLED || status == Status.REFUNDED || status == Status.EXPIRED) {
             return false;
         }
         if (status == Status.PAID) {
@@ -86,14 +99,27 @@ public class PurchaseOrder {
         return true;
     }
 
-    public void requirePayable() {
+    public boolean expireIfDue(LocalDateTime now) {
+        if (status != Status.CREATED || now.isBefore(expiresAt)) {
+            return false;
+        }
+        status = Status.EXPIRED;
+        expiredAt = now.truncatedTo(ChronoUnit.MICROS);
+        cancelledAt = expiredAt;
+        return true;
+    }
+
+    public void requirePayable(LocalDateTime now) {
+        if (status == Status.EXPIRED || (status == Status.CREATED && !now.isBefore(expiresAt))) {
+            throw new ApiException(HttpStatus.CONFLICT, "ORDER_EXPIRED", "결제 가능 시간이 지났습니다. 새 주문을 만들어 주세요.");
+        }
         if (status != Status.CREATED) {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_NOT_PAYABLE", "결제 대기 중인 주문만 결제할 수 있습니다.");
         }
     }
 
     public void markPaid(LocalDateTime paidAt) {
-        requirePayable();
+        requirePayable(paidAt);
         this.status = Status.PAID;
         this.paidAt = paidAt;
     }

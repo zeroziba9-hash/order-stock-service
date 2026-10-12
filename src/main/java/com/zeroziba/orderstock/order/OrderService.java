@@ -5,6 +5,10 @@ import com.zeroziba.orderstock.product.Product;
 import com.zeroziba.orderstock.product.ProductRepository;
 import java.util.Comparator;
 import java.util.List;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,10 +19,15 @@ public class OrderService {
 
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final Clock clock;
+    private final OrderExpirationProperties expiration;
 
-    public OrderService(ProductRepository productRepository, OrderRepository orderRepository) {
+    public OrderService(ProductRepository productRepository, OrderRepository orderRepository,
+            Clock clock, OrderExpirationProperties expiration) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
+        this.clock = clock;
+        this.expiration = expiration;
     }
 
     @Transactional
@@ -37,7 +46,9 @@ public class OrderService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_AMOUNT", "주문 금액이 허용 범위를 초과합니다.");
         }
         product.decreaseStock(request.quantity());
-        PurchaseOrder order = new PurchaseOrder(userId, product, request.quantity(), totalAmount);
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        PurchaseOrder order = new PurchaseOrder(userId, product, request.quantity(), totalAmount,
+                now, now.plus(expiration.paymentWindow()));
         // 저장 실패는 RuntimeException으로 전파되어 재고 변경과 주문 전체가 롤백된다.
         orderRepository.saveAndFlush(order);
         return OrderResponse.from(order);

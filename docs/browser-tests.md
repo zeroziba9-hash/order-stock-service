@@ -7,6 +7,7 @@
 ## 검증 범위
 
 데스크톱 1280×900과 모바일 375×812에서 각각 7개, 총 14개 시나리오를 실행합니다.
+이후 테스트 앱만 5초 마감·1초 주기로 재시작하고 [자동 만료](order-expiration.md) 시나리오를 각 1개씩 추가해 CI에서는 총 16개를 검증합니다.
 
 - 공개 상품·재고 조회, 익명 주문의 로그인 안내, 가로 넘침 검사.
 - 실제 회원가입·로그인, 수량별 가격, 취소 확인창의 돌아가기와 취소 후 재고 복구.
@@ -38,6 +39,19 @@ npm test
 테스트 설정이 `E2E_DISPOSABLE=true`, loopback, HTTP 18083 포트를 확인하고 다른 대상을 거부합니다.
 평소 이용하는 18080 서비스는 대상이 아닙니다. Linux도 같은 Compose 옵션·환경 변수로 실행합니다.
 Linux에서 브라우저 시스템 의존성이 없다면 `npx playwright install --with-deps chromium`이 필요합니다.
+
+자동 만료 테스트까지 실행하려면 위 일반 테스트 후 저장소 루트에서 동일한 테스트 프로젝트의 앱만 재시작합니다.
+
+```powershell
+Set-Location ..
+docker compose --project-name order-stock-browser-dev --env-file .env -f compose.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+Set-Location e2e
+$env:E2E_EXPIRATION = 'true'
+npm test
+Remove-Item Env:E2E_EXPIRATION
+```
+
+이 단계는 실제 DB·스케줄러·브라우저를 사용합니다. 일반 앱이나 운영 프로젝트에는 짧은 마감 override를 적용하지 않습니다.
 
 보고서는 `npm run report`로 확인합니다. 테스트가 끝나면 저장소 루트에서 방금 만든 테스트 환경만 정리합니다.
 

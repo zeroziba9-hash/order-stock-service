@@ -5,6 +5,10 @@ import com.zeroziba.orderstock.config.MockOperationsPolicy;
 import com.zeroziba.orderstock.order.OrderRepository;
 import com.zeroziba.orderstock.order.PurchaseOrder;
 import java.util.List;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,11 +21,14 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final MockOperationsPolicy policy;
+    private final Clock clock;
 
-    public PaymentService(OrderRepository orderRepository, PaymentRepository paymentRepository, MockOperationsPolicy policy) {
+    public PaymentService(OrderRepository orderRepository, PaymentRepository paymentRepository, MockOperationsPolicy policy,
+            Clock clock) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.policy = policy;
+        this.clock = clock;
     }
 
     @Transactional
@@ -47,8 +54,9 @@ public class PaymentService {
             // 주문이 이후 취소되더라도 원래 실패 결과는 그대로 재생한다.
             return new PaymentResult(PaymentResponse.from(payment), true);
         }
-        order.requirePayable();
-        PaymentAttempt payment = new PaymentAttempt(orderId, key, order.getTotalAmount(), request.result());
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        order.requirePayable(now);
+        PaymentAttempt payment = new PaymentAttempt(orderId, key, order.getTotalAmount(), request.result(), now);
         if (payment.getStatus() == PaymentAttempt.Status.SUCCEEDED) {
             order.markPaid(payment.getCreatedAt());
         }

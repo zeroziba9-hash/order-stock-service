@@ -16,13 +16,14 @@
 | 한정 재고에 동시 주문 | 상품 행 잠금, 주문·재고 단일 트랜잭션 | 실제 MySQL 동시 요청, 실패 시 전체 롤백 |
 | 응답 유실 뒤 주문 재시도 | 회원별 멱등 키, 같은 요청은 기존 주문 반환 | 같은 키 동시 요청과 브라우저 응답 유실 재현 |
 | 반복 취소·환불 | 주문 잠금과 상태 전이, 재고 한 번만 복구 | 동시 취소·환불·결제 경쟁 검증 |
+| 미결제 재고 장기 점유 | 생성 시 마감 고정, 배치 자동 만료, 늦은 결제 차단 | 실제 스케줄러·만료/취소/결제 경쟁·롤백 |
 | 다른 회원의 주문 접근 | 세션 인증, 소유자 조건 조회, CSRF | 타인 상세·이력 접근 거부와 세션 만료 검증 |
 | 운영·복구 | prod 보호, Caddy HTTPS, 별도 빈 DB 복원 | Compose·TLS·백업 복원 CI |
 
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 154개 통과, 데스크톱·모바일 Chromium E2E 14개 통과.
+**확인된 결과:** 백엔드 테스트 177개 통과, 데스크톱·모바일 Chromium E2E 16개 통과(일반 14 + 자동 만료 2).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 테스트 조건과 실제 측정값은 [설계·검증 포트폴리오](docs/portfolio.md)에 정리했습니다.
 브라우저·부하·배포 검증의 추가 코드는 각각 [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1),
@@ -44,6 +45,7 @@ docker compose up --build --wait --wait-timeout 240
 - [기능 브랜치·PR 작업 규칙](docs/development-workflow.md)
 - [인증](docs/auth.md) · [주문 API](docs/order-api.md) · [주문 규칙](docs/order-rules.md)
 - [멱등 요청](docs/idempotency.md) · [모의 결제](docs/payments.md) · [모의 환불](docs/refunds.md)
+- [미결제 주문 자동 만료](docs/order-expiration.md)
 - [웹 프론트](docs/frontend.md) · [HTTPS 배포](docs/https-deployment.md) · [백업·복원](docs/backup-restore.md)
 
 <details>
@@ -161,7 +163,7 @@ DB 시작·접속·종료 방법은 [MySQL 안내](docs/mysql.md)를 참고하�
 주문 기능은 `order/OrderController.java` → `OrderService.java` →
 `ProductRepository.findByIdForUpdate()` → `OrderRepository` 순서로 읽어보세요.
 `src/main/resources/db/migration`의 SQL은 Flyway가 순서대로 한 번씩 실행합니다.
-이미 적용한 파일을 수정하지 말고, 다음 변경은 `V9__설명.sql`처럼 새 파일로 추가하세요.
+이미 적용한 파일을 수정하지 말고, 다음 변경은 `V10__설명.sql`처럼 새 파일로 추가하세요.
 JPA의 `ddl-auto=validate`는 테이블 구조를 검증하며 DB를 초기화하지 않습니다.
 
 ### 첫 실습: DB 값과 API 응답 연결하기
@@ -228,7 +230,7 @@ MySQL 실행 후, 최초 한 번 테스트 전용 DB를 준비합니다.
 
 ## 다음 단계
 
-1. 기능별 PR에서 브라우저 E2E·부하 검증·배포 점검을 검토하고 CI 통과를 확인합니다.
+1. 자동 만료 기능 PR을 검토하고 main의 백엔드·브라우저·부하·복구·업그레이드 CI를 유지합니다.
 2. 실제 서버·도메인 연결 후 공개 HTTPS와 서버 밖 백업·복구를 확인합니다.
 3. 충분한 실행 시간·반복 측정과 서버 계측을 추가한 뒤 성능 개선을 비교합니다.
 

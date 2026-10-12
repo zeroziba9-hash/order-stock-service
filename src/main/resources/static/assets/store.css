@@ -823,6 +823,11 @@ footer>span {
   color:#74776e
 }
 
+.status.EXPIRED {
+  background:#eee2db;
+  color:#805645
+}
+
 .order-items {
   font-size:16px;
   font-weight:700;
