@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '4.0.8'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.asciidoctor.jvm.convert' version '4.0.5'
 }
 
 group = 'com.zeroziba'
@@ -15,6 +16,14 @@ java {
 
 repositories {
 	mavenCentral()
+}
+
+configurations {
+	asciidoctorExt
+}
+
+asciidoctorj {
+	version = '3.0.1'
 }
 
 dependencies {
@@ -31,9 +40,56 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+	asciidoctorExt 'org.springframework.restdocs:spring-restdocs-asciidoctor'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+	outputs.dir layout.buildDirectory.dir('generated-snippets')
+	// A filtered/failed run must never leave snippets from an older successful run.
+	doFirst {
+		delete layout.buildDirectory.dir('generated-snippets')
+	}
+}
+
+tasks.register('verifyApiSnippets') {
+	group = 'verification'
+	description = 'Reject unmasked credentials and session tokens in generated API snippets.'
+	dependsOn tasks.named('test')
+	inputs.dir layout.buildDirectory.dir('generated-snippets')
+	doLast {
+		def snippets = fileTree(layout.buildDirectory.dir('generated-snippets')) { include '**/*.adoc' }
+		if (snippets.isEmpty()) {
+			throw new GradleException('No API snippets generated. Run the full test suite, including ApiDocumentationTests.')
+		}
+		def forbidden = [
+			~/TestPass123!|DocPass123!|WrongDocPass123!/,
+			~/(?im)^Set-Cookie\s*:/,
+			~/(?im)^X-CSRF-TOKEN:(?![ \t]*<csrf-token>[ \t]*\r?$).*$/,
+			~/"(?:token|password)"\s*:\s*"(?!<redacted>")[^"]*"/,
+			~/(?i)password=(?!(?:%3Credacted%3E|<redacted>)(?:[&\s'"]|$))[^&\s'"]+/,
+			~/(?im)^Cookie:(?![ \t]*JSESSIONID=<session-id>[ \t]*\r?$).*$/
+		]
+		snippets.each { snippet ->
+			def content = snippet.getText('UTF-8')
+			if (forbidden.any { pattern -> (content =~ pattern).find() }) {
+				// Never print the matching content.
+				throw new GradleException("Unmasked sensitive value in API snippet: ${relativePath(snippet)}")
+			}
+		}
+	}
+}
+
+tasks.named('asciidoctor') {
+	dependsOn tasks.named('verifyApiSnippets')
+	inputs.dir layout.buildDirectory.dir('generated-snippets')
+	configurations 'asciidoctorExt'
+	outputDir = layout.buildDirectory.dir('docs/api').get().asFile
+	// Missing snippets and rendering warnings must fail CI, not publish broken docs.
+	logDocuments = true
+	asciidoctorj {
+		fatalWarnings '.*'
+	}
 }

@@ -1,0 +1,229 @@
+= STOCKROOM API 가이드
+:lang: ko
+:toc: left
+:toc-title: 목차
+:sectnums:
+:sectanchors:
+:webfonts!:
+:docinfo: shared
+
+이 문서의 HTTP 요청·응답과 필드 표는 실제 MySQL, Spring Security 필터, 서비스 트랜잭션을 거친 테스트에서 생성합니다.
+필드 누락·미문서화 필드·타입 불일치가 발생하면 REST Docs 테스트가 실패합니다.
+설명 문장과 아래 정책 표는 수동으로 관리하므로 정책 변경 시 함께 검토합니다.
+
+== 읽기 전에
+
+* 예제의 호스트는 로컬 Docker의 `http://localhost:18080`입니다. Java 직접 실행은 기본 8080입니다.
+* 모든 금액은 원 단위 정수, 시각은 UTC ISO-8601(`Z` 접미사)입니다. ID·시각·상품은 테스트마다 달라집니다.
+* `*.example.test` 계정은 테스트 전용입니다. 비밀번호·CSRF 토큰은 `<redacted>` / `<csrf-token>`으로 치환하고 `Set-Cookie`는 제거합니다.
+* 실제 요청에서는 같은 브라우저/HTTP 클라이언트의 세션 쿠키(`JSESSIONID`)를 유지해야 합니다.
+  MockMvc 테스트는 서버 세션을 직접 연결하므로 아래 HTTP 예제에는 세션 쿠키가 생략됩니다.
+  브라우저의 같은 출처 `fetch` 또는 curl의 `-c cookies.txt -b cookies.txt`를 사용하세요.
+* 회원가입은 자동 로그인이 아닙니다. `/auth/csrf` → 회원가입 → 로그인 → `/auth/csrf` 재조회 → 쓰기 요청 순서입니다.
+  로그인 시 세션 ID와 토큰이 교체되므로 로그인 전 토큰을 재사용하지 마세요.
+* 모의 결제·환불은 로컬/테스트용이며 실제 돈이 오가지 않습니다. 운영에서는 쓰기가 `404 MOCK_API_DISABLED`입니다.
+  본인 결제·환불 이력 조회는 운영에서도 가능합니다. 설정을 먼저 확인하세요.
+
+=== API 목록
+
+[cols="1,3,1",options="header"]
+|===
+|메서드 |경로 |로그인
+|GET |`/products`, `/storefront/config`, `/auth/csrf` |불필요
+|POST |`/auth/register`, `/auth/login` |불필요, CSRF 필요
+|GET |`/auth/me` |필요
+|POST |`/auth/logout` |CSRF 필요
+|POST |`/orders` |필요, CSRF 필요
+|GET |`/orders`, `/orders/{orderId}` |필요
+|POST |`/orders/{orderId}/cancel` |필요, CSRF 필요
+|POST |`/orders/{orderId}/payments`, `/orders/{orderId}/refunds` |필요, CSRF 필요, 모의 쓰기 허용 필요
+|GET |`/orders/{orderId}/payments`, `/orders/{orderId}/refunds` |필요
+|===
+
+운영 상태 확인 API(`GET /actuator/health`, `/actuator/health/liveness`, `/actuator/health/readiness`)는 배포 문서를 참고하세요.
+헬스 응답은 이 문서의 필드 계약 검증 범위에 포함하지 않습니다.
+
+== 상품과 화면 설정
+
+=== 상품 조회
+
+ID 오름차순입니다. 재고는 응답 시점의 값이며 이후 주문 성공을 보장하지 않습니다.
+
+operation::products[snippets='http-request,http-response,response-fields']
+
+=== 모의 기능 허용 여부
+
+operation::storefront-config[snippets='http-request,http-response,response-fields']
+
+== 회원과 세션
+
+=== CSRF 토큰 발급
+
+operation::csrf[snippets='http-request,http-response,response-fields']
+
+=== 회원가입
+
+operation::register[snippets='http-request,request-headers,request-fields,http-response,response-fields']
+
+=== 로그인
+
+JSON이 아니라 `application/x-www-form-urlencoded` 본문을 사용합니다.
+반환된 세션 쿠키를 유지하고 CSRF를 다시 발급받으세요.
+
+operation::login[snippets='http-request,request-headers,form-parameters,http-response,response-fields']
+
+=== 현재 회원
+
+operation::me[snippets='http-request,http-response,response-fields']
+
+=== 로그아웃
+
+성공 시 본문 없는 `204 No Content`입니다. 브라우저의 인증 상태와 보관 중인 CSRF 토큰을 함께 비우세요.
+
+operation::logout[snippets='http-request,request-headers,http-response']
+
+== 주문
+
+=== 멱등 키를 사용한 생성
+
+회원별 주문 키는 `[A-Za-z0-9][A-Za-z0-9._:-]{0,63}` 형식입니다.
+응답을 받지 못했을 때 같은 키·같은 상품·같은 수량으로 재시도하세요. 다른 주문에는 새 키를 사용합니다.
+`expiresAt`은 생성 시 고정하며 기본 30분입니다. 설정을 바꿔도 기존 주문의 마감은 바뀌지 않습니다.
+
+operation::order-create[snippets='http-request,request-headers,request-fields,http-response,response-headers,response-fields']
+
+=== 같은 키 재시도
+
+신규 생성은 `201`, 같은 내용의 재요청은 `200`과 `Idempotency-Replayed: true`입니다.
+주문 재조회 시 현재 주문 상태를 반환하므로 취소·결제·만료 뒤에는 상태가 달라질 수 있습니다.
+
+operation::order-replay[snippets='http-request,http-response,response-headers']
+
+=== 키를 생략한 생성
+
+키 생략은 허용하지만 요청마다 새 주문입니다. 응답 유실 시 안전한 재시도를 위해 키 사용을 권장합니다.
+이 경우 `Idempotency-Replayed` 헤더는 없습니다.
+
+operation::order-without-key[snippets='http-request,http-response,response-headers']
+
+=== 본인 주문 상세
+
+주문 항목의 상품명·가격은 주문 당시 값입니다. 상태별 시각은 미발생 시 `null`입니다.
+
+operation::order-detail[snippets='http-request,path-parameters,http-response,response-fields']
+
+=== 본인 주문 목록
+
+ID 내림차순 최대 20건입니다. `nextBeforeId`가 있으면 다음 요청의 `beforeId`에 그대로 넣습니다.
+`null`이면 마지막 페이지입니다. 다른 회원의 주문은 포함되지 않습니다.
+
+operation::order-list[snippets='http-request,http-response,response-fields']
+
+operation::order-next-page[snippets='http-request,query-parameters,http-response']
+
+operation::order-empty-page[snippets='http-request,http-response']
+
+=== 미결제 취소
+
+본문은 필요 없습니다. 반복 취소는 최초 취소 시각을 유지하고 재고를 추가 복구하지 않습니다.
+이미 환불·만료된 주문에는 현재 상태를 반환합니다. 결제 완료 주문은 환불 API를 사용해야 합니다.
+
+operation::order-cancel[snippets='http-request,path-parameters,request-headers,http-response']
+
+=== 결제 마감과 자동 만료
+
+마감 시각 이상이면 배치 실행 전에도 새 결제는 거부됩니다.
+배치가 처리한 뒤 `EXPIRED`와 `expiredAt`이 표시되고 재고가 한 번 복구됩니다.
+이 문서 테스트는 마감을 과거로 변경한 뒤 실제 만료 서비스를 호출합니다. 실제 스케줄러 동작은 별도 통합·브라우저 테스트로 검증합니다.
+
+operation::order-expired-error[snippets='http-request,http-response,response-fields']
+
+operation::order-expired[snippets='http-request,http-response']
+
+== 모의 결제와 전액 환불
+
+주문별 키가 필수이며 결제와 환불 키 공간은 서로 독립적입니다. 형식은 주문 키와 같습니다.
+`result`는 `SUCCESS` 또는 `FAILURE`입니다. `FAILURE`도 정상 처리한 시도 이력이므로 신규 응답은 `201`입니다.
+`status`를 확인하세요. 결제 실패는 `CREATED`, 환불 실패는 `PAID`를 유지합니다.
+같은 키·같은 결과 선택은 최초 이력을 `200`으로 반환하며 선택을 바꾸면 `409 IDEMPOTENCY_KEY_REUSED`입니다.
+기록된 결제 키의 재요청은 결제 마감 후에도 최초 이력을 반환합니다. 새 결제 시도는 마감 검증을 받습니다.
+
+=== 결제 실패와 성공
+
+operation::payment-failure[snippets='http-request,path-parameters,request-headers,request-fields,http-response,response-headers,response-fields']
+
+operation::payment-failure-replay[snippets='http-request,http-response,response-headers']
+
+operation::payment-success[snippets='http-request,http-response']
+
+operation::payment-success-replay[snippets='http-request,http-response,response-headers']
+
+operation::order-paid[snippets='http-request,http-response']
+
+=== 결제 이력
+
+시도 ID 오름차순이며 시도가 없으면 빈 배열입니다.
+
+operation::payment-history[snippets='http-request,path-parameters,http-response,response-fields']
+
+=== 환불 실패와 성공
+
+성공 결제를 전액 환불합니다. 성공 시 `REFUNDED`와 `refundedAt`을 기록하고 재고를 한 번 복구합니다.
+
+operation::refund-failure[snippets='http-request,path-parameters,request-headers,request-fields,http-response,response-headers,response-fields']
+
+operation::refund-failure-replay[snippets='http-request,http-response,response-headers']
+
+operation::refund-success[snippets='http-request,http-response']
+
+operation::refund-success-replay[snippets='http-request,http-response,response-headers']
+
+operation::order-refunded[snippets='http-request,http-response']
+
+=== 환불 이력
+
+operation::refund-history[snippets='http-request,path-parameters,http-response,response-fields']
+
+== 오류 처리
+
+오류 본문은 `code`와 `message`입니다. 클라이언트는 HTTP 상태와 `code`로 분기합니다.
+아래는 실제 검증한 대표 예제이며 모든 오류 코드 목록은 저장소의 각 기능 문서를 참고하세요.
+CSRF 필터는 인증 확인보다 먼저 실행될 수 있어, 비로그인 쓰기에 토큰도 없으면 `403`이 우선 반환될 수 있습니다.
+
+=== 인증 필요: 401
+
+operation::auth-required[snippets='http-request,http-response,response-fields']
+
+=== 잘못된 로그인: 401
+
+operation::invalid-credentials[snippets='http-request,http-response']
+
+=== CSRF 누락: 403
+
+operation::csrf-rejected[snippets='http-request,http-response']
+
+=== 입력 검증: 400
+
+operation::invalid-request[snippets='http-request,http-response']
+
+=== 필수 키 누락: 400
+
+operation::missing-key[snippets='http-request,http-response']
+
+=== 없는 주문 또는 타인 주문: 404
+
+소유자를 노출하지 않기 위해 타인 주문도 없는 주문과 같은 오류를 반환합니다.
+
+operation::order-not-found[snippets='http-request,http-response']
+
+=== 재고 부족: 409
+
+operation::insufficient-stock[snippets='http-request,http-response']
+
+=== 키에 다른 요청 재사용: 409
+
+operation::idempotency-conflict[snippets='http-request,http-response']
+
+=== 결제된 주문의 취소: 409
+
+operation::refund-required[snippets='http-request,http-response']

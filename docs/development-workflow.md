@@ -4,7 +4,7 @@
 병합된 브랜치를 삭제해서 GitHub에 `main` 하나만 남는 것은 정상입니다. 브랜치 개수보다 PR의 변경 내용·검증 기록이 중요합니다.
 기존 main 이력을 억지로 재작성하거나 과거 기능에 빈 브랜치를 만들지 않습니다.
 
-## 현재 작업 분리
+## PR별 작업 기록
 
 | 브랜치 | 범위 | 검토 |
 |---|---|---|
@@ -12,9 +12,11 @@
 | `feat/load-testing` | HTTP 동시 요청·실제 DB 결과·측정 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | `feat/deployment-verification` | HTTPS 배포 결과 점검·CI·운영 기록 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
 | `docs/portfolio` | README·아키텍처·설계 근거·검증 문서 | [PR #4](https://github.com/zeroziba9-hash/order-stock-service/pull/4) |
+| `feat/order-expiration` | 미결제 주문 자동 만료·V8→V9 업그레이드·브라우저 검증 | [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5) |
 
-각 브랜치는 같은 main 커밋에서 독립적으로 시작했습니다. 앞 PR의 미병합 코드를 다음 작업에 섞지 않았습니다.
-1→2→3→문서 순서로 검토하면 이해하기 쉽습니다. 이번 변경들은 앱 코드와 DB 스키마를 바꾸지 않습니다.
+위 PR #1~#5는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+#5와 이후 기능은 앞 작업이 병합된 최신 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
+API 계약 문서화는 `feat/verified-api-docs`에서 진행합니다.
 
 ## 새 작업 시작
 

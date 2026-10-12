@@ -77,14 +77,15 @@ BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 177개 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| 백엔드 189개 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·문서 계약/마스킹 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
 | Chromium E2E 16개 | 일반 14 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
 | 백업·복원 | 체크섬·빈 별도 DB 복원 후 실제 HTTPS 데이터 비교 | [복구 안내](backup-restore.md) |
 | 배포 후 점검 도구 | 인증서 검증을 유지한 GET 검사 9개, CI의 로컬 HTTPS 대상 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
+| API 계약 문서 | 실제 인증·CSRF·MySQL 응답에서 HTML 생성, 필드·마스킹·누락 참조 검증 | [가이드 생성·다운로드](api-documentation.md) |
 
-추가 검증 코드는 위 독립 PR에서 확인합니다. 병합 전 main에 모든 테스트 파일이 있다고 가정하지 않습니다.
+추가 검증 코드는 위 독립 PR에서 확인합니다. 자동 만료는 [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5)에 기록했습니다.
 브라우저 검증은 Chromium 데스크톱·모바일 에뮬레이션이며 실제 iOS·Android 기기나 모든 브라우저를 검증한 것은 아닙니다.
 응답 유실 검증은 서버 POST를 실제 처리한 뒤 브라우저의 응답 수신을 차단하고 같은 키 재시도를 확인합니다.
 
