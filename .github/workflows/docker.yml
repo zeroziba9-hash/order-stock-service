@@ -126,7 +126,9 @@ jobs:
           persist-credentials: false
       - name: Check backup scripts
         run: |
-          bash -n scripts/production-db.sh .github/scripts/verify-backup-restore.sh
+          for script in scripts/production-db.sh .github/scripts/verify-backup-restore.sh; do
+            bash -n "$script"
+          done
           shellcheck scripts/production-db.sh .github/scripts/verify-backup-restore.sh
       - name: Prepare private recovery test environment
         run: |

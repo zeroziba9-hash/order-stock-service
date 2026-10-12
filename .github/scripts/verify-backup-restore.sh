@@ -54,6 +54,7 @@ expect_rejection 'checksum verification failed' "${db_tool[@]}" restore "$env_fi
 touch "$archive/INCOMPLETE"
 expect_rejection 'Backup is incomplete' "${db_tool[@]}" restore "$env_file" "$archive" "$target_project"
 rm -- "$archive/INCOMPLETE"
+# shellcheck disable=SC2016 # Resolve credentials inside the DB container.
 table_count=$(printf 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE();\n' |
     "${target_compose[@]}" exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --batch --skip-column-names')
 [[ $table_count == 0 ]] || { echo 'Rejected restores changed the empty target.' >&2; exit 1; }

@@ -22,6 +22,7 @@ repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 compose=(docker compose --project-name "$project" --env-file "$env_file" -f "$repo_root/deploy/compose.prod.yaml")
 
 # Passwords stay inside the DB container, outside host command arguments and output.
+# shellcheck disable=SC2016 # Expand these variables in the container's sh, not on the host.
 mysql_command='MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --protocol=TCP --host=127.0.0.1 --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --batch --skip-column-names'
 query() { printf '%s\n' "$1" | "${compose[@]}" exec -T db sh -c "$mysql_command"; }
 validate_database() {
@@ -41,6 +42,7 @@ if [[ $operation == backup ]]; then
     archive=$(mktemp -d -- "$parent/order-stock-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXXXX")
     touch "$archive/INCOMPLETE"
     trap 'printf "Backup incomplete; do not restore: %s\n" "$archive" >&2' ERR
+    # shellcheck disable=SC2016 # The DB container supplies the credentials at execution time.
     "${compose[@]}" exec -T db sh -c \
         'MYSQL_PWD="$MYSQL_PASSWORD" exec mysqldump --protocol=TCP --host=127.0.0.1 --user="$MYSQL_USER" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --skip-add-drop-table --skip-add-locks "$MYSQL_DATABASE"' |
         gzip > "$archive/database.sql.gz"
