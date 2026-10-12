@@ -85,7 +85,11 @@ def main():
 
     def data(path, expected=200):
         body, headers = get(base + path, expected, path)
-        require(headers.get_content_type() == "application/json", "Expected JSON: " + path)
+        content_type = headers.get_content_type()
+        # Actuator uses application/vnd.spring-boot.actuator.v3+json by default.
+        require(content_type == "application/json" or
+                (content_type.startswith("application/") and content_type.endswith("+json")),
+                "Expected JSON: " + path)
         return json.loads(body)
 
     require(data("/actuator/health/readiness") == {"status": "UP"}, "Application not ready")
