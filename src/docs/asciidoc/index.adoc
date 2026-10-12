@@ -38,6 +38,8 @@
 |POST |`/orders/{orderId}/cancel` |필요, CSRF 필요
 |POST |`/orders/{orderId}/payments`, `/orders/{orderId}/refunds` |필요, CSRF 필요, 모의 쓰기 허용 필요
 |GET |`/orders/{orderId}/payments`, `/orders/{orderId}/refunds` |필요
+|POST |`/admin/products/{productId}/inventory-adjustments` |ADMIN, CSRF·멱등 키 필수
+|GET |`/admin/inventory-adjustments` |ADMIN
 |===
 
 운영 상태 확인 API(`GET /actuator/health`, `/actuator/health/liveness`, `/actuator/health/readiness`)는 배포 문서를 참고하세요.
@@ -81,6 +83,37 @@ operation::me[snippets='http-request,http-response,response-fields']
 성공 시 본문 없는 `204 No Content`입니다. 브라우저의 인증 상태와 보관 중인 CSRF 토큰을 함께 비우세요.
 
 operation::logout[snippets='http-request,request-headers,http-response']
+
+== 관리자 재고 조정
+
+회원가입은 항상 USER입니다. 관리자는 웹 API로 지정하지 않으며, 운영자가 DB 접근 권한으로 기존 회원의 역할을 변경합니다.
+역할 부여 후 다시 로그인해야 새 권한이 세션에 반영됩니다. 권한 회수 후에는 기존 관리자 세션도 이 API에서 거부합니다.
+
+=== 수동 입고·폐기
+
+상품 행을 주문과 동일하게 잠그고, 재고·변경 이력·요청 키를 한 트랜잭션에서 저장합니다.
+조정 후 재고는 0~2147483647이어야 합니다. 실패하면 전체를 롤백합니다.
+
+operation::inventory-adjust[snippets='http-request,path-parameters,request-headers,request-fields,http-response,response-headers,response-fields']
+
+=== 응답 유실 뒤 같은 요청 재확인
+
+키는 관리자별로 구분합니다. 상품·수량·양끝 공백을 제거한 사유가 같으면 최초 변경 결과를 반환합니다.
+그 뒤 재고가 달라졌어도 최초 beforeStock/afterStock을 유지하며 다시 조정하지 않습니다.
+같은 키에 다른 내용을 보내면 `409 IDEMPOTENCY_KEY_REUSED`입니다.
+
+operation::inventory-replay[snippets='http-request,http-response,response-headers,response-fields']
+
+=== 수동 조정 이력
+
+관리자 전체의 수동 조정 이력입니다. 주문·취소·환불·자동 만료로 바뀐 재고는 이 목록에 포함하지 않습니다.
+상품 필터와 커서로 조회하며 페이지당 최대 20건입니다. 이력을 수정·삭제하는 웹 API는 없습니다.
+
+operation::inventory-history[snippets='http-request,query-parameters,http-response,response-fields']
+
+=== 일반 회원 접근 거부
+
+operation::inventory-forbidden[snippets='http-request,http-response,response-fields']
 
 == 주문
 

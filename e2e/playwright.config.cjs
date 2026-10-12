@@ -10,7 +10,7 @@ if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: process.env.E2E_EXPIRATION === 'true' ? '**/expiration.spec.cjs' : '**/storefront.spec.cjs',
+  testMatch: process.env.E2E_EXPIRATION === 'true' ? '**/expiration.spec.cjs' : ['**/storefront.spec.cjs','**/admin.spec.cjs'],
   outputDir: process.env.E2E_EXPIRATION === 'true' ? 'expiration-results' : 'test-results',
   fullyParallel: false,
   workers: 1,

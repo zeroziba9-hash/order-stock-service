@@ -80,7 +80,7 @@ class ApiDocumentationTests {
     @AfterEach
     void clean() {
         assertThat(jdbc.queryForObject("SELECT DATABASE()", String.class)).isEqualTo("order_stock_test");
-        for (String table : List.of("refund_attempts", "payment_attempts", "order_requests", "order_items",
+        for (String table : List.of("inventory_adjustment_requests", "inventory_adjustments", "refund_attempts", "payment_attempts", "order_requests", "order_items",
                 "purchase_orders", "products", "app_users")) {
             jdbc.update("DELETE FROM " + table);
         }
@@ -142,6 +142,38 @@ class ApiDocumentationTests {
         mvc.perform(write("/orders/{orderId}/cancel", id)).andExpect(status().isOk())
                 .andExpect(content().json(cancelled.getResponse().getContentAsString()));
         assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(100);
+    }
+
+    @Test
+    void adminInventoryAdjustmentReplayAndHistory() throws Exception {
+        mvc.perform(get("/admin/inventory-adjustments").session(session)).andExpect(status().isForbidden())
+                .andDo(document("inventory-forbidden", responseFields(errorFields())));
+        jdbc.update("UPDATE app_users SET user_role='ADMIN' WHERE id=?", userId);
+        session = login("reader@example.test", TestAccounts.PASSWORD, null);
+        token = csrfToken(session);
+        mvc.perform(write("/admin/products/{productId}/inventory-adjustments", product.getId())
+                        .header("Idempotency-Key", "inventory-demo-1").content("{\"delta\":5,\"reason\":\"추가 입고\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.beforeStock").value(100))
+                .andExpect(jsonPath("$.afterStock").value(105))
+                .andDo(document("inventory-adjust", pathParameters(parameterWithName("productId").description("조정할 상품 ID")),
+                        requestHeaders(headerWithName("X-CSRF-TOKEN").description("현재 세션의 CSRF 토큰"),
+                                headerWithName("Idempotency-Key").description("필수. 관리자별 요청 키, 주문 키와 동일한 형식")),
+                        requestFields(fieldWithPath("delta").description("0이 아닌 32비트 정수. 증가 양수, 감소 음수"),
+                                fieldWithPath("reason").description("1~200자 변경 사유, 양끝 공백 제거")),
+                        responseHeaders(headerWithName("Idempotency-Replayed").description("새 조정은 false, 기존 조정 재응답은 true")), responseFields(inventoryFields(""))));
+        mvc.perform(write("/admin/products/{productId}/inventory-adjustments", product.getId())
+                        .header("Idempotency-Key", "inventory-demo-1").content("{\"delta\":5,\"reason\":\"추가 입고\"}"))
+                .andExpect(status().isOk()).andExpect(header().string("Idempotency-Replayed", "true"))
+                .andDo(document("inventory-replay", responseHeaders(headerWithName("Idempotency-Replayed").description("기존 조정 재응답은 true")), responseFields(inventoryFields(""))));
+        var historyFields = new ArrayList<FieldDescriptor>();
+        historyFields.add(fieldWithPath("adjustments").type(JsonFieldType.ARRAY).description("ID 내림차순, 최대 20건 수동 조정"));
+        historyFields.addAll(List.of(inventoryFields("adjustments[].")));
+        historyFields.add(fieldWithPath("nextBeforeId").type(JsonFieldType.NUMBER).optional().description("다음 페이지 커서. 마지막은 null"));
+        mvc.perform(read("/admin/inventory-adjustments").queryParam("productId", product.getId().toString()))
+                .andExpect(status().isOk()).andDo(document("inventory-history", queryParameters(
+                        parameterWithName("productId").optional().description("특정 상품만 조회"),
+                        parameterWithName("beforeId").optional().description("이 ID 미만의 이전 기록")),
+                        responseFields(historyFields)));
     }
 
     @Test
@@ -334,7 +366,20 @@ class ApiDocumentationTests {
     }
 
     private static FieldDescriptor[] userFields() {
-        return new FieldDescriptor[]{fieldWithPath("userId").description("회원 ID"), fieldWithPath("email").description("정규화된 이메일")};
+        return new FieldDescriptor[]{fieldWithPath("userId").description("회원 ID"), fieldWithPath("email").description("정규화된 이메일"),
+                fieldWithPath("role").description("USER 또는 ADMIN. 회원가입은 항상 USER")};
+    }
+
+    private static FieldDescriptor[] inventoryFields(String prefix) {
+        return new FieldDescriptor[]{fieldWithPath(prefix + "adjustmentId").description("변경 이력 ID"),
+                fieldWithPath(prefix + "adminId").description("실행한 관리자 회원 ID"),
+                fieldWithPath(prefix + "productId").description("상품 ID"),
+                fieldWithPath(prefix + "productName").description("조정 당시 상품명"),
+                fieldWithPath(prefix + "delta").description("조정 수량"),
+                fieldWithPath(prefix + "beforeStock").description("조정 직전 잠금 상태의 재고"),
+                fieldWithPath(prefix + "afterStock").description("조정 직후 재고. 재응답에서는 최초 결과"),
+                fieldWithPath(prefix + "reason").description("변경 사유"),
+                fieldWithPath(prefix + "createdAt").description("변경 시각, UTC ISO-8601")};
     }
 
     private static FieldDescriptor[] createFields() {

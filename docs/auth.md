@@ -29,7 +29,8 @@ Invoke-RestMethod -Method Post -Uri "$base/auth/register" -WebSession $session `
   -Body ([Text.Encoding]::UTF8.GetBytes($registration))
 ```
 
-성공하면 `201 Created`와 `userId`, `email`을 반환합니다.
+성공하면 `201 Created`와 `userId`, `email`, `role: USER`를 반환합니다.
+회원가입으로 관리자 권한을 지정할 수 없습니다. 관리자 지정·회수는 [재고 관리 안내](admin-inventory.md)를 참고하세요.
 같은 이메일이 있으면 `409 EMAIL_ALREADY_EXISTS`입니다. 가입이 곧 로그인을 의미하지는 않습니다.
 DB에는 BCrypt 해시만 저장하고, 응답에 비밀번호나 해시를 포함하지 않습니다.
 

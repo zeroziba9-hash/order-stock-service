@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f4ef">
+  <title>재고 관리 — STOCKROOM</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/store.css">
+  <link rel="stylesheet" href="/assets/admin.css">
+  <script src="/assets/admin.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="header">
+    <a class="brand" href="/" aria-label="Stockroom 홈"><span class="brand-icon" aria-hidden="true">s<span>r</span></span>STOCKROOM<span class="brand-dot">®</span></a>
+    <nav aria-label="관리 메뉴"><a href="/">컬렉션으로 ↗</a><span class="admin-badge">ADMIN</span></nav>
+    <span class="account-email" id="admin-account"></span>
+  </header>
+  <main id="main" class="admin-main">
+    <div class="admin-intro"><div><p class="eyebrow"><span class="live-dot"></span> STOCK & OPERATIONS</p><h1>재고의 흐름을,<br>명확하게<span class="period">.</span></h1><p class="muted">입고부터 조정까지. 변경 사유와 함께 기록하세요.</p></div><div class="admin-intro-note"><span>STOCKROOM / OPERATIONS</span><strong>작은 변화도<br>기록에 남도록.</strong><p>관리자의 수동 조정 이력입니다.<br>주문·취소로 바뀐 재고는 포함하지 않아요.</p></div></div>
+    <p id="admin-status" class="admin-message" role="status" aria-live="polite">관리자 권한을 확인하고 있어요.</p>
+    <div id="admin-workspace" hidden>
+      <div class="admin-grid">
+        <section class="admin-panel" aria-labelledby="inventory-title"><div class="section-heading"><div><p class="eyebrow">LIVE INVENTORY</p><h2 id="inventory-title">현재 재고</h2></div><button type="button" class="button ghost small" id="admin-refresh">↻ 새로고침</button></div><p class="field-help">상품을 선택하면 해당 상품의 조정 이력을 확인해요.</p><div id="admin-products" class="admin-products"></div></section>
+        <section class="admin-panel adjustment-panel" aria-labelledby="adjust-title"><p class="eyebrow">MAKE AN ADJUSTMENT</p><h2 id="adjust-title">재고 조정</h2><p id="selected-product" class="muted"></p><form id="adjustment-form"><label for="stock-delta">조정 수량</label><input id="stock-delta" name="delta" type="number" step="1" min="-2147483648" max="2147483647" placeholder="예: 입고 5 / 폐기 -2" required><p id="stock-preview" class="field-help">증가는 양수, 감소는 음수로 입력하세요.</p><label for="adjustment-reason">변경 사유</label><textarea id="adjustment-reason" name="reason" maxlength="200" rows="3" placeholder="예: 추가 입고, 파손 상품 폐기" required></textarea><p class="field-help">최대 200자. 개인 정보는 입력하지 마세요.</p><p id="pending-help" class="pending-help" hidden>이전 요청의 응답을 확인하지 못했어요. 수량과 사유를 유지한 채 같은 요청으로 결과를 확인하세요.</p><button class="button primary full" id="adjust-submit" type="submit">조정 내용 확인 →</button></form></section>
+      </div>
+      <section class="admin-panel history-panel" aria-labelledby="adjustment-history-title"><div class="section-heading"><div><p class="eyebrow">MANUAL ADJUSTMENT LOG</p><h2 id="adjustment-history-title">변경 이력</h2></div><span id="history-filter" class="muted"></span></div><div class="admin-table-wrap" tabindex="0" role="region" aria-label="재고 변경 이력 표"><table class="admin-table"><thead><tr><th scope="col">변경 시각</th><th scope="col">상품</th><th scope="col">조정</th><th scope="col">변경 전 → 후</th><th scope="col">사유</th><th scope="col">관리자</th></tr></thead><tbody id="adjustment-history"></tbody></table></div><p id="history-empty" class="empty">변경 이력을 불러오고 있어요.</p><button class="button ghost load-more" id="history-more" type="button" hidden>이전 이력 더 보기 ↓</button></section>
+    </div>
+  </main>
+  <footer><a class="footer-brand" href="/">STOCKROOM®</a><p>작은 취향을 담는 곳.</p><span>INVENTORY OPERATIONS · 2026</span></footer>
+  <dialog id="inventory-confirm" aria-labelledby="inventory-confirm-title"><p class="eyebrow">ONE LAST CHECK</p><h2 id="inventory-confirm-title">재고를 조정할까요?</h2><p id="inventory-confirm-message" class="muted"></p><form method="dialog" class="confirm-actions"><button class="button ghost" value="no" autofocus>돌아가기</button><button class="button primary" value="yes">확인하고 반영</button></form></dialog>
+</body>
+</html>
