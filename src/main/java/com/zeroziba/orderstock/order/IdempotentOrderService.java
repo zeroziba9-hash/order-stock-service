@@ -1,6 +1,7 @@
 package com.zeroziba.orderstock.order;
 
 import com.zeroziba.orderstock.common.ApiException;
+import com.zeroziba.orderstock.monitoring.OrderMetrics;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,12 @@ public class IdempotentOrderService {
 
     private final OrderRequestRepository requestRepository;
     private final OrderService orderService;
+    private final OrderMetrics metrics;
 
-    public IdempotentOrderService(OrderRequestRepository requestRepository, OrderService orderService) {
+    public IdempotentOrderService(OrderRequestRepository requestRepository, OrderService orderService, OrderMetrics metrics) {
         this.requestRepository = requestRepository;
         this.orderService = orderService;
+        this.metrics = metrics;
     }
 
     @Transactional
@@ -40,6 +43,7 @@ public class IdempotentOrderService {
                     "이미 다른 주문 내용에 사용한 요청 키입니다. 새 주문에는 새 키를 사용하세요.");
         }
         if (stored.orderId() != null) {
+            metrics.afterCommit(OrderMetrics.Outcome.REPLAYED);
             return new CreationResult(orderService.findById(userId, stored.orderId()), true);
         }
         // 별도 Spring 빈의 메서드를 호출하여 기존 주문 생성이 이 트랜잭션에 참여하도록 한다.
