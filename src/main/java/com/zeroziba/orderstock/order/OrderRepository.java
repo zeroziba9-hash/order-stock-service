@@ -3,6 +3,7 @@ package com.zeroziba.orderstock.order;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.List;
+import java.time.LocalDateTime;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,4 +27,12 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from PurchaseOrder o where o.id = :id and o.userId = :userId")
     Optional<PurchaseOrder> findByIdForUpdate(@Param("id") long id, @Param("userId") long userId);
+
+    @Query("select o.id from PurchaseOrder o where o.status = 'CREATED' and o.expiresAt <= :now order by o.expiresAt, o.id")
+    List<Long> findDueIds(@Param("now") LocalDateTime now, Pageable pageable);
+
+    // Internal expiration worker only; HTTP endpoints always use the owner-scoped lookup above.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from PurchaseOrder o where o.id = :id")
+    Optional<PurchaseOrder> findByIdForExpiration(@Param("id") long id);
 }

@@ -48,6 +48,13 @@ jobs:
       - name: Exercise desktop and mobile browser workflows
         working-directory: e2e
         run: npm test
+      - name: Use short deadlines only in the disposable browser stack
+        run: docker compose -f compose.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+      - name: Verify automatic expiration in desktop and mobile browsers
+        working-directory: e2e
+        env:
+          E2E_EXPIRATION: 'true'
+        run: npm test
       - name: Upload browser report without network traces
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -56,6 +63,8 @@ jobs:
           path: |
             e2e/playwright-report/
             e2e/test-results/**/*.png
+            e2e/playwright-expiration-report/
+            e2e/expiration-results/**/*.png
           if-no-files-found: ignore
           retention-days: 7
       - name: Show failure logs

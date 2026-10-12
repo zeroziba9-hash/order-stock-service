@@ -10,13 +10,15 @@ if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
 
 module.exports = defineConfig({
   testDir: './tests',
+  testMatch: process.env.E2E_EXPIRATION === 'true' ? '**/expiration.spec.cjs' : '**/storefront.spec.cjs',
+  outputDir: process.env.E2E_EXPIRATION === 'true' ? 'expiration-results' : 'test-results',
   fullyParallel: false,
   workers: 1,
   retries: 0,
   timeout: 30000,
   expect: { timeout: 10000 },
   forbidOnly: Boolean(process.env.CI),
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [['list'], ['html', { open: 'never', outputFolder: process.env.E2E_EXPIRATION === 'true' ? 'playwright-expiration-report' : 'playwright-report' }]],
   use: {
     baseURL,
     browserName: 'chromium',

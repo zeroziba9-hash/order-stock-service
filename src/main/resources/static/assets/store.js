@@ -5,7 +5,7 @@
   const money = (value) => `${new Intl.NumberFormat("ko-KR").format(value)}원`;
   const date = (value) => new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
   const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-  const statuses = { CREATED: "결제 대기", PAID: "결제 완료", CANCELLED: "취소 완료", REFUNDED: "환불 완료" };
+  const statuses = { CREATED: "결제 대기", PAID: "결제 완료", CANCELLED: "취소 완료", REFUNDED: "환불 완료", EXPIRED: "주문 만료" };
   const state = { user: null, products: [], orders: [], next: null, filter: "all", register: false, selected: null, config: {}, epoch: 0, ordersLoading: false };
   const pendingKeys = new Map();
   let toastTimer;
@@ -171,6 +171,11 @@
     return `<h3 class="history-heading">${title}</h3>${rows.length ? rows.map((row) => `<div class="history-row"><div>${row.status === "SUCCEEDED" ? "완료" : "실패"}<br><time datetime="${escape(row.createdAt)}">${escape(date(row.createdAt))}</time></div><strong>${escape(money(row.amount))}</strong></div>`).join("") : '<p class="history-empty">아직 이력이 없어요.</p>'}`;
   }
 
+  function deadlineNotice(order) {
+    if (order.status !== "CREATED" || !order.expiresAt) return "";
+    return `<p class="field-help">결제 기한 · ${escape(date(order.expiresAt))}<br>${Date.now() >= Date.parse(order.expiresAt) ? "기한이 지나 결제할 수 없어요. 자동 만료 처리 후 재고가 반환돼요." : "기한 내 결제하지 않으면 주문이 자동 만료되고 재고가 반환돼요."}</p>`;
+  }
+
   async function detail(orderId) {
     const epoch = state.epoch; const requestId = ++detailRequest;
     $("#detail-title").textContent = `주문 #${orderId}`; $("#detail-error").textContent = "";
@@ -179,9 +184,9 @@
     try {
       const [order, payments, refunds] = await Promise.all([api(`/orders/${orderId}`), api(`/orders/${orderId}/payments`), api(`/orders/${orderId}/refunds`)]);
       if (epoch !== state.epoch || requestId !== detailRequest || !$("#detail-dialog").open) return;
-      const mockPay = state.config.mockPayments && order.status === "CREATED";
+      const mockPay = state.config.mockPayments && order.status === "CREATED" && Date.now() < Date.parse(order.expiresAt);
       const mockRefund = state.config.mockRefunds && order.status === "PAID";
-      $("#order-detail").innerHTML = `<div class="detail-summary">${badge(order)}<time datetime="${escape(order.createdAt)}">${escape(date(order.createdAt))}</time></div>${order.items.map((item) => `<div class="detail-item"><span>${escape(item.productName)}<br>${escape(money(item.unitPrice))} × ${escape(item.quantity)}</span><strong>${escape(money(item.unitPrice * item.quantity))}</strong></div>`).join("")}<div class="total-row"><span>총 주문 금액</span><strong>${escape(money(order.totalAmount))}</strong></div>${order.cancelledAt ? `<p class="field-help">${order.status === "REFUNDED" ? "환불" : "취소"} 완료 · ${escape(date(order.cancelledAt))}</p>` : ""}${history("결제 이력", payments)}${history("환불 이력", refunds)}${mockPay || mockRefund ? '<p class="demo-note">로컬 체험용 모의 결제·환불이에요. 실제 금액은 청구되지 않아요.</p>' : ""}<div class="detail-actions">${order.status === "CREATED" ? `<button class="button small" data-cancel="${orderId}">주문 취소</button>` : ""}${mockPay ? `<button class="button primary small" data-mock="payments" data-id="${orderId}">모의 결제</button>` : ""}${mockRefund ? `<button class="button primary small" data-mock="refunds" data-id="${orderId}">모의 전액 환불</button>` : ""}</div>`;
+      $("#order-detail").innerHTML = `<div class="detail-summary">${badge(order)}<time datetime="${escape(order.createdAt)}">${escape(date(order.createdAt))}</time></div>${order.items.map((item) => `<div class="detail-item"><span>${escape(item.productName)}<br>${escape(money(item.unitPrice))} × ${escape(item.quantity)}</span><strong>${escape(money(item.unitPrice * item.quantity))}</strong></div>`).join("")}<div class="total-row"><span>총 주문 금액</span><strong>${escape(money(order.totalAmount))}</strong></div>${deadlineNotice(order)}${order.cancelledAt ? `<p class="field-help">${order.status === "REFUNDED" ? "환불 완료" : order.status === "EXPIRED" ? "주문 만료" : "취소 완료"} · ${escape(date(order.cancelledAt))}</p>` : ""}${history("결제 이력", payments)}${history("환불 이력", refunds)}${mockPay || mockRefund ? '<p class="demo-note">로컬 체험용 모의 결제·환불이에요. 실제 금액은 청구되지 않아요.</p>' : ""}<div class="detail-actions">${order.status === "CREATED" ? `<button class="button small" data-cancel="${orderId}">주문 취소</button>` : ""}${mockPay ? `<button class="button primary small" data-mock="payments" data-id="${orderId}">모의 결제</button>` : ""}${mockRefund ? `<button class="button primary small" data-mock="refunds" data-id="${orderId}">모의 전액 환불</button>` : ""}</div>`;
     } catch (error) { if (epoch === state.epoch && requestId === detailRequest) handleError(error, "#detail-error"); }
   }
 
@@ -207,7 +212,14 @@
       request?.done(); notify(operation === "cancel" ? "주문을 취소하고 재고를 반환했어요." : operation === "payments" ? "모의 결제를 완료했어요." : "모의 환불을 완료하고 재고를 반환했어요.");
       await Promise.all([loadProducts(), loadOrders()]);
       if ($("#detail-dialog").open) await detail(orderId);
-    } catch (error) { handleError(error, $("#detail-dialog").open ? "#detail-error" : null); }
+    } catch (error) {
+      if (error.code === "ORDER_EXPIRED") {
+        request?.done();
+        await Promise.all([loadProducts(), loadOrders()]);
+        if ($("#detail-dialog").open) await detail(orderId);
+      }
+      handleError(error, $("#detail-dialog").open ? "#detail-error" : null);
+    }
     finally { controls.forEach((control) => { control.disabled = false; }); }
   }
 

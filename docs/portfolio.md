@@ -20,7 +20,7 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V8"] --> DB
+    Flyway["Flyway V1~V9"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
@@ -55,6 +55,7 @@ DB의 음수 재고·가격 제약도 둡니다. JVM 내부 잠금에 의존하�
 stateDiagram-v2
     [*] --> CREATED: 주문 + 재고 차감
     CREATED --> CANCELLED: 미결제 취소 + 재고 복구
+    CREATED --> EXPIRED: 결제 기한 경과 + 재고 복구
     CREATED --> PAID: 모의 결제 성공
     PAID --> REFUNDED: 모의 전액 환불 + 재고 복구
 ```
@@ -63,6 +64,7 @@ stateDiagram-v2
 모의 결제·환불 실패는 시도 이력을 남기되 주문 상태를 유지합니다.
 DB 유니크 제약은 주문당 성공 결제·성공 환불을 각각 최대 한 건으로 제한합니다.
 운영에서는 모의 결제·환불 쓰기를 비활성화하고 기존 본인 이력 조회만 제공합니다.
+미결제 주문은 기본 30분 뒤 자동 만료 대상이 됩니다. [배치·경쟁·재시도 설계](order-expiration.md)를 참고하세요.
 
 ### 세션과 소유자 확인
 
@@ -75,8 +77,8 @@ BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 154개 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 14개 | 데스크톱 7 + 모바일 7, 실제 UI·API·DB, 응답 유실·세션 만료·네트워크 오류 | [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1) |
+| 백엔드 177개 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium E2E 16개 | 일반 14 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
 | 백업·복원 | 체크섬·빈 별도 DB 복원 후 실제 HTTPS 데이터 비교 | [복구 안내](backup-restore.md) |

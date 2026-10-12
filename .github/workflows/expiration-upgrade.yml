@@ -1,0 +1,61 @@
+name: Order Expiration Upgrade CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  expiration-upgrade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: order-stock-upgrade-ci
+      APP_PORT: '18085'
+      UPGRADE_DISPOSABLE: 'true'
+    steps:
+      - name: Checkout current app
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Checkout immutable V8 baseline
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: f3f35c0623486e0b5cfe447eac019266a90defd1
+          path: .upgrade-baseline
+          persist-credentials: false
+      - name: Prepare private disposable environment
+        run: |
+          umask 077
+          app_password=$(openssl rand -hex 24)
+          root_password=$(openssl rand -hex 24)
+          echo "::add-mask::$app_password"
+          echo "::add-mask::$root_password"
+          printf 'APP_PORT=18085\nMYSQL_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\n' "$app_password" "$root_password" > "$RUNNER_TEMP/upgrade.env"
+          printf 'services:\n  app:\n    image: order-stock-upgrade-baseline\n' > "$RUNNER_TEMP/upgrade-old.yaml"
+          printf 'services:\n  app:\n    image: order-stock-upgrade-current\n    environment:\n      APP_ORDERS_EXPIRATION_PAYMENT_WINDOW: PT7M\n      APP_ORDERS_EXPIRATION_POLL_INTERVAL: PT1S\n' > "$RUNNER_TEMP/upgrade-new.yaml"
+      - name: Build old and current application images
+        run: |
+          docker build -t order-stock-upgrade-baseline .upgrade-baseline
+          docker build -t order-stock-upgrade-current .
+      - name: Create real V8 orders before migration
+        run: |
+          docker compose --env-file "$RUNNER_TEMP/upgrade.env" -f compose.yaml -f "$RUNNER_TEMP/upgrade-old.yaml" up --no-build --wait --wait-timeout 240
+          python3 .github/scripts/verify-expiration-upgrade.py prepare --project "$COMPOSE_PROJECT_NAME" --env-file "$RUNNER_TEMP/upgrade.env" --state-file "$RUNNER_TEMP/upgrade-state.json"
+      - name: Upgrade the existing DB and verify state preservation
+        run: |
+          docker compose --env-file "$RUNNER_TEMP/upgrade.env" -f compose.yaml -f "$RUNNER_TEMP/upgrade-new.yaml" up --no-build --no-deps --wait --wait-timeout 120 app
+          python3 .github/scripts/verify-expiration-upgrade.py verify --project "$COMPOSE_PROJECT_NAME" --env-file "$RUNNER_TEMP/upgrade.env" --state-file "$RUNNER_TEMP/upgrade-state.json"
+      - name: Show failure logs
+        if: failure()
+        run: docker compose --env-file "$RUNNER_TEMP/upgrade.env" logs --no-color --tail 100
+      - name: Remove disposable upgrade stack
+        if: always()
+        run: docker compose --env-file "$RUNNER_TEMP/upgrade.env" down --volumes --remove-orphans

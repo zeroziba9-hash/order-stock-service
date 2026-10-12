@@ -12,14 +12,16 @@ stateDiagram-v2
     CREATED --> CREATED: 결제 실패 · 이력 저장
     CREATED --> PAID: 결제 성공
     CREATED --> CANCELLED: 취소 · 재고 복구
+    CREATED --> EXPIRED: 결제 기한 경과 · 재고 복구
     PAID --> PAID: 환불 실패 · 이력 저장
     PAID --> REFUNDED: 전액 환불 · 취소 · 재고 복구
 ```
 
-`PAID`·`CANCELLED`·`REFUNDED`에서 새 결제는 거부합니다.
+`PAID`·`CANCELLED`·`REFUNDED`·`EXPIRED`에서 새 결제는 거부합니다.
 `PAID` 주문의 `/cancel`은 거부하고, [환불 API](refunds.md)에서 환불과 취소를 함께 처리합니다.
-결제 자체는 재고를 변경하지 않습니다. 실패해도 재고는 예약 상태이며, 포기하려면 주문을 취소하세요.
-현재 자동 만료는 없습니다. 생성·결제·취소 시각은 모두 UTC로 저장하고 API는 `Z`가 붙은 시각으로 반환합니다.
+결제 자체는 재고를 변경하지 않습니다. 실패하면 재고는 예약 상태이며 수동 취소 또는 자동 만료 때 반환됩니다.
+기본 결제 기한은 주문 후 30분이며, 기한 이후 새 결제는 `409 ORDER_EXPIRED`입니다.
+[자동 만료 안내](order-expiration.md)의 주기·기존 주문 처리 규칙을 참고하세요. API 시각은 UTC `Z`로 반환합니다.
 
 ## 1. 로그인하고 새 주문 생성
 

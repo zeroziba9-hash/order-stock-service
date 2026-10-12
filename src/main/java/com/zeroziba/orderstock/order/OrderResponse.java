@@ -6,6 +6,7 @@ import java.util.List;
 
 public record OrderResponse(long orderId, String status, long totalAmount,
                             Instant createdAt, Instant cancelledAt, Instant paidAt, Instant refundedAt,
+                            Instant expiresAt, Instant expiredAt,
                             List<ItemResponse> items) {
 
     public record ItemResponse(long productId, String productName, long unitPrice, int quantity) { }
@@ -16,6 +17,8 @@ public record OrderResponse(long orderId, String status, long totalAmount,
                 order.getCancelledAt() == null ? null : order.getCancelledAt().toInstant(ZoneOffset.UTC),
                 order.getPaidAt() == null ? null : order.getPaidAt().toInstant(ZoneOffset.UTC),
                 order.getRefundedAt() == null ? null : order.getRefundedAt().toInstant(ZoneOffset.UTC),
+                order.getExpiresAt().toInstant(ZoneOffset.UTC),
+                order.getExpiredAt() == null ? null : order.getExpiredAt().toInstant(ZoneOffset.UTC),
                 order.getItems().stream().map(item -> new ItemResponse(item.getProductId(),
                         item.getProductName(), item.getUnitPrice(), item.getQuantity())).toList());
     }

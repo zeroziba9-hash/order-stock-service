@@ -1,0 +1,6 @@
+# Only for the disposable E2E project on loopback port 18083. Do not use in production.
+services:
+  app:
+    environment:
+      APP_ORDERS_EXPIRATION_PAYMENT_WINDOW: PT5S
+      APP_ORDERS_EXPIRATION_POLL_INTERVAL: PT1S

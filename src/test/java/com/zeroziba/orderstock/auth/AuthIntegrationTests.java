@@ -221,7 +221,10 @@ class AuthIntegrationTests {
 
     @Test
     void legacyAnonymousOrderRemainsUnownedAndInaccessible() throws Exception {
-        jdbcTemplate.update("INSERT INTO purchase_orders (total_amount, status, created_at) VALUES (1000, 'CREATED', UTC_TIMESTAMP(6))");
+        jdbcTemplate.update("""
+                INSERT INTO purchase_orders (total_amount, status, created_at, expires_at)
+                VALUES (1000, 'CREATED', UTC_TIMESTAMP(6), DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 30 MINUTE))
+                """);
         long legacyId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM purchase_orders", Long.class);
         MockHttpSession session = login("owner@example.test", TestAccounts.PASSWORD);
         mockMvc.perform(get("/orders/" + legacyId).session(session)).andExpect(status().isNotFound());
