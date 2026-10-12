@@ -11,7 +11,7 @@
 | `feat/browser-e2e` | 데스크톱·모바일 브라우저 테스트 | [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1) |
 | `feat/load-testing` | HTTP 동시 요청·실제 DB 결과·측정 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | `feat/deployment-verification` | HTTPS 배포 결과 점검·CI·운영 기록 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
-| `docs/portfolio` | README·아키텍처·설계 근거·검증 문서 | 포트폴리오 문서 PR |
+| `docs/portfolio` | README·아키텍처·설계 근거·검증 문서 | [PR #4](https://github.com/zeroziba9-hash/order-stock-service/pull/4) |
 
 각 브랜치는 같은 main 커밋에서 독립적으로 시작했습니다. 앞 PR의 미병합 코드를 다음 작업에 섞지 않았습니다.
 1→2→3→문서 순서로 검토하면 이해하기 쉽습니다. 이번 변경들은 앱 코드와 DB 스키마를 바꾸지 않습니다.
