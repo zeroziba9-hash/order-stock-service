@@ -10,6 +10,8 @@
   const pendingKeys = new Map();
   let toastTimer;
   let afterLogin;
+  let ordersRequest = 0;
+  let detailRequest = 0;
 
   class ApiError extends Error {
     constructor(message, status, code) { super(message); this.status = status; this.code = code; }
@@ -107,19 +109,23 @@
   }
 
   async function loadOrders(append = false) {
-    if (!state.user || state.ordersLoading) { if (!state.user) renderOrders(); return; }
-    const epoch = state.epoch; state.ordersLoading = true;
+    if (!state.user || (append && state.ordersLoading)) { if (!state.user) renderOrders(); return; }
+    const epoch = state.epoch; const requestId = ++ordersRequest; state.ordersLoading = true;
     $("#refresh-orders").disabled = true; $("#load-more").disabled = true;
     try {
       const page = await api(`/orders${append && state.next ? `?beforeId=${encodeURIComponent(state.next)}` : ""}`);
-      if (epoch !== state.epoch) return;
+      if (epoch !== state.epoch || requestId !== ordersRequest) return;
       state.orders = append ? [...state.orders, ...page.orders] : page.orders;
       state.next = page.nextBeforeId; renderOrders();
     } catch (error) {
-      if (epoch !== state.epoch) return;
+      if (epoch !== state.epoch || requestId !== ordersRequest) return;
       if (!state.orders.length) $("#orders").innerHTML = '<p class="empty">주문 내역을 불러오지 못했어요. 새로고침으로 다시 시도해 주세요.</p>';
       handleError(error);
-    } finally { state.ordersLoading = false; $("#refresh-orders").disabled = false; $("#load-more").disabled = false; }
+    } finally {
+      if (requestId === ordersRequest) {
+        state.ordersLoading = false; $("#refresh-orders").disabled = false; $("#load-more").disabled = false;
+      }
+    }
   }
 
   function route() {
@@ -166,17 +172,17 @@
   }
 
   async function detail(orderId) {
-    const epoch = state.epoch;
+    const epoch = state.epoch; const requestId = ++detailRequest;
     $("#detail-title").textContent = `주문 #${orderId}`; $("#detail-error").textContent = "";
     $("#order-detail").innerHTML = '<p class="history-empty">주문을 불러오고 있어요.</p>';
     if (!$("#detail-dialog").open) $("#detail-dialog").showModal();
     try {
       const [order, payments, refunds] = await Promise.all([api(`/orders/${orderId}`), api(`/orders/${orderId}/payments`), api(`/orders/${orderId}/refunds`)]);
-      if (epoch !== state.epoch || !$("#detail-dialog").open) return;
+      if (epoch !== state.epoch || requestId !== detailRequest || !$("#detail-dialog").open) return;
       const mockPay = state.config.mockPayments && order.status === "CREATED";
       const mockRefund = state.config.mockRefunds && order.status === "PAID";
       $("#order-detail").innerHTML = `<div class="detail-summary">${badge(order)}<time datetime="${escape(order.createdAt)}">${escape(date(order.createdAt))}</time></div>${order.items.map((item) => `<div class="detail-item"><span>${escape(item.productName)}<br>${escape(money(item.unitPrice))} × ${escape(item.quantity)}</span><strong>${escape(money(item.unitPrice * item.quantity))}</strong></div>`).join("")}<div class="total-row"><span>총 주문 금액</span><strong>${escape(money(order.totalAmount))}</strong></div>${order.cancelledAt ? `<p class="field-help">${order.status === "REFUNDED" ? "환불" : "취소"} 완료 · ${escape(date(order.cancelledAt))}</p>` : ""}${history("결제 이력", payments)}${history("환불 이력", refunds)}${mockPay || mockRefund ? '<p class="demo-note">로컬 체험용 모의 결제·환불이에요. 실제 금액은 청구되지 않아요.</p>' : ""}<div class="detail-actions">${order.status === "CREATED" ? `<button class="button small" data-cancel="${orderId}">주문 취소</button>` : ""}${mockPay ? `<button class="button primary small" data-mock="payments" data-id="${orderId}">모의 결제</button>` : ""}${mockRefund ? `<button class="button primary small" data-mock="refunds" data-id="${orderId}">모의 전액 환불</button>` : ""}</div>`;
-    } catch (error) { if (epoch === state.epoch) handleError(error, "#detail-error"); }
+    } catch (error) { if (epoch === state.epoch && requestId === detailRequest) handleError(error, "#detail-error"); }
   }
 
   function confirmAction(message) {
@@ -269,9 +275,10 @@
   window.addEventListener("hashchange", route);
 
   async function init() {
+    const epoch = state.epoch;
     renderOrders(); route();
     await Promise.all([loadProducts(), (async () => { try { state.config = await api("/storefront/config"); } catch { /* Mock actions remain hidden if configuration is unavailable. */ } })(),
-      (async () => { try { state.user = await api("/auth/me"); state.epoch++; renderAccount(); if (location.hash === "#orders") await loadOrders(); } catch (error) { if (error.status !== 401) notify(error.message); } })()]);
+      (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); if (location.hash === "#orders") await loadOrders(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } })()]);
   }
   init();
 })();
