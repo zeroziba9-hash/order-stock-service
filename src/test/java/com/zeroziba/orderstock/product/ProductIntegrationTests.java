@@ -34,6 +34,7 @@ class ProductIntegrationTests {
     @BeforeEach
     void prepareTestDatabase() {
         assertTestDatabase();
+        com.zeroziba.orderstock.TestDatabase.cleanInventory(jdbcTemplate);
         jdbcTemplate.update("DELETE FROM refund_attempts");
         jdbcTemplate.update("DELETE FROM payment_attempts");
         jdbcTemplate.update("DELETE FROM order_requests");
@@ -46,6 +47,7 @@ class ProductIntegrationTests {
     @AfterEach
     void cleanTestDatabase() {
         assertTestDatabase();
+        com.zeroziba.orderstock.TestDatabase.cleanInventory(jdbcTemplate);
         jdbcTemplate.update("DELETE FROM refund_attempts");
         jdbcTemplate.update("DELETE FROM payment_attempts");
         jdbcTemplate.update("DELETE FROM order_requests");

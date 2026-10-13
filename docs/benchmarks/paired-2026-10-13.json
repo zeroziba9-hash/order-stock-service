@@ -1,0 +1,945 @@
+{
+  "format": "order-stock-paired-benchmark-v1",
+  "measuredAtUtc": "2026-10-13T01:07:59.824708+00:00",
+  "method": "closed-loop, successful orders only; warmup/auth/fixture/cancellation/DB inspection excluded; alternating mode order",
+  "limitations": "Local single-client short repeated runs; medians of run p95s are not a pooled p95 or production capacity. Conditional mode retains a locked read for catalog/ledger snapshots.",
+  "commit": "0f212102d15fbae4218336a5affd0cf3393c09be",
+  "workingTreeDirty": false,
+  "python": "3.12.14",
+  "clientPlatform": "Windows",
+  "docker": {
+    "cpus": 16,
+    "memoryBytes": 16532045824
+  },
+  "imageId": "sha256:2c124bcba14326ede671911cd69abea9e568b81f1e65e066c8c84c4d3dfcacfd",
+  "rounds": [
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.557,
+      "requestsPerSecond": 67.47,
+      "p50Ms": 9.46,
+      "p95Ms": 32.07,
+      "p99Ms": 33.69,
+      "maxMs": 34.2,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 1,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.528,
+      "requestsPerSecond": 68.02,
+      "p50Ms": 7.73,
+      "p95Ms": 31.39,
+      "p99Ms": 32.48,
+      "maxMs": 34.65,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 1,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 1.114,
+      "requestsPerSecond": 215.41,
+      "p50Ms": 31.72,
+      "p95Ms": 51.77,
+      "p99Ms": 54.83,
+      "maxMs": 59.03,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 4866,
+        "Innodb_row_lock_waits": 238
+      },
+      "repeat": 1,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 0.453,
+      "requestsPerSecond": 529.82,
+      "p50Ms": 10.92,
+      "p95Ms": 24.47,
+      "p99Ms": 33.28,
+      "maxMs": 35.34,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 14,
+        "Innodb_row_lock_waits": 7
+      },
+      "repeat": 1,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 1.344,
+      "requestsPerSecond": 178.58,
+      "p50Ms": 130.34,
+      "p95Ms": 151.62,
+      "p99Ms": 161.73,
+      "maxMs": 206.39,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 8660,
+        "Innodb_row_lock_waits": 239
+      },
+      "repeat": 1,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 0.597,
+      "requestsPerSecond": 401.72,
+      "p50Ms": 33.76,
+      "p95Ms": 44.89,
+      "p99Ms": 58.66,
+      "maxMs": 61.95,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 586,
+        "Innodb_row_lock_waits": 123
+      },
+      "repeat": 1,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.662,
+      "requestsPerSecond": 65.53,
+      "p50Ms": 9.81,
+      "p95Ms": 32.63,
+      "p99Ms": 34.76,
+      "maxMs": 35.62,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 1,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.979,
+      "requestsPerSecond": 60.32,
+      "p50Ms": 8.75,
+      "p95Ms": 32.3,
+      "p99Ms": 35.04,
+      "maxMs": 43.35,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 1,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 1.161,
+      "requestsPerSecond": 206.76,
+      "p50Ms": 34.3,
+      "p95Ms": 52.33,
+      "p99Ms": 55.61,
+      "maxMs": 59.92,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 5201,
+        "Innodb_row_lock_waits": 236
+      },
+      "repeat": 1,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 0.532,
+      "requestsPerSecond": 451.06,
+      "p50Ms": 11.02,
+      "p95Ms": 26.43,
+      "p99Ms": 37.58,
+      "maxMs": 44.39,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 17,
+        "Innodb_row_lock_waits": 12
+      },
+      "repeat": 1,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 1.404,
+      "requestsPerSecond": 170.9,
+      "p50Ms": 134.47,
+      "p95Ms": 154.06,
+      "p99Ms": 165.19,
+      "maxMs": 167.19,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 9065,
+        "Innodb_row_lock_waits": 239
+      },
+      "repeat": 1,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 0.569,
+      "requestsPerSecond": 421.68,
+      "p50Ms": 32.59,
+      "p95Ms": 51.71,
+      "p99Ms": 61.31,
+      "maxMs": 65.05,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 590,
+        "Innodb_row_lock_waits": 121
+      },
+      "repeat": 1,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 2.97,
+      "requestsPerSecond": 80.81,
+      "p50Ms": 7.16,
+      "p95Ms": 30.75,
+      "p99Ms": 32.29,
+      "maxMs": 32.54,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 2,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.146,
+      "requestsPerSecond": 76.29,
+      "p50Ms": 7.31,
+      "p95Ms": 31.33,
+      "p99Ms": 32.34,
+      "maxMs": 32.69,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 2,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 1.144,
+      "requestsPerSecond": 209.81,
+      "p50Ms": 32.67,
+      "p95Ms": 51.36,
+      "p99Ms": 55.17,
+      "maxMs": 58.56,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 5368,
+        "Innodb_row_lock_waits": 237
+      },
+      "repeat": 2,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 0.473,
+      "requestsPerSecond": 507.44,
+      "p50Ms": 10.14,
+      "p95Ms": 23.78,
+      "p99Ms": 31.86,
+      "maxMs": 38.51,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 2,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 1.351,
+      "requestsPerSecond": 177.71,
+      "p50Ms": 131.8,
+      "p95Ms": 154.52,
+      "p99Ms": 163.49,
+      "maxMs": 165.12,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 8716,
+        "Innodb_row_lock_waits": 239
+      },
+      "repeat": 2,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 0.582,
+      "requestsPerSecond": 412.63,
+      "p50Ms": 33.91,
+      "p95Ms": 50.7,
+      "p99Ms": 59.41,
+      "maxMs": 61.66,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 618,
+        "Innodb_row_lock_waits": 111
+      },
+      "repeat": 2,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.903,
+      "requestsPerSecond": 61.49,
+      "p50Ms": 11.8,
+      "p95Ms": 33.18,
+      "p99Ms": 39.38,
+      "maxMs": 41.18,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 2,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 2.952,
+      "requestsPerSecond": 81.3,
+      "p50Ms": 7.52,
+      "p95Ms": 30.9,
+      "p99Ms": 32.94,
+      "maxMs": 35.41,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 2,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 1.128,
+      "requestsPerSecond": 212.69,
+      "p50Ms": 31.66,
+      "p95Ms": 51.35,
+      "p99Ms": 56.25,
+      "maxMs": 60.4,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 5139,
+        "Innodb_row_lock_waits": 237
+      },
+      "repeat": 2,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 0.455,
+      "requestsPerSecond": 527.47,
+      "p50Ms": 10.18,
+      "p95Ms": 21.08,
+      "p99Ms": 32.48,
+      "maxMs": 33.29,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 19,
+        "Innodb_row_lock_waits": 10
+      },
+      "repeat": 2,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 1.292,
+      "requestsPerSecond": 185.8,
+      "p50Ms": 130.31,
+      "p95Ms": 153.45,
+      "p99Ms": 176.49,
+      "maxMs": 256.98,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 8570,
+        "Innodb_row_lock_waits": 239
+      },
+      "repeat": 2,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 0.581,
+      "requestsPerSecond": 413.41,
+      "p50Ms": 31.86,
+      "p95Ms": 45.81,
+      "p99Ms": 60.11,
+      "maxMs": 61.83,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 531,
+        "Innodb_row_lock_waits": 115
+      },
+      "repeat": 2,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.484,
+      "requestsPerSecond": 68.88,
+      "p50Ms": 7.6,
+      "p95Ms": 31.59,
+      "p99Ms": 32.24,
+      "maxMs": 36.57,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 3,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 2.965,
+      "requestsPerSecond": 80.93,
+      "p50Ms": 6.95,
+      "p95Ms": 31.2,
+      "p99Ms": 32.75,
+      "maxMs": 33.6,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 3,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 1.036,
+      "requestsPerSecond": 231.75,
+      "p50Ms": 28.85,
+      "p95Ms": 48.58,
+      "p99Ms": 53.7,
+      "maxMs": 56.73,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 4584,
+        "Innodb_row_lock_waits": 237
+      },
+      "repeat": 3,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 0.464,
+      "requestsPerSecond": 517.7,
+      "p50Ms": 10.36,
+      "p95Ms": 25.19,
+      "p99Ms": 32.73,
+      "maxMs": 36.93,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 18,
+        "Innodb_row_lock_waits": 8
+      },
+      "repeat": 3,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 1.227,
+      "requestsPerSecond": 195.62,
+      "p50Ms": 124.02,
+      "p95Ms": 142.42,
+      "p99Ms": 150.11,
+      "maxMs": 153.58,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 8223,
+        "Innodb_row_lock_waits": 239
+      },
+      "repeat": 3,
+      "mode": "locking",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 0.557,
+      "requestsPerSecond": 430.68,
+      "p50Ms": 31.24,
+      "p95Ms": 47.5,
+      "p99Ms": 54.65,
+      "maxMs": 64.34,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 546,
+        "Innodb_row_lock_waits": 118
+      },
+      "repeat": 3,
+      "mode": "locking",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.957,
+      "requestsPerSecond": 60.66,
+      "p50Ms": 11.21,
+      "p95Ms": 34.94,
+      "p99Ms": 40.34,
+      "maxMs": 43.77,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 3,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 1,
+      "elapsedSeconds": 3.078,
+      "requestsPerSecond": 77.97,
+      "p50Ms": 7.52,
+      "p95Ms": 31.74,
+      "p99Ms": 33.15,
+      "maxMs": 37.36,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 0,
+        "Innodb_row_lock_waits": 0
+      },
+      "repeat": 3,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 1.144,
+      "requestsPerSecond": 209.8,
+      "p50Ms": 33.58,
+      "p95Ms": 51.29,
+      "p99Ms": 57.01,
+      "maxMs": 65.27,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 5383,
+        "Innodb_row_lock_waits": 239
+      },
+      "repeat": 3,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 8,
+      "elapsedSeconds": 0.465,
+      "requestsPerSecond": 516.2,
+      "p50Ms": 10.93,
+      "p95Ms": 26.23,
+      "p99Ms": 34.08,
+      "maxMs": 35.46,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 35,
+        "Innodb_row_lock_waits": 18
+      },
+      "repeat": 3,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 1.303,
+      "requestsPerSecond": 184.15,
+      "p50Ms": 133.7,
+      "p95Ms": 152.19,
+      "p99Ms": 160.38,
+      "maxMs": 242.95,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 8783,
+        "Innodb_row_lock_waits": 239
+      },
+      "repeat": 3,
+      "mode": "conditional",
+      "workload": "hot",
+      "products": 1,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    },
+    {
+      "requests": 240,
+      "concurrency": 32,
+      "elapsedSeconds": 0.568,
+      "requestsPerSecond": 422.57,
+      "p50Ms": 33.18,
+      "p95Ms": 51.78,
+      "p99Ms": 62.41,
+      "maxMs": 65.94,
+      "statusCounts": {
+        "201": 240
+      },
+      "mysqlRowLockDelta": {
+        "Innodb_row_lock_time": 555,
+        "Innodb_row_lock_waits": 120
+      },
+      "repeat": 3,
+      "mode": "conditional",
+      "workload": "distributed",
+      "products": 8,
+      "warmup": 64,
+      "allInvariantsPassed": true
+    }
+  ],
+  "summaries": [
+    {
+      "mode": "locking",
+      "concurrency": 1,
+      "workload": "hot",
+      "repeats": 3,
+      "medianP95Ms": 32.07,
+      "medianRequestsPerSecond": 67.47
+    },
+    {
+      "mode": "locking",
+      "concurrency": 1,
+      "workload": "distributed",
+      "repeats": 3,
+      "medianP95Ms": 31.2,
+      "medianRequestsPerSecond": 80.93
+    },
+    {
+      "mode": "locking",
+      "concurrency": 8,
+      "workload": "hot",
+      "repeats": 3,
+      "medianP95Ms": 51.35,
+      "medianRequestsPerSecond": 215.41
+    },
+    {
+      "mode": "locking",
+      "concurrency": 8,
+      "workload": "distributed",
+      "repeats": 3,
+      "medianP95Ms": 24.47,
+      "medianRequestsPerSecond": 527.47
+    },
+    {
+      "mode": "locking",
+      "concurrency": 32,
+      "workload": "hot",
+      "repeats": 3,
+      "medianP95Ms": 151.62,
+      "medianRequestsPerSecond": 185.8
+    },
+    {
+      "mode": "locking",
+      "concurrency": 32,
+      "workload": "distributed",
+      "repeats": 3,
+      "medianP95Ms": 45.81,
+      "medianRequestsPerSecond": 413.41
+    },
+    {
+      "mode": "conditional",
+      "concurrency": 1,
+      "workload": "hot",
+      "repeats": 3,
+      "medianP95Ms": 32.63,
+      "medianRequestsPerSecond": 65.53
+    },
+    {
+      "mode": "conditional",
+      "concurrency": 1,
+      "workload": "distributed",
+      "repeats": 3,
+      "medianP95Ms": 31.74,
+      "medianRequestsPerSecond": 76.29
+    },
+    {
+      "mode": "conditional",
+      "concurrency": 8,
+      "workload": "hot",
+      "repeats": 3,
+      "medianP95Ms": 51.36,
+      "medianRequestsPerSecond": 209.8
+    },
+    {
+      "mode": "conditional",
+      "concurrency": 8,
+      "workload": "distributed",
+      "repeats": 3,
+      "medianP95Ms": 26.23,
+      "medianRequestsPerSecond": 507.44
+    },
+    {
+      "mode": "conditional",
+      "concurrency": 32,
+      "workload": "hot",
+      "repeats": 3,
+      "medianP95Ms": 154.06,
+      "medianRequestsPerSecond": 177.71
+    },
+    {
+      "mode": "conditional",
+      "concurrency": 32,
+      "workload": "distributed",
+      "repeats": 3,
+      "medianP95Ms": 51.71,
+      "medianRequestsPerSecond": 421.68
+    }
+  ],
+  "allInvariantsPassed": true,
+  "defaultStrategy": "locking"
+}

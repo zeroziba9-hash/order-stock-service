@@ -69,6 +69,7 @@ class OrderIntegrationTests {
     void cleanTestDatabase() {
         assertThat(jdbcTemplate.queryForObject("SELECT DATABASE()", String.class))
                 .isEqualTo("order_stock_test");
+        com.zeroziba.orderstock.TestDatabase.cleanInventory(jdbcTemplate);
         jdbcTemplate.update("DELETE FROM refund_attempts");
         jdbcTemplate.update("DELETE FROM payment_attempts");
         jdbcTemplate.update("DELETE FROM order_requests");

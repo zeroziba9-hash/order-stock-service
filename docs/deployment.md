@@ -44,8 +44,8 @@ bash ./gradlew --no-daemon test asciidoctor bootJar
 실제 운영 비밀 값이나 `.local/`을 CI에 복사하지 않습니다. 테스트 프로필은 접속 파일 없이도 환경 변수로 실행됩니다.
 각 통합 테스트는 DB 이름을 확인하고 테스트 데이터만 정리합니다.
 
-실패해도 HTML·JUnit XML 보고서를 `test-reports` 아티팩트에 올립니다.
-성공한 경우 실행 JAR를 `order-stock-service`, [생성 API 가이드](api-documentation.md)를 `api-documentation`
+실패해도 HTML·JUnit XML 보고서를 `test-reports-locking`/`test-reports-conditional` 아티팩트에 올립니다.
+성공한 경우 각 차감 방식의 실행 JAR를 `order-stock-service-locking`/`order-stock-service-conditional`, [생성 API 가이드](api-documentation.md)를 `api-documentation-locking`/`api-documentation-conditional`
 아티팩트에 올리며 보관 기간은 7일입니다.
 워크플로는 저장소 읽기 권한만 사용하며 자동 배포는 하지 않습니다.
 외부 액션은 확인된 커밋 SHA로 고정했고, Gradle 배포 ZIP의 SHA-256도 고정했습니다.
@@ -68,7 +68,7 @@ GitHub에 프로젝트를 올린 다음 **Actions → Backend CI**에서 결과�
 JAR에 DB 접속 파일·비밀번호·DB 데이터가 포함되지 않습니다.
 운영 DB는 별도 `order_stock_prod` 스키마와 계정을 준비하고, 현재는 Flyway 마이그레이션에 필요한 DDL 권한도
 해당 스키마에만 부여합니다. 운영 데이터와 테스트 데이터를 같은 DB로 지정하지 마세요.
-마이그레이션 전 백업을 준비하고 적용된 `V1`~`V10` 파일은 변경하지 않습니다.
+마이그레이션 전 백업을 준비하고 적용된 `V1`~`V11` 파일은 변경하지 않습니다.
 V9 배포 후 기존의 오래된 미결제 주문도 자동 만료 대상이 됩니다. [업그레이드 규칙](order-expiration.md)을 확인하세요.
 
 ## Linux 서버 실행 예시

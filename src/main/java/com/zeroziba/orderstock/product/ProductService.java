@@ -15,7 +15,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<ProductResponse> findAll() {
-        return productRepository.findAllByOrderByIdAsc().stream()
+        return productRepository.findAllBySellingTrueOrderByIdAsc().stream()
                 .map(ProductResponse::from)
                 .toList();
     }

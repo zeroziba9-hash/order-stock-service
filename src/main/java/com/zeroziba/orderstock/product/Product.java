@@ -27,6 +27,12 @@ public class Product {
     @Column(nullable = false)
     private int stock;
 
+    @Column(nullable = false)
+    private boolean selling = true;
+
+    @Column(name = "catalog_revision", nullable = false)
+    private long catalogRevision;
+
     protected Product() {
         // JPA가 DB 행을 엔티티로 읽을 때 사용하는 생성자.
     }
@@ -60,6 +66,22 @@ public class Product {
 
     public int getStock() {
         return stock;
+    }
+
+    public boolean isSelling() { return selling; }
+    public long getCatalogRevision() { return catalogRevision; }
+
+    public void editCatalog(String name, long price, boolean selling, long expectedRevision) {
+        if (catalogRevision != expectedRevision) {
+            throw new ApiException(HttpStatus.CONFLICT, "CATALOG_CHANGED", "다른 변경이 반영됐어요. 상품을 다시 불러오세요.");
+        }
+        if (name == null || name.isBlank() || name.strip().length() > 100 || price < 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "상품명과 가격을 확인하세요.");
+        }
+        this.name = name.strip();
+        this.price = price;
+        this.selling = selling;
+        this.catalogRevision = Math.incrementExact(catalogRevision);
     }
 
     public void decreaseStock(int quantity) {

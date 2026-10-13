@@ -40,6 +40,9 @@
 |GET |`/orders/{orderId}/payments`, `/orders/{orderId}/refunds` |필요
 |POST |`/admin/products/{productId}/inventory-adjustments` |ADMIN, CSRF·멱등 키 필수
 |GET |`/admin/inventory-adjustments` |ADMIN
+|GET, POST |`/admin/products` |ADMIN. POST는 CSRF·멱등 키 필수
+|PUT |`/admin/products/{id}` |ADMIN, CSRF·revision 필수
+|GET |`/admin/inventory-movements?productId=1` |ADMIN
 |===
 
 운영 상태 확인 API(`GET /actuator/health`, `/actuator/health/liveness`, `/actuator/health/readiness`)는 배포 문서를 참고하세요.
@@ -115,7 +118,30 @@ operation::inventory-history[snippets='http-request,query-parameters,http-respon
 
 operation::inventory-forbidden[snippets='http-request,http-response,response-fields']
 
+== 관리자 상품과 전체 재고 이력
+
+=== 관리자 상품 등록·수정
+
+신규 상품은 재고 0개입니다. 상품 등록에 관리자별 멱등 키가 필수이며 재응답은 같은 productId를 반환합니다.
+가격은 0~1000000000000원 정수입니다. 수정은 조회한 revision을 보내고, 다른 수정이 먼저 반영되면 `409 CATALOG_CHANGED`입니다.
+수량 변경은 기존 수동 재고 조정 API를 사용합니다. 상품 삭제 API는 없습니다.
+
+operation::catalog-create[snippets='http-request,request-headers,request-fields,http-response,response-fields']
+operation::catalog-list[snippets='http-request,http-response,response-fields']
+operation::catalog-edit[snippets='http-request,path-parameters,request-headers,request-fields,http-response,response-fields']
+
+=== 전체 재고 변동
+
+V11 적용 시 현재 수량을 BASELINE으로 보관합니다. 적용 이전 이력을 소급 복원하지 않습니다.
+이후 주문·취소·환불·자동 만료·수동 조정을 같은 트랜잭션에서 기록하며 중복 상태 전이는 추가 변동을 만들지 않습니다.
+일치 여부는 커서 페이지와 무관한 전체 기록 합계로 계산합니다. DB 직접 변경은 기록되지 않으며 불일치로 감지할 수 있습니다.
+
+operation::ledger-history[snippets='http-request,query-parameters,http-response,response-fields']
+
 == 주문
+
+관리자가 판매 중지한 상품의 새 주문은 `409 PRODUCT_NOT_SELLING`으로 거부합니다.
+이전 주문의 이름·가격은 보존하며 취소·환불·만료에 따른 재고 복구는 계속 허용합니다.
 
 === 멱등 키를 사용한 생성
 

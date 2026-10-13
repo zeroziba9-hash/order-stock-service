@@ -4,6 +4,8 @@ import com.zeroziba.orderstock.common.ApiException;
 import com.zeroziba.orderstock.monitoring.OrderMetrics;
 import com.zeroziba.orderstock.product.Product;
 import com.zeroziba.orderstock.product.ProductRepository;
+import com.zeroziba.orderstock.product.StockAllocator;
+import com.zeroziba.orderstock.inventory.InventoryLedger;
 import java.util.Comparator;
 import java.util.List;
 import java.time.Clock;
@@ -23,14 +25,17 @@ public class OrderService {
     private final Clock clock;
     private final OrderExpirationProperties expiration;
     private final OrderMetrics metrics;
+    private final StockAllocator allocator;
+    private final InventoryLedger ledger;
 
     public OrderService(ProductRepository productRepository, OrderRepository orderRepository,
-            Clock clock, OrderExpirationProperties expiration, OrderMetrics metrics) {
+            Clock clock, OrderExpirationProperties expiration, OrderMetrics metrics, StockAllocator allocator, InventoryLedger ledger) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.clock = clock;
         this.expiration = expiration;
         this.metrics = metrics;
+        this.allocator=allocator; this.ledger=ledger;
     }
 
     @Transactional
@@ -40,20 +45,20 @@ public class OrderService {
                 || request.quantity() == null || request.quantity() < 1) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "상품 ID와 주문 수량은 1 이상이어야 합니다.");
         }
-        Product product = productRepository.findByIdForUpdate(request.productId())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "상품을 찾을 수 없습니다."));
+        var allocation=allocator.allocate(request.productId(),request.quantity());
+        Product product=allocation.product();
         long totalAmount;
         try {
             totalAmount = Math.multiplyExact(product.getPrice(), (long) request.quantity());
         } catch (ArithmeticException exception) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_AMOUNT", "주문 금액이 허용 범위를 초과합니다.");
         }
-        product.decreaseStock(request.quantity());
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         PurchaseOrder order = new PurchaseOrder(userId, product, request.quantity(), totalAmount,
                 now, now.plus(expiration.paymentWindow()));
         // 저장 실패는 RuntimeException으로 전파되어 재고 변경과 주문 전체가 롤백된다.
         orderRepository.saveAndFlush(order);
+        ledger.record(product,allocation.beforeStock(),InventoryLedger.Type.ORDER,order.getId().toString(),userId,"주문 재고 차감");
         metrics.afterCommit(OrderMetrics.Outcome.CREATED);
         return OrderResponse.from(order);
     }
@@ -98,7 +103,9 @@ public class OrderService {
                 .sorted(Comparator.comparing(OrderItem::getProductId)).toList()) {
             Product product = productRepository.findByIdForUpdate(item.getProductId())
                     .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "상품을 찾을 수 없습니다."));
+            int before=product.getStock();
             product.restoreStock(item.getQuantity());
+            ledger.record(product,before,InventoryLedger.Type.CANCEL,order.getId().toString(),userId,"미결제 주문 취소");
         }
         // 취소 상태와 재고 복구를 함께 반영한다. DB 오류는 전체 트랜잭션을 롤백한다.
         orderRepository.flush();

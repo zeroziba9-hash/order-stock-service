@@ -1,0 +1,5 @@
+services:
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: local,benchmark
+      APP_INVENTORY_ALLOCATION: ${BENCHMARK_ALLOCATION:-locking}

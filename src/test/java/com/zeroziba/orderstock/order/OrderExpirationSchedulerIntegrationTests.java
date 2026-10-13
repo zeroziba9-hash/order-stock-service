@@ -28,6 +28,7 @@ class OrderExpirationSchedulerIntegrationTests {
     @AfterEach
     void clean() {
         assertThat(jdbc.queryForObject("SELECT DATABASE()", String.class)).isEqualTo("order_stock_test");
+        com.zeroziba.orderstock.TestDatabase.cleanInventory(jdbc);
         jdbc.update("DELETE FROM refund_attempts");
         jdbc.update("DELETE FROM payment_attempts");
         jdbc.update("DELETE FROM order_requests");
