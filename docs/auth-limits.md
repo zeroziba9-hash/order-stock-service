@@ -74,6 +74,7 @@ docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{"\n"
 | `stockroom_auth_requests_total` | endpoint: login/register, outcome: success/failure/rate_limited/error |
 | `stockroom_auth_rejections_total` | endpoint, reason: request_rate/credential_failures/capacity |
 | `stockroom_auth_limit_entries` | 현재 프로세스의 제한 버킷 수 |
+| `stockroom_auth_limit_capacity` | 설정된 최대 용량. 제한 해제 시 0 |
 
 CSRF를 통과한 인증 HTTP 요청만 집계합니다. `failure`는 로그인 401뿐 아니라 가입 입력 오류·중복 등 4xx도 포함합니다.
 429는 `rate_limited`로 한 번만 세고 사유 카운터에 별도로 기록합니다. 5xx·처리 예외는 `error`입니다.
@@ -81,6 +82,7 @@ IP·이메일·회원 ID·비밀번호는 라벨로 사용하지 않습니다. �
 성공 지표는 HTTP 응답 결과이며 DB 커밋 기반 주문 지표와 의미가 다릅니다. 프로세스 재시작 시 초기화됩니다.
 
 Grafana의 인증 패널 3개는 결과·거절 사유·메모리 버킷을 보여줍니다. 알림 전송은 포함하지 않습니다.
+Prometheus는 반복 429와 설정 용량 대비 사용률도 경고합니다. [경고 기준](alert-runbook.md)을 참고하세요.
 Observability CI는 실제 로그인 실패 5회와 429 1회를 만든 뒤 Prometheus에서 증가량과 Retry-After를 확인합니다.
 단위 테스트는 시간 구간·해제·용량·32개 동시 예약을, HTTP 통합 테스트는 동시 로그인 32개 중 설정된 슬롯 수만 검사를 통과하는지 검증합니다.
 브라우저 CI는 격리된 앱에만 3초 구간을 적용해 데스크톱·모바일에서 대기 표시·수동 복구·가입 제한·이메일 변경 우회를 검증합니다.

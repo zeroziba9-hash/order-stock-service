@@ -111,6 +111,7 @@ def main():
     assert 1 <= int(headers["Retry-After"]) <= 300
     eventually(lambda: sample(failure_query) == failures_before + 5 and sample(limit_query) == limits_before + 1)
     eventually(lambda: sample('stockroom_auth_limit_entries{job="stockroom"}') > 0)
+    assert sample('stockroom_auth_limit_capacity{job="stockroom"}') == 10000
 
     dashboard = json.loads((root / "monitoring/grafana/dashboards/stockroom.json").read_text(encoding="utf-8"))
     for panel in dashboard["panels"]:
