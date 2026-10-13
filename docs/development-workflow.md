@@ -18,6 +18,7 @@
 | `feat/admin-inventory` | 관리자 권한·수동 재고 조정·변경 이력·UI | [PR #8](https://github.com/zeroziba9-hash/order-stock-service/pull/8) |
 | `feat/catalog-ledger-benchmarks` | 상품 등록·수정·판매 중지, 전체 재고 원장, 차감 방식 반복 비교 | [PR #9](https://github.com/zeroziba9-hash/order-stock-service/pull/9) |
 | `feat/auth-request-limits` | 인증 요청 제한·동시 검사 예약·재시도 화면·인증 지표 | [PR #10](https://github.com/zeroziba9-hash/order-stock-service/pull/10) |
+| `feat/catalog-change-history` | 상품 수정 전후·관리자·시각, 트랜잭션·커서·이력 화면 | [PR #11](https://github.com/zeroziba9-hash/order-stock-service/pull/11) |
 
 현재 `feat/catalog-change-history`에서 관리자 상품 수정·변경 이력·조회 화면을 검증합니다.
 
