@@ -1,0 +1,67 @@
+# Local-only overlay: compose.yaml must be the first -f argument.
+services:
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: local,observability
+      APP_ORDERS_EXPIRATION_POLL_INTERVAL: ${MONITORING_EXPIRATION_POLL_INTERVAL:-PT60S}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:9091/actuator/health/readiness]
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 12
+    networks: [default, monitoring]
+
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=24h
+      - --storage.tsdb.retention.size=256MB
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:${PROMETHEUS_PORT:-19090}:9090"]
+    networks: [monitoring]
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  grafana:
+    image: grafana/grafana:13.2.2-ubuntu
+    environment:
+      GF_SECURITY_ADMIN_USER: monitor-admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set a random GRAFANA_ADMIN_PASSWORD in the private env file}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_DEFAULT_THEME: dark
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_PLUGINS_PREINSTALL_AUTO_UPDATE: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["127.0.0.1:${GRAFANA_PORT:-13000}:3000"]
+    networks: [monitoring]
+    depends_on: [prometheus]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+networks:
+  # Dedicated bridge; access from the host is limited to the loopback ports above.
+  monitoring: {}
+
+volumes:
+  prometheus-data:
+  grafana-data:
