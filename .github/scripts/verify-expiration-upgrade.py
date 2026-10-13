@@ -1,4 +1,4 @@
-"""Verify V8 -> V9 with real orders in a disposable loopback Compose project."""
+"""Verify V8 -> current schema, including expiration and legacy USER role backfill."""
 
 import argparse
 from datetime import datetime, timedelta
@@ -72,8 +72,12 @@ def main():
         print("PASS: V8 app created five real orders and preserved private upgrade fixtures")
     else:
         assert sql("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '9' AND success = 1;") == "1"
+        assert sql("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '10' AND success = 1;") == "1"
+        assert sql("SELECT COUNT(*) FROM app_users WHERE user_role <> 'USER';") == "0"
+        assert sql("SELECT COUNT(*) FROM inventory_adjustments;") == "0"
         state = json.loads(args.state_file.read_text(encoding="utf-8"))
         client.login(state["account"])
+        assert client.request("/auth/me")["role"] == "USER"
         deadline = time.monotonic() + 15
         overdue_id = state["orders"]["overdue"]["orderId"]
         while client.request(f"/orders/{overdue_id}")["status"] != "EXPIRED" and time.monotonic() < deadline:
@@ -100,7 +104,7 @@ def main():
         assert datetime.fromisoformat(new["expiresAt"]) - datetime.fromisoformat(new["createdAt"]) == timedelta(minutes=7)
         client.request(f"/orders/{new['orderId']}/cancel", data={})
         assert client.stock(state["product"]["id"]) == state["product"]["stock"] - 2
-        print("PASS: V9 backfill, overdue-only expiration, stock restored once, ownership/history/key preservation, new 7-minute window")
+        print("PASS: V9 expiration and V10 legacy USER backfill, stock restored once, ownership/history/key preservation, new 7-minute window")
 
 
 if __name__ == "__main__":

@@ -73,6 +73,7 @@
       : '<button class="button small" id="login-button">로그인 <span aria-hidden="true">↗</span></button>';
     $("#order-count").hidden = !state.user || !state.orders.length;
     $("#order-count").textContent = state.orders.length + (state.next ? "+" : "");
+    $("#admin-nav").hidden = state.user?.role !== "ADMIN";
   }
 
   function productArt(product) {

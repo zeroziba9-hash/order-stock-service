@@ -72,6 +72,17 @@ public class Product {
         stock -= quantity;
     }
 
+    public void adjustStock(int delta) {
+        long next = (long) stock + delta;
+        if (delta == 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "조정 수량은 0일 수 없습니다.");
+        }
+        if (next < 0 || next > Integer.MAX_VALUE) {
+            throw new ApiException(HttpStatus.CONFLICT, "INVALID_STOCK_ADJUSTMENT", "조정 후 재고는 0~2147483647개여야 합니다.");
+        }
+        stock = (int) next;
+    }
+
     public void restoreStock(int quantity) {
         if (quantity < 1) {
             throw new IllegalArgumentException("복구할 수량은 1 이상이어야 합니다.");

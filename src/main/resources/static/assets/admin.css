@@ -1,0 +1,51 @@
+textarea { font:inherit; color:inherit; resize:vertical; width:100%; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--white) }
+textarea:focus-visible { outline:3px solid #6d8b3a; outline-offset:3px }
+.admin-main { max-width:1440px; margin:auto; padding:52px 48px 64px }
+.admin-intro { display:flex; align-items:center; justify-content:space-between; gap:32px; margin-bottom:36px }
+.admin-intro h1 { font-size:clamp(36px,4vw,58px); letter-spacing:-2px; line-height:1.23; margin:18px 0 }
+.admin-intro-note { padding:24px 32px; border-left:1px solid var(--line); min-width:270px }
+.admin-intro-note span { font-size:10px; letter-spacing:1.2px; color:var(--muted) }
+.admin-intro-note strong { display:block; font-size:24px; line-height:1.5; margin:12px 0 }
+.admin-intro-note p { font-size:12px; line-height:1.8; color:var(--muted) }
+.admin-badge { font-size:11px; letter-spacing:1px; background:var(--green); border-radius:6px; padding:7px 10px }
+.admin-message { padding:16px 20px; background:#e9eee0; border:1px solid #d6dfc8; border-radius:12px; line-height:1.7; margin-bottom:24px; overflow-wrap:anywhere }
+.admin-message.error { background:#fff0e9; border-color:#edcbb8; color:#8a3b24 }
+.admin-grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:24px; align-items:start }
+.admin-panel { padding:28px; border:1px solid var(--line); background:#fbfbf7; border-radius:var(--radius); min-width:0 }
+.admin-panel .section-heading { margin:0 0 14px }
+.admin-panel h2 { font-size:24px; margin:10px 0 16px; letter-spacing:-.7px }
+.admin-panel .field-help { line-height:1.7 }
+.admin-products { display:grid; gap:12px; margin-top:20px }
+button.admin-product { display:flex; align-items:center; justify-content:space-between; text-align:left; gap:20px; padding:22px; border:1px solid var(--line); border-radius:12px; background:white }
+button.admin-product[aria-pressed="true"] { border-color:#78944f; background:#f0f5e5; box-shadow:inset 0 0 0 1px #78944f }
+.admin-product strong { display:block; font-size:16px; margin-bottom:6px }
+.admin-product small { color:var(--muted); font-size:12px }
+.admin-stock { white-space:nowrap; font-size:30px; font-weight:700; letter-spacing:-1px }
+.admin-stock small { margin-left:5px; font-size:12px; font-weight:400 }
+.adjustment-panel label { display:block; font-size:13px; font-weight:700; margin:22px 0 9px }
+.adjustment-panel input { width:100%; padding:14px; border:1px solid var(--line); border-radius:10px; background:white }
+.adjustment-panel .primary { margin-top:24px }
+.pending-help { padding:12px; background:#f6ecd4; border-radius:8px; font-size:13px; line-height:1.7; margin-top:18px }
+.history-panel { margin-top:24px }
+.admin-table-wrap { overflow:auto }
+.admin-table { width:100%; border-collapse:collapse; font-size:13px; text-align:left }
+.admin-table th { color:var(--muted); font-weight:400; font-size:11px; padding:16px 12px; border-bottom:1px solid var(--line); white-space:nowrap }
+.admin-table td { padding:20px 12px; border-bottom:1px solid var(--line); line-height:1.6; vertical-align:top }
+.admin-table td:first-child { white-space:nowrap; color:var(--muted); font-size:12px }
+.admin-table td:nth-child(3) { font-weight:700; white-space:nowrap }
+.admin-table td:nth-child(4) { white-space:nowrap }
+.admin-table td:nth-child(5) { min-width:140px; max-width:280px; overflow-wrap:anywhere; white-space:pre-wrap }
+.admin-table td:last-child { color:var(--muted); white-space:nowrap }
+.stock-positive { color:#476b25 }
+.stock-negative { color:#9a4b32 }
+@media(max-width:800px) {
+  .admin-main { padding:32px 20px }
+  .admin-intro-note { display:none }
+  .admin-grid { grid-template-columns:minmax(0,1fr) }
+  .admin-panel { padding:20px }
+  .admin-intro { margin-bottom:24px }
+  .admin-table { min-width:720px }
+  .admin-main .section-heading { align-items:center; gap:12px }
+  .header .account-email { display:none }
+  .header nav { gap:12px }
+}

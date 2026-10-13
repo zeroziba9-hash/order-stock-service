@@ -6,8 +6,8 @@
 
 ## 검증 범위
 
-데스크톱 1280×900과 모바일 375×812에서 각각 7개, 총 14개 시나리오를 실행합니다.
-이후 테스트 앱만 5초 마감·1초 주기로 재시작하고 [자동 만료](order-expiration.md) 시나리오를 각 1개씩 추가해 CI에서는 총 16개를 검증합니다.
+데스크톱 1280×900과 모바일 375×812에서 각각 일반 7개·관리자 4개, 총 22개 시나리오를 실행합니다.
+이후 테스트 앱만 5초 마감·1초 주기로 재시작하고 [자동 만료](order-expiration.md) 시나리오를 각 1개씩 추가해 총 24개를 검증합니다.
 
 - 공개 상품·재고 조회, 익명 주문의 로그인 안내, 가로 넘침 검사.
 - 실제 회원가입·로그인, 수량별 가격, 취소 확인창의 돌아가기와 취소 후 재고 복구.
@@ -16,6 +16,8 @@
 - 서버에 주문이 실제 커밋된 후 응답만 끊고, 재시도 시 같은 요청 키로 주문 한 건·재고 한 번 차감 확인.
 - 로그아웃으로 세션이 사라진 후 로그인 만료 안내 확인.
 - 상품 API 연결 실패 메시지와 새로고침으로 복구 확인.
+- 일반 회원의 관리자 화면·API 차단, 관리자 확인창 취소·조정·이력·사유 안전 표시.
+- 재고 조정 응답 유실 뒤 새로고침과 같은 키 재확인, 이미 열린 관리자 세션의 권한 회수.
 
 정상 데이터는 API 응답을 꾸미지 않습니다. 통신 실패 시나리오에서만 네트워크를 의도적으로 끊습니다.
 자동 재시도는 0회입니다. 실패한 테스트를 재실행으로 숨기지 않습니다.
@@ -23,11 +25,15 @@
 
 ## 로컬 실행 (PowerShell)
 
-Node.js 22 이상과 Docker Desktop, 기존 `.env`를 준비한 뒤 저장소 루트에서 실행합니다.
+Node.js 22 이상, Python 3, Docker Desktop, 기존 `.env`를 준비한 뒤 저장소 루트에서 실행합니다.
 아래 이름은 **테스트용으로만 사용하는 새 프로젝트**입니다. 기존 앱의 프로젝트·볼륨을 지정하지 마세요.
 
 ```powershell
 $env:APP_PORT = '18083'
+$env:COMPOSE_PROJECT_NAME = 'order-stock-browser-dev'
+$env:E2E_ENV_FILE = (Resolve-Path .env).Path
+# python3로 실행할 수 없다면 실제 Python 실행 파일을 지정합니다.
+$env:E2E_PYTHON = 'python'
 docker compose --project-name order-stock-browser-dev --env-file .env up --build --wait --wait-timeout 240
 Set-Location e2e
 npm ci
@@ -60,12 +66,15 @@ Set-Location ..
 docker compose --project-name order-stock-browser-dev --env-file .env down --volumes --remove-orphans
 Remove-Item Env:APP_PORT
 Remove-Item Env:E2E_DISPOSABLE
+Remove-Item Env:COMPOSE_PROJECT_NAME, Env:E2E_ENV_FILE, Env:E2E_PYTHON
 ```
 
 ## CI와 산출물
 
 [Browser E2E CI](../.github/workflows/browser.yml)는 push·PR마다 잠금 파일로 설치하고 Chromium을 준비한 후
 일회용 무작위 DB 비밀번호·별도 프로젝트로 앱을 빌드합니다. 완료 후 해당 테스트 볼륨을 정리합니다.
+관리자 테스트는 공개 API로 새 회원을 등록하고 일회용 DB에서만 역할 도구를 실행합니다.
+테스트 계정의 수동 조정은 같은 계정의 반대 조정으로 복구하며 이력은 보존합니다.
 HTML 보고서와 실패 화면만 7일 보관합니다. 비밀번호·세션 쿠키·CSRF 토큰이 들어갈 수 있는
 네트워크 trace, 인증 storageState, 동영상은 저장하거나 업로드하지 않습니다.
 이는 Chromium 데스크톱·모바일 크기 검증이며 실제 iOS Safari·Android 기기 검증을 뜻하지 않습니다.

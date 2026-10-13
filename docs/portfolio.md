@@ -20,13 +20,14 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V9"] --> DB
+    Flyway["Flyway V1~V10"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
 같은 출처에서 정적 프론트와 API를 제공해 별도의 프론트 배포나 교차 출처 인증 설정 없이 세션 로그인을 사용합니다.
 핵심 테이블은 `products`, `app_users`, `purchase_orders`, `order_items`, `order_requests`,
-`payment_attempts`, `refund_attempts`입니다. 주문 항목은 당시 상품명·가격을 보관합니다.
+`payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`입니다.
+주문 항목은 당시 상품명·가격을, 수동 조정은 실행자·사유·당시 상품명·변경 전후 수량을 보관합니다.
 
 ## 설계 선택
 
@@ -73,12 +74,19 @@ BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검�
 운영 세션 쿠키는 Secure·HttpOnly·SameSite=Lax입니다. 메모리 세션이므로 앱 재시작 뒤 재로그인이 필요합니다.
 운영 설정은 DB 연결·Flyway 이전에 검사하며 root DB 계정·잘못된 프로필 조합·모의 쓰기 허용을 거부합니다.
 
+### 관리자 조정도 주문과 같은 상품 잠금 사용
+
+관리자 API는 세션 역할과 현재 DB 역할을 확인하고 수동 증감만 허용합니다.
+관리자별 필수 요청 키·재고·이력은 같은 트랜잭션으로 저장해 중복 입고와 기록 없는 변경을 막습니다.
+권한 회수는 이미 열린 세션의 다음 API 요청에도 적용됩니다. 가입으로 권한을 올릴 수 없습니다.
+이 이력은 수동 조정만 포함하며 전체 주문 재고 이동 원장은 아닙니다. [구현·실습·검증](admin-inventory.md)을 참고하세요.
+
 ## 확인한 결과
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 198개 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 16개 | 일반 14 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 218개 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium E2E 24개 | 일반 14 + 관리자 8 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
 | 백업·복원 | 체크섬·빈 별도 DB 복원 후 실제 HTTPS 데이터 비교 | [복구 안내](backup-restore.md) |
