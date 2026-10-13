@@ -7,7 +7,7 @@
 회원가입·상품·주문·모의 결제·모의 환불을 웹 화면에서 직접 체험하고 실제 MySQL 결과로 검증합니다.
 
 구현 범위는 단일 상품 주문·전액 모의 환불·단일 앱 인스턴스입니다.
-실제 PG·배송·장바구니·관리자 상품 편집·분산 세션은 포함하지 않습니다.
+실제 PG·배송·장바구니·분산 세션은 포함하지 않습니다. 관리자 상품 등록·수정·판매 중지와 전체 재고 이동 원장을 제공합니다.
 2026-10-13 기준 공개 서버·도메인은 연결하지 않았으며 공개 배포 완료로 기재하지 않습니다.
 
 ## 아키텍처
@@ -20,13 +20,14 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V10"] --> DB
+    Flyway["Flyway V1~V11"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
 같은 출처에서 정적 프론트와 API를 제공해 별도의 프론트 배포나 교차 출처 인증 설정 없이 세션 로그인을 사용합니다.
 핵심 테이블은 `products`, `app_users`, `purchase_orders`, `order_items`, `order_requests`,
-`payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`입니다.
+`payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`,
+`inventory_movements`, `catalog_creation_requests`입니다.
 주문 항목은 당시 상품명·가격을, 수동 조정은 실행자·사유·당시 상품명·변경 전후 수량을 보관합니다.
 
 ## 설계 선택
@@ -38,7 +39,7 @@ flowchart LR
 DB의 음수 재고·가격 제약도 둡니다. JVM 내부 잠금에 의존하지 않고 DB의 동시 쓰기를 제어합니다.
 
 장점은 상품 단위 정합성 흐름을 명확하게 읽을 수 있다는 점입니다. 같은 상품에 요청이 몰리면 잠금 대기가 생깁니다.
-조건부 UPDATE·낙관적 잠금과의 성능 비교를 완료한 것은 아닙니다.
+조건부 UPDATE와의 비교는 [반복 측정](paired-benchmark.md)에 기록합니다. 실험 방식도 상품 정보·원장 전후 수량을 위한 잠금 조회를 유지하며 기본 방식은 행 잠금입니다. 낙관적 잠금 비교는 포함하지 않습니다.
 
 ### 응답 유실 뒤 재요청을 기존 주문에 연결
 
@@ -79,15 +80,20 @@ BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검�
 관리자 API는 세션 역할과 현재 DB 역할을 확인하고 수동 증감만 허용합니다.
 관리자별 필수 요청 키·재고·이력은 같은 트랜잭션으로 저장해 중복 입고와 기록 없는 변경을 막습니다.
 권한 회수는 이미 열린 세션의 다음 API 요청에도 적용됩니다. 가입으로 권한을 올릴 수 없습니다.
-이 이력은 수동 조정만 포함하며 전체 주문 재고 이동 원장은 아닙니다. [구현·실습·검증](admin-inventory.md)을 참고하세요.
+수동 조정 전용 이력과 별도로 [전체 재고 원장](catalog-and-ledger.md)에 주문·취소·환불·만료·수동 변경을 같은 트랜잭션으로 기록합니다.
+원장 실패 시 상태·재고·기록이 함께 롤백합니다. V11 적용 시점의 기준 재고를 시작점으로 사용하며 과거 이동을 역산하지 않습니다.
+상품별 전체 원장 합계와 현재 재고를 같은 MySQL 스냅샷에서 비교합니다.
+상품 등록은 0개로 시작해 입고를 따로 기록하고, 수정 버전으로 오래된 화면의 덮어쓰기를 차단합니다.
+판매 중지 뒤에도 과거 주문 항목의 이름·가격과 취소·환불·만료 흐름을 보존합니다.
 
 ## 확인한 결과
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 218개 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 24개 | 일반 14 + 관리자 8 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 233개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium E2E 30개 | 일반 14 + 관리자 14 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
+| 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
 | 백업·복원 | 체크섬·빈 별도 DB 복원 후 실제 HTTPS 데이터 비교 | [복구 안내](backup-restore.md) |
 | 배포 후 점검 도구 | 인증서 검증을 유지한 GET 검사 9개, CI의 로컬 HTTPS 대상 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
@@ -129,7 +135,7 @@ Java 17·MySQL 8.4, Docker가 보고한 CPU 16개·메모리 약 15.4 GiB 환경
 ## 남은 작업
 
 실제 서버·도메인에서 공개 HTTPS와 서버 밖 백업을 확인합니다.
-성능 비교는 추가한 서버 계측에 충분한 재고·여러 상품·반복 측정·워밍업을 더한 뒤 진행합니다.
+성능 후속 검증은 독립된 부하 발생기·더 긴 측정·클라이언트 및 서버 계측으로 병목과 변동 원인을 분리합니다.
 공개 환경의 모니터링 인증·알림·장기 저장과 만료 스케줄러 전체 건강 상태 점검은 후속 범위입니다.
 실제 결제 연동은 웹훅·승인 조회·결제사 멱등 보장·실패 보상 설계를 포함한 별도 범위입니다.
 변경은 [기능 브랜치·PR 규칙](development-workflow.md)에 따라 검토합니다.

@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findAllByOrderByIdAsc();
+    List<Product> findAllBySellingTrueOrderByIdAsc();
 
     // 반드시 주문 생성 트랜잭션 안에서 호출한다. 커밋/롤백까지 상품 행을 잠근다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)

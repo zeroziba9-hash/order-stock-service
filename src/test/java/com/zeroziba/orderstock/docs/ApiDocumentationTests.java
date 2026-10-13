@@ -80,6 +80,7 @@ class ApiDocumentationTests {
     @AfterEach
     void clean() {
         assertThat(jdbc.queryForObject("SELECT DATABASE()", String.class)).isEqualTo("order_stock_test");
+        com.zeroziba.orderstock.TestDatabase.cleanInventory(jdbc);
         for (String table : List.of("inventory_adjustment_requests", "inventory_adjustments", "refund_attempts", "payment_attempts", "order_requests", "order_items",
                 "purchase_orders", "products", "app_users")) {
             jdbc.update("DELETE FROM " + table);
@@ -185,6 +186,47 @@ class ApiDocumentationTests {
                         responseFields(orderFields(""))));
         mvc.perform(write("/orders").content(orderBody(1))).andExpect(status().isCreated());
         assertThat(orders.findRecent(userId, null).orders()).hasSize(2);
+    }
+
+    @Test
+    void catalogRegistrationSaleStopAndFullLedger() throws Exception {
+        jdbc.update("UPDATE app_users SET user_role='ADMIN' WHERE id=?",userId);
+        session=login("reader@example.test",TestAccounts.PASSWORD,null); token=csrfToken(session);
+        var created=mvc.perform(write("/admin/products").header("Idempotency-Key","catalog-demo")
+                        .content("{\"name\":\"새 컬렉션\",\"price\":2000}"))
+                .andExpect(status().isCreated()).andDo(document("catalog-create",requestHeaders(headerWithName("X-CSRF-TOKEN").description("현재 CSRF 토큰"),headerWithName("Idempotency-Key").description("관리자별 상품 등록 키, 필수")),
+                        requestFields(fieldWithPath("name").description("1~100자 상품명"),fieldWithPath("price").description("0~1000000000000원 정수")),
+                        responseFields(fieldWithPath("productId").description("재고 0개로 등록한 상품 ID"),fieldWithPath("replayed").description("동일 등록 요청 재응답 여부"))))
+                .andReturn();
+        long productId=id(created,"productId");
+        mvc.perform(put("/admin/products/{id}",productId).session(session).header("X-CSRF-TOKEN",token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"새 컬렉션\",\"price\":3000,\"selling\":false,\"revision\":0}"))
+                .andExpect(status().isOk()).andDo(document("catalog-edit",pathParameters(parameterWithName("id").description("상품 ID")),csrfHeader(),
+                        requestFields(fieldWithPath("name").description("상품명"),fieldWithPath("price").description("0~1000000000000원 정수"),
+                                fieldWithPath("selling").description("false면 신규 주문 차단·공개 목록 제외"),fieldWithPath("revision").description("조회 당시 수정 버전. 불일치하면 409")),
+                        responseFields(catalogFields(""))));
+        mvc.perform(read("/admin/products")).andExpect(status().isOk())
+                .andDo(document("catalog-list",responseFields(catalogFields("[]."))));
+        mvc.perform(read("/admin/inventory-movements").queryParam("productId",Long.toString(productId)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.consistent").value(true))
+                .andDo(document("ledger-history",queryParameters(parameterWithName("productId").description("필수 상품 ID"),
+                        parameterWithName("beforeId").optional().description("이 ID 미만의 이전 변동")),responseFields(
+                        fieldWithPath("movements").type(JsonFieldType.ARRAY).description("최신순 최대 20개 재고 변동"),
+                        fieldWithPath("movements[].movementId").description("변동 ID"),fieldWithPath("movements[].productId").description("상품 ID"),
+                        fieldWithPath("movements[].productName").description("변동 당시 상품명"),fieldWithPath("movements[].type").description("BASELINE/ORDER/CANCEL/REFUND/EXPIRE/MANUAL"),
+                        fieldWithPath("movements[].reference").description("시작점 opening 또는 주문/수동 조정 ID"),
+                        fieldWithPath("movements[].actorId").type(JsonFieldType.NUMBER).optional().description("회원/관리자 ID. 시작점·자동 만료는 null"),
+                        fieldWithPath("movements[].delta").description("수량 증감"),fieldWithPath("movements[].beforeStock").description("변경 전 수량"),
+                        fieldWithPath("movements[].afterStock").description("변경 후 수량"),fieldWithPath("movements[].reason").description("사유"),
+                        fieldWithPath("movements[].createdAt").description("UTC 변경 시각"),fieldWithPath("nextBeforeId").type(JsonFieldType.NUMBER).optional().description("다음 커서. 마지막 null"),
+                        fieldWithPath("currentStock").description("현재 상품 재고"),fieldWithPath("recordedStock").description("전체 이력 수량 합계. 페이지와 무관"),
+                        fieldWithPath("consistent").description("현재 수량과 기록 합계의 일치 여부"))));
+    }
+
+    private static FieldDescriptor[] catalogFields(String prefix) {
+        return new FieldDescriptor[]{fieldWithPath(prefix+"id").description("상품 ID"),fieldWithPath(prefix+"name").description("상품명"),
+                fieldWithPath(prefix+"price").description("가격"),fieldWithPath(prefix+"stock").description("현재 재고"),
+                fieldWithPath(prefix+"selling").description("판매 여부"),fieldWithPath(prefix+"revision").description("상품 정보 수정 버전")};
     }
 
     @Test

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $ = selector => document.querySelector(selector);
-  const state = {user:null, csrf:null, products:[], selected:null, next:null, saving:false, blocked:false, pending:null, historyEpoch:0};
+  const state = {user:null, csrf:null, products:[], selected:null, next:null, saving:false, blocked:false, pending:null, historyEpoch:0, ledgerEpoch:0, ledgerNext:null};
   const number = value => Number(value).toLocaleString('ko-KR');
   const storageKey = () => `stockroom-inventory:${state.user.userId}`;
   function message(text, error=false) { $('#admin-status').textContent=text; $('#admin-status').classList.toggle('error',error); }
@@ -36,11 +36,11 @@
       const button=document.createElement('button'); button.type='button'; button.className='admin-product';
       button.dataset.productId=product.id; button.setAttribute('aria-pressed',String(product.id===state.selected));
       const name=document.createElement('span'); const title=document.createElement('strong'); title.textContent=product.name;
-      const caption=document.createElement('small'); caption.textContent=`PRODUCT #${product.id} · ${number(product.price)}원`;
+      const caption=document.createElement('small'); caption.textContent=`PRODUCT #${product.id} · ${number(product.price)}원${product.selling?'':' · 판매 중지'}`;
       name.append(title,caption);
       const count=document.createElement('span'); count.className='admin-stock'; count.textContent=number(product.stock);
       const unit=document.createElement('small'); unit.textContent='개'; count.append(unit); button.append(name,count);
-      button.addEventListener('click',()=>{ if (state.pending || state.saving) return; state.selected=product.id; renderProducts(); loadHistory().catch(error=>message(error.message,true)); });
+      button.addEventListener('click',()=>{ if (state.pending || state.saving) return; state.selected=product.id; renderProducts(); Promise.all([loadHistory(),loadLedger()]).catch(error=>message(error.message,true)); });
       list.append(button);
     }
     $('#selected-product').textContent=selected()?`${selected().name} · 현재 ${number(selected().stock)}개`:'선택할 상품이 없어요.';
@@ -53,7 +53,7 @@
       : '증가는 양수, 감소는 음수로 입력하세요.';
   }
   async function loadProducts() {
-    state.products=await api('/products');
+    state.products=await api('/admin/products');
     if (!state.selected && state.products.length) state.selected=state.products[0].id;
     renderProducts();
   }
@@ -83,6 +83,27 @@
     $('#inventory-confirm-message').textContent=`${selected().name}의 재고를 ${intent.delta>0?'+':''}${number(intent.delta)}개 조정합니다. 사유: ${intent.reason}`;
     return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='yes'),{once:true}); dialog.returnValue='no'; dialog.showModal();});
   }
+  async function loadLedger(append=false) {
+    if(!state.selected) return;
+    const epoch=++state.ledgerEpoch;
+    $('#ledger-more').disabled=true;
+    try {
+      const data=await api(`/admin/inventory-movements?productId=${state.selected}${append && state.ledgerNext?`&beforeId=${state.ledgerNext}`:''}`);
+      if(epoch!==state.ledgerEpoch) return;
+      const table=$('#ledger-history'); if(!append) table.replaceChildren();
+      const names={BASELINE:'시작 재고',ORDER:'주문',CANCEL:'취소',REFUND:'환불',EXPIRE:'자동 만료',MANUAL:'수동 조정'};
+      for(const entry of data.movements) {
+        const row=document.createElement('tr');
+        for(const text of [new Date(entry.createdAt).toLocaleString('ko-KR'),names[entry.type]||entry.type,`${entry.delta>0?'+':''}${number(entry.delta)}`,
+          `${number(entry.beforeStock)} → ${number(entry.afterStock)}`,entry.reason,`${entry.type==='MANUAL'?'조정':'주문'} #${entry.reference}`]) {
+          const cell=document.createElement('td'); cell.textContent=entry.type==='BASELINE' && text.endsWith('#opening')?'기록 시작':text; row.append(cell);
+        }
+        table.append(row);
+      }
+      state.ledgerNext=data.nextBeforeId; $('#ledger-more').hidden=!state.ledgerNext;
+      $('#ledger-balance').textContent=`현재 ${number(data.currentStock)}개 / 기록 합계 ${number(data.recordedStock)}개 · ${data.consistent?'일치':'불일치 — DB 직접 변경 여부를 확인하세요.'}`;
+    } finally {if(epoch===state.ledgerEpoch) $('#ledger-more').disabled=false;}
+  }
   function savePending(intent) { sessionStorage.setItem(storageKey(),JSON.stringify(intent)); state.pending=intent; }
   function clearPending() { sessionStorage.removeItem(storageKey()); state.pending=null; }
   $('#stock-delta').addEventListener('input',preview);
@@ -105,12 +126,13 @@
       message(state.pending && !state.blocked?'응답을 확인하지 못했어요. 같은 요청으로 결과를 다시 확인하세요.':error.message,true);
     } finally {state.saving=false; syncForm();}
     if(completed) {
-      const refresh=await Promise.allSettled([loadProducts(),loadHistory()]);
+      const refresh=await Promise.allSettled([loadProducts(),loadHistory(),loadLedger()]);
       if(refresh.some(result=>result.status==='rejected')) message('재고 조정은 완료됐어요. 목록을 불러오지 못했으니 새로고침하세요.',true);
     }
   });
-  $('#admin-refresh').addEventListener('click',async()=>{try {await loadProducts(); await loadHistory();} catch(error){message(error.message,true);}});
+  $('#admin-refresh').addEventListener('click',async()=>{try {await loadProducts(); await Promise.all([loadHistory(),loadLedger()]);} catch(error){message(error.message,true);}});
   $('#history-more').addEventListener('click',()=>loadHistory(true).catch(error=>message(error.message,true)));
+  $('#ledger-more').addEventListener('click',()=>loadLedger(true).catch(error=>message(error.message,true)));
   (async()=>{
     try {
       state.user=await api('/auth/me');
@@ -125,7 +147,7 @@
         state.pending=pending; state.selected=pending.productId;
         $('#stock-delta').value=pending.delta; $('#adjustment-reason').value=pending.reason;
       }
-      await loadProducts(); await loadHistory(); $('#admin-workspace').hidden=false;
+      await loadProducts(); await Promise.all([loadHistory(),loadLedger()]); $('#admin-workspace').hidden=false;
       message(state.pending?'이전 조정 요청이 남아 있어요. 같은 요청으로 결과를 확인하세요.':'현재 재고를 확인하고 변경 사유와 함께 조정하세요.'); syncForm();
     } catch(error) {message(error.message,true);}
   })();

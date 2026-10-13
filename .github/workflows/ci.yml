@@ -14,6 +14,10 @@ concurrency:
 
 jobs:
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        allocation: [locking, conditional]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
@@ -32,6 +36,7 @@ jobs:
           --health-timeout=5s
           --health-retries=30
     env:
+      APP_INVENTORY_ALLOCATION: ${{ matrix.allocation }}
       # Disposable CI account, restricted to the test schema. No production secrets are used.
       SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/order_stock_test?serverTimezone=UTC&allowPublicKeyRetrieval=true&sslMode=DISABLED
       SPRING_DATASOURCE_USERNAME: order_test
@@ -54,7 +59,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: test-reports
+          name: test-reports-${{ matrix.allocation }}
           path: |
             build/reports/tests/test/
             build/test-results/test/*.xml
@@ -63,14 +68,14 @@ jobs:
       - name: Upload verified API guide
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: api-documentation
+          name: api-documentation-${{ matrix.allocation }}
           path: build/docs/api/
           if-no-files-found: error
           retention-days: 7
       - name: Upload executable JAR
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: order-stock-service
+          name: order-stock-service-${{ matrix.allocation }}
           path: build/libs/order-stock-service-0.0.1-SNAPSHOT.jar
           if-no-files-found: error
           retention-days: 7

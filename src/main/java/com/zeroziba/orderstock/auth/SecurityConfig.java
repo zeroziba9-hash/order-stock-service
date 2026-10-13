@@ -45,7 +45,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/storefront/config", "/products", "/actuator/health", "/actuator/health/liveness",
                                 "/actuator/health/readiness", "/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
-                        .requestMatchers("/admin/**", "/admin.html").hasRole("ADMIN")
+                        .requestMatchers("/admin/**", "/admin.html", "/catalog.html").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .requestCache(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)

@@ -23,12 +23,14 @@ public class InventoryService {
     private final ProductRepository products;
     private final InventoryRepository inventory;
     private final Clock clock;
+    private final InventoryLedger ledger;
 
-    public InventoryService(UserRepository users, ProductRepository products, InventoryRepository inventory, Clock clock) {
+    public InventoryService(UserRepository users, ProductRepository products, InventoryRepository inventory, Clock clock, InventoryLedger ledger) {
         this.users = users;
         this.products = products;
         this.inventory = inventory;
         this.clock = clock;
+        this.ledger=ledger;
     }
 
     @Transactional
@@ -56,6 +58,7 @@ public class InventoryService {
         products.flush();
         var now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         var adjustment = inventory.insert(adminId, productId, product.getName(), request.delta(), before, product.getStock(), reason, now);
+        ledger.record(product,before,InventoryLedger.Type.MANUAL,Long.toString(adjustment.adjustmentId()),adminId,reason);
         inventory.complete(adminId, key, adjustment.adjustmentId());
         return new Result(adjustment, false);
     }

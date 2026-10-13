@@ -21,12 +21,14 @@
 | 운영·복구 | prod 보호, Caddy HTTPS, 별도 빈 DB 복원 | Compose·TLS·백업 복원 CI |
 | API와 문서 불일치 | 실제 보안 필터·MySQL 테스트에서 REST Docs 생성 | 필드 계약 검증, 토큰 마스킹 검사, HTML 생성 CI |
 | 관리자 수동 재고 변경 | 역할 확인, 상품 잠금, 사유·전후 수량 이력, 필수 요청 키 | 동시 주문·재조정·응답 유실·권한 회수·이력 저장 실패 검증 |
+| 상품 운영·재고 전체 이동 | 등록 멱등 키, 수정 버전, 판매 중지, 주문·복구·수동 조정 원장 | 오래된 수정 차단, 원장 실패 전체 롤백, 전체 잔액 대조 |
+| 차감 방식 성능 비교 | 기본 행 잠금과 실험용 조건부 UPDATE, 워밍업·교대·3회 반복 | 충분한 재고의 성공 주문만 측정, 상품별 원장·취소 복구 확인 |
 | 처리 결과와 실행 상태 관측 | 커밋 후 주문 지표, 내부 관리 포트, Prometheus·Grafana | 롤백·동시 요청·실제 만료와 13개 패널 쿼리 CI |
 
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 218개 통과, 데스크톱·모바일 Chromium E2E 24개 통과(일반 14 + 관리자 8 + 자동 만료 2).
+**확인된 결과:** 백엔드 테스트 233개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 30개 통과(일반 14 + 관리자 14 + 자동 만료 2).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 테스트 조건과 실제 측정값은 [설계·검증 포트폴리오](docs/portfolio.md)에 정리했습니다.
 브라우저·부하·배포 검증의 추가 코드는 각각 [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1),
@@ -51,6 +53,8 @@ docker compose up --build --wait --wait-timeout 240
 - [멱등 요청](docs/idempotency.md) · [모의 결제](docs/payments.md) · [모의 환불](docs/refunds.md)
 - [미결제 주문 자동 만료](docs/order-expiration.md)
 - [관리자 권한·재고 조정·변경 이력](docs/admin-inventory.md)
+- [상품 등록·수정·판매 중지·전체 재고 원장](docs/catalog-and-ledger.md)
+- [워밍업·반복 측정을 포함한 차감 방식 비교](docs/paired-benchmark.md)
 - [주문 지표·Prometheus·Grafana 로컬 대시보드](docs/observability.md)
 - [웹 프론트](docs/frontend.md) · [HTTPS 배포](docs/https-deployment.md) · [백업·복원](docs/backup-restore.md)
 
@@ -63,7 +67,7 @@ Java 17, Spring Boot 4.0.8, MySQL 8.4, Spring Data JPA, Flyway를 사용합니�
 Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
 상품 조회는 공개이며, 주문 생성·조회·취소는 로그인한 회원의 본인 주문만 처리합니다.
 회원가입·로그인·주문까지 실행하는 방법은 [인증 실습](docs/auth.md)을 먼저 참고하세요.
-`GET /products`는 DB에 저장된 상품을 ID 오름차순으로 반환합니다.
+`GET /products`는 판매 중인 상품을 ID 오름차순으로 반환합니다. 판매 중지 상품은 새 주문도 차단하며, 기존 주문 취소·환불·만료는 재고를 복구합니다.
 가격은 원 단위 정수이며, 가격과 재고에는 음수를 금지하는 DB 제약 조건이 있습니다.
 `POST /orders`로 상품 한 종류를 주문하고 `GET /orders/{orderId}`로 주문을 조회합니다.
 주문 저장과 재고 차감은 하나의 트랜잭션으로 처리합니다.

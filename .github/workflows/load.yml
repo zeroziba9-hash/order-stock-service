@@ -13,6 +13,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: order-stock-benchmark-ci
+      BENCHMARK_DISPOSABLE: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Prepare private disposable environment
+        run: |
+          umask 077
+          app_password=$(openssl rand -hex 24)
+          root_password=$(openssl rand -hex 24)
+          echo "::add-mask::$app_password"
+          echo "::add-mask::$root_password"
+          printf 'MYSQL_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\nAPP_PORT=18088\n' "$app_password" "$root_password" > "$RUNNER_TEMP/order-stock-benchmark.env"
+      - name: Start fresh benchmark stack
+        run: docker compose --env-file "$RUNNER_TEMP/order-stock-benchmark.env" -f compose.yaml -f benchmark/compose.benchmark.yaml up --build --wait --wait-timeout 240
+      - name: Verify paired successful-order experiment and ledger balances
+        run: python3 scripts/benchmark-orders.py --project "$COMPOSE_PROJECT_NAME" --env-file "$RUNNER_TEMP/order-stock-benchmark.env" --requests 64 --warmup 32 --repeats 3 --concurrency 4 --products 2 --output build/benchmark-report.json
+      - name: Upload sanitized aggregate report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: paired-order-benchmark
+          path: build/benchmark-report.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove disposable benchmark stack
+        if: always()
+        run: docker compose --env-file "$RUNNER_TEMP/order-stock-benchmark.env" -f compose.yaml -f benchmark/compose.benchmark.yaml down --volumes --remove-orphans
   load:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

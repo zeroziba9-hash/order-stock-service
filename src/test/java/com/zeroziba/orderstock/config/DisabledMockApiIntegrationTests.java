@@ -51,6 +51,7 @@ class DisabledMockApiIntegrationTests {
     @AfterEach
     void clean() {
         assertThat(jdbc.queryForObject("SELECT DATABASE()", String.class)).isEqualTo("order_stock_test");
+        com.zeroziba.orderstock.TestDatabase.cleanInventory(jdbc);
         for (String table : new String[]{"refund_attempts", "payment_attempts", "order_requests", "order_items", "purchase_orders", "products", "app_users"}) {
             jdbc.update("DELETE FROM " + table);
         }

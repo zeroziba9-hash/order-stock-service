@@ -8,6 +8,7 @@ import com.zeroziba.orderstock.payment.PaymentAttempt;
 import com.zeroziba.orderstock.payment.PaymentRepository;
 import com.zeroziba.orderstock.product.Product;
 import com.zeroziba.orderstock.product.ProductRepository;
+import com.zeroziba.orderstock.inventory.InventoryLedger;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -24,14 +25,16 @@ public class RefundService {
     private final ProductRepository products;
     private final RefundRepository refunds;
     private final MockOperationsPolicy policy;
+    private final InventoryLedger ledger;
 
     public RefundService(OrderRepository orders, PaymentRepository payments, ProductRepository products,
-            RefundRepository refunds, MockOperationsPolicy policy) {
+            RefundRepository refunds, MockOperationsPolicy policy, InventoryLedger ledger) {
         this.orders = orders;
         this.payments = payments;
         this.products = products;
         this.refunds = refunds;
         this.policy = policy;
+        this.ledger=ledger;
     }
 
     @Transactional
@@ -68,7 +71,9 @@ public class RefundService {
                     .sorted(Comparator.comparing(OrderItem::getProductId)).toList()) {
                 Product product = products.findByIdForUpdate(item.getProductId())
                         .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "상품을 찾을 수 없습니다."));
+                int before=product.getStock();
                 product.restoreStock(item.getQuantity());
+                ledger.record(product,before,InventoryLedger.Type.REFUND,order.getId().toString(),userId,"전액 환불 재고 복구");
             }
         }
         // 실패 이력도 커밋한다. 저장 오류는 환불 이력·주문 상태·재고 복구 전체를 롤백한다.
