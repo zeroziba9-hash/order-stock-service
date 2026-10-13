@@ -41,6 +41,11 @@ button.admin-product[aria-pressed="true"] { border-color:#78944f; background:#f0
 .admin-table td:last-child { color:var(--muted); white-space:nowrap }
 .stock-positive { color:#476b25 }
 .stock-negative { color:#9a4b32 }
+.catalog-change { padding:20px 0; border-bottom:1px solid var(--line); overflow-wrap:anywhere }
+.catalog-change h3 { font-size:14px; margin:0 0 8px }
+.catalog-change time { color:var(--muted); font-size:12px }
+.catalog-change p { font-size:14px; line-height:1.7; white-space:pre-wrap; margin:10px 0 }
+#catalog-history-more { margin-top:20px }
 @media(max-width:800px) {
   .admin-main { padding:32px 20px }
   .admin-intro-note { display:none }

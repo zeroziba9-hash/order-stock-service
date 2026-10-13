@@ -43,6 +43,7 @@
 |GET, POST |`/admin/products` |ADMIN. POST는 CSRF·멱등 키 필수
 |PUT |`/admin/products/{id}` |ADMIN, CSRF·revision 필수
 |GET |`/admin/inventory-movements?productId=1` |ADMIN
+|GET |`/admin/products/{id}/changes?beforeId=100` |ADMIN
 |===
 
 운영 상태 확인 API(`GET /actuator/health`, `/actuator/health/liveness`, `/actuator/health/readiness`)는 배포 문서를 참고하세요.
@@ -138,6 +139,15 @@ operation::inventory-forbidden[snippets='http-request,http-response,response-fie
 operation::catalog-create[snippets='http-request,request-headers,request-fields,http-response,response-fields']
 operation::catalog-list[snippets='http-request,http-response,response-fields']
 operation::catalog-edit[snippets='http-request,path-parameters,request-headers,request-fields,http-response,response-fields']
+
+=== 상품 정보 변경 이력
+
+V12 이후 실제 이름·가격·판매 상태 변경만 저장합니다. 상품 수정과 이력은 같은 트랜잭션입니다.
+관리자 ID·UTC 시각·변경 전후 값을 보관하며 이메일은 반환하지 않습니다. 웹에서 수정·삭제할 수 없습니다.
+양끝 공백 제거 후 같은 내용이면 revision과 이력을 유지합니다. 이 경우에도 오래된 revision은 409입니다.
+최신순 20건과 다음 커서를 반환합니다. 상품 등록·재고 증감과 V12 이전 수정은 이 목록에 포함하지 않습니다.
+
+operation::catalog-changes[snippets='http-request,path-parameters,query-parameters,http-response,response-fields']
 
 === 전체 재고 변동
 

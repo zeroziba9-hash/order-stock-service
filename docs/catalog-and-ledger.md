@@ -16,6 +16,7 @@
 | `GET /admin/products` | 판매 중지 상품을 포함한 목록. 현재 규모에서는 전체 목록 |
 | `POST /admin/products` | `{name, price}`와 필수 `Idempotency-Key`. 새 상품은 재고 0·판매 중·revision 0 |
 | `PUT /admin/products/{id}` | `{name, price, selling, revision}`. 조회 당시 수정 버전 필요 |
+| `GET /admin/products/{id}/changes` | 상품 변경 전후·관리자 ID·UTC 시각, 최신 20건과 커서 |
 | `GET /products` | 판매 중인 상품만 공개. 재고 0인 품절 상품은 표시 |
 
 상품명은 양끝 공백 제거 후 1~100자, 등록·수정 가격은 0~1000000000000원 정수입니다.
@@ -31,7 +32,9 @@
 `selling=false`는 공개 목록과 **새 주문**을 차단합니다(`409 PRODUCT_NOT_SELLING`).
 이미 생성한 주문의 상품명·가격은 보존하며 결제·취소·환불·자동 만료 정책은 계속 적용합니다.
 중지와 새 주문은 같은 상품 잠금으로 순서가 결정됩니다. 중지 커밋 이전에 승인된 주문을 소급 취소하지 않습니다.
-재판매는 같은 상품의 `selling=true` 수정입니다. 상품 삭제·이미지 업로드·검색·카테고리·상품 수정 감사 이력은 별도 범위입니다.
+재판매는 같은 상품의 `selling=true` 수정입니다. 상품 삭제·이미지 업로드·검색·카테고리는 별도 범위입니다.
+상품 수정은 V12 이후 [변경 이력](catalog-change-history.md)에 같은 트랜잭션으로 남깁니다.
+정규화 후 같은 내용이면 revision과 이력을 늘리지 않으며, 오래된 revision은 계속 409입니다.
 
 ## 원장 시작점과 이동 종류
 

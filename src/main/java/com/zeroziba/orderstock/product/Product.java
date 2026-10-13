@@ -78,6 +78,7 @@ public class Product {
         if (name == null || name.isBlank() || name.strip().length() > 100 || price < 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "상품명과 가격을 확인하세요.");
         }
+        if (this.name.equals(name.strip()) && this.price == price && this.selling == selling) return;
         this.name = name.strip();
         this.price = price;
         this.selling = selling;

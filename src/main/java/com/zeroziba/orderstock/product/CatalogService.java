@@ -23,8 +23,10 @@ public class CatalogService {
     private final AdminAccess admins;
     private final InventoryLedger ledger;
     private final JdbcTemplate jdbc;
-    public CatalogService(ProductRepository products,AdminAccess admins,InventoryLedger ledger,JdbcTemplate jdbc) {
-        this.products=products; this.admins=admins; this.ledger=ledger; this.jdbc=jdbc;
+    private final CatalogChangeHistory changes;
+    public CatalogService(ProductRepository products,AdminAccess admins,InventoryLedger ledger,JdbcTemplate jdbc,
+            CatalogChangeHistory changes) {
+        this.products=products; this.admins=admins; this.ledger=ledger; this.jdbc=jdbc; this.changes=changes;
     }
     @Transactional(readOnly=true)
     public List<Item> list(long admin) { admins.require(admin); return products.findAllByOrderByIdAsc().stream().map(Item::from).toList(); }
@@ -55,7 +57,9 @@ public class CatalogService {
             throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_REQUEST","판매 상태와 수정 버전을 확인하세요.");
         var product=products.findByIdForUpdate(id).orElseThrow(() ->
                 new ApiException(HttpStatus.NOT_FOUND,"PRODUCT_NOT_FOUND","상품을 찾을 수 없습니다."));
+        var before = CatalogChangeHistory.Snapshot.from(product);
         product.editCatalog(body.name(),body.price(),body.selling(),body.revision()); products.flush();
+        if (product.getCatalogRevision() != before.revision()) changes.record(admin, product, before);
         return Item.from(product);
     }
     private void validate(String name,Long price) {

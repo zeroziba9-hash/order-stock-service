@@ -2,6 +2,7 @@
   'use strict';
   const $=s=>document.querySelector(s);
   const state={user:null,products:[],selected:null,revision:null,busy:false,blocked:false,pending:null};
+  let historyRequest=0, historyLoading=false, historyNext=null;
   const scope=()=>`stockroom-catalog-create:${state.user.userId}`;
   const status=text=>{$('#catalog-status').textContent=text;};
   async function api(path,method='GET',body,key) {
@@ -25,6 +26,8 @@
     $('#catalog-refresh').disabled=state.busy;
     for(const id of ['edit-name','edit-price','edit-selling']) $('#'+id).disabled=state.busy||state.blocked||!state.selected;
     document.querySelectorAll('#catalog-products button').forEach(button=>button.disabled=state.busy);
+    $('#catalog-history-refresh').disabled=state.busy||state.blocked||!state.selected;
+    $('#catalog-history-more').disabled=historyLoading||state.busy||state.blocked;
   }
   function select(item) {
     state.selected=item.id; state.revision=item.revision;
@@ -32,6 +35,39 @@
     $('#edit-caption').textContent=`상품 #${item.id} · 재고 ${item.stock}개 · 수정 버전 ${item.revision}`;
     document.querySelectorAll('#catalog-products button').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.id)===item.id)));
     sync();
+    loadHistory();
+  }
+  async function loadHistory(append=false) {
+    if(!state.selected||state.blocked||(append&&(historyLoading||!historyNext))) return;
+    const product=state.selected, request=++historyRequest, cursor=append?historyNext:null;
+    historyLoading=true;
+    if(!append) {historyNext=null; $('#catalog-history').replaceChildren();}
+    $('#catalog-history-more').hidden=true;
+    $('#catalog-history-status').textContent='변경 이력을 불러오고 있어요.'; sync();
+    try {
+      const result=await api(`/admin/products/${product}/changes${cursor?`?beforeId=${cursor}`:''}`);
+      if(request!==historyRequest||product!==state.selected) return;
+      for(const change of result.changes) {
+        const card=document.createElement('article'); card.className='catalog-change'; card.dataset.changeId=change.changeId;
+        const heading=document.createElement('h3'); heading.textContent=`수정 ${change.before.revision} → ${change.after.revision} · 관리자 #${change.actorId}`;
+        const time=document.createElement('time'); time.dateTime=change.createdAt;
+        time.textContent=new Intl.DateTimeFormat('ko-KR',{dateStyle:'medium',timeStyle:'medium'}).format(new Date(change.createdAt));
+        card.append(heading,time);
+        for(const [field,label,format] of [['name','상품명',String],['price','가격',v=>`${v.toLocaleString('ko-KR')}원`],['selling','판매 상태',v=>v?'판매 중':'판매 중지']]) {
+          if(change.before[field]===change.after[field]) continue;
+          const line=document.createElement('p'); line.textContent=`${label}: ${format(change.before[field])} → ${format(change.after[field])}`;
+          card.append(line);
+        }
+        $('#catalog-history').append(card);
+      }
+      historyNext=result.nextBeforeId;
+      $('#catalog-history-status').textContent=$('#catalog-history').children.length?'최근 변경부터 표시해요.':'기록된 변경이 없어요. 이력 기능 적용 이후의 수정부터 남아요.';
+      $('#catalog-history-more').hidden=!historyNext;
+    } catch(error) {
+      if(request!==historyRequest||product!==state.selected) return;
+      $('#catalog-history-status').textContent=`변경 이력을 불러오지 못했어요. ${error.message} 이력 새로고침으로 다시 확인하세요.`;
+      $('#catalog-history-more').hidden=!historyNext;
+    } finally {if(request===historyRequest) {historyLoading=false; sync();}}
   }
   async function load() {
     state.products=await api('/admin/products'); const list=$('#catalog-products'); list.replaceChildren();
@@ -76,6 +112,8 @@
     finally {state.busy=false; sync();}
   });
   $('#catalog-refresh').addEventListener('click',()=>load().catch(error=>status(error.message)));
+  $('#catalog-history-refresh').addEventListener('click',()=>loadHistory());
+  $('#catalog-history-more').addEventListener('click',()=>loadHistory(true));
   (async()=>{try {
     state.user=await api('/auth/me'); if(state.user.role!=='ADMIN') throw new Error('관리자 계정으로 로그인하세요.');
     const stored=sessionStorage.getItem(scope()); if(stored) {
