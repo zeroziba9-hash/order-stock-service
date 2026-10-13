@@ -1,14 +1,14 @@
 {
   "uid": "stockroom",
   "title": "STOCKROOM · Orders & Runtime",
-  "description": "Local observability demo. Events are counted after transaction commit; counters reset when the application restarts. No personal identifiers are metric labels.",
+  "description": "Local orders, authentication and runtime observability. Order events follow commit; auth results follow CSRF-valid HTTP outcomes. Counters reset on restart. No personal identifiers are metric labels.",
   "tags": [
     "stockroom",
     "local",
     "portfolio"
   ],
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "editable": false,
   "timezone": "browser",
   "refresh": "5s",
@@ -738,6 +738,174 @@
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "AUTH · results / second",
+      "type": "timeseries",
+      "description": "CSRF-valid auth HTTP outcomes; failures include validation/duplicate registration, not only bad passwords.",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stockroom-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (endpoint,outcome) (rate(stockroom_auth_requests_total{job=\"stockroom\"}[1m]))",
+          "legendFormat": "{{endpoint}} · {{outcome}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stockroom-prometheus"
+          },
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "AUTH · rejections / second",
+      "type": "timeseries",
+      "description": "Rejected before password hashing or registration. Retry-After is returned; counters reset on restart.",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stockroom-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (endpoint,reason) (rate(stockroom_auth_rejections_total{job=\"stockroom\"}[1m]))",
+          "legendFormat": "{{endpoint}} · {{reason}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stockroom-prometheus"
+          },
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "AUTH · limiter entries",
+      "type": "timeseries",
+      "description": "Current process-local entries, maximum 10000 by default. Idle entries are pruned when auth traffic resumes.",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "stockroom-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "stockroom_auth_limit_entries{job=\"stockroom\"}",
+          "legendFormat": "Entries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "stockroom-prometheus"
+          },
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
           "color": {
             "mode": "palette-classic"
           },

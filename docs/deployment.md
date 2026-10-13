@@ -25,6 +25,7 @@ Docker로 운영 배포할 때는 별도의 [운영 Compose·Caddy HTTPS 안내]
 - MySQL 전용 계정을 사용해야 합니다. `root`는 거부합니다.
 - 모의 쓰기 허용 또는 Secure 쿠키 해제 설정을 거부합니다.
 - `prod`와 `local`·`test`의 동시 활성화를 거부합니다.
+- 인증 요청 제한 해제와 원격 IP를 바꾸는 자동 forwarded-header 처리를 거부합니다.
 
 환경 변수 이름은 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`입니다.
 프로필을 생략하면 로컬 실습용으로 시작하므로 실제 서버에는 반드시 `prod`를 지정하세요.

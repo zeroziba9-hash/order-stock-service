@@ -1,0 +1,10 @@
+# Short limits only for the disposable browser test stack.
+services:
+  app:
+    environment:
+      APP_AUTH_LIMITS_LOGIN_ATTEMPTS: "6"
+      APP_AUTH_LIMITS_REGISTRATION_ATTEMPTS: "2"
+      APP_AUTH_LIMITS_FAILED_LOGINS: "2"
+      APP_AUTH_LIMITS_LOGIN_WINDOW: PT3S
+      APP_AUTH_LIMITS_REGISTRATION_WINDOW: PT3S
+      APP_AUTH_LIMITS_FAILURE_WINDOW: PT3S

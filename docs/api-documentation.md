@@ -37,6 +37,7 @@ GitHub에서는 해당 커밋의 [Backend CI](https://github.com/zeroziba9-hash/
 
 - 실제 MySQL·서비스·보안 필터를 사용하는 `ApiDocumentationTests` 11개에서 대표 요청을 실행합니다.
 - 실제 CSRF 발급·회원가입·폼 로그인·토큰 재발급·로그아웃을 거칩니다. 인증을 가짜 principal로 대체하지 않습니다.
+- 전용 인증 제한 통합 테스트는 실제 연속 실패 후 `429 AUTH_RATE_LIMITED`와 `Retry-After`를 문서로 생성합니다.
 - 주문 키 사용/생략, `201` 신규 / `200` 재요청, 커서 20건·다음 페이지·빈 페이지를 기록합니다.
 - 결제·환불 성공/실패와 각각의 재요청, 이력, `PAID`·`CANCELLED`·`REFUNDED`·`EXPIRED` 상태를 기록합니다.
 - 관리자 수동 조정 신규·재응답·상품별 이력·일반 회원 차단과 인증 응답의 역할 필드를 기록합니다.

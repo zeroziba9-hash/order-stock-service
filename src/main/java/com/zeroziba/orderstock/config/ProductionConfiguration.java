@@ -26,6 +26,12 @@ public class ProductionConfiguration {
             if (!environment.getProperty("server.servlet.session.cookie.secure", Boolean.class, false)) {
                 throw new IllegalStateException("Secure session cookies are required in prod.");
             }
+            if (!environment.getProperty("app.auth.limits.enabled", Boolean.class, true)) {
+                throw new IllegalStateException("Authentication request limits must be enabled in prod.");
+            }
+            if (!environment.getProperty("server.forward-headers-strategy", "none").equalsIgnoreCase("none")) {
+                throw new IllegalStateException("Auth limits require the original peer address.");
+            }
             for (String key : new String[]{"spring.datasource.url", "spring.datasource.username", "spring.datasource.password"}) {
                 String value = environment.getProperty(key);
                 if (value == null || value.isBlank()) {

@@ -2,6 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:18083';
 const target = new URL(baseURL);
+const phase = process.env.E2E_AUTH_LIMITS === 'true' ? 'auth' : process.env.E2E_EXPIRATION === 'true' ? 'expiration' : 'normal';
 if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
     || !['127.0.0.1', 'localhost'].includes(target.hostname) || target.port !== '18083'
     || target.username || target.password || target.pathname !== '/' || target.search || target.hash) {
@@ -10,15 +11,15 @@ if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: process.env.E2E_EXPIRATION === 'true' ? '**/expiration.spec.cjs' : ['**/storefront.spec.cjs','**/admin.spec.cjs'],
-  outputDir: process.env.E2E_EXPIRATION === 'true' ? 'expiration-results' : 'test-results',
+  testMatch: phase === 'auth' ? '**/auth-limits.spec.cjs' : phase === 'expiration' ? '**/expiration.spec.cjs' : ['**/storefront.spec.cjs','**/admin.spec.cjs'],
+  outputDir: phase === 'normal' ? 'test-results' : `${phase}-results`,
   fullyParallel: false,
   workers: 1,
   retries: 0,
   timeout: 30000,
   expect: { timeout: 10000 },
   forbidOnly: Boolean(process.env.CI),
-  reporter: [['list'], ['html', { open: 'never', outputFolder: process.env.E2E_EXPIRATION === 'true' ? 'playwright-expiration-report' : 'playwright-report' }]],
+  reporter: [['list'], ['html', { open: 'never', outputFolder: phase === 'normal' ? 'playwright-report' : `playwright-${phase}-report` }]],
   use: {
     baseURL,
     browserName: 'chromium',

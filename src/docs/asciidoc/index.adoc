@@ -77,6 +77,15 @@ JSON이 아니라 `application/x-www-form-urlencoded` 본문을 사용합니다.
 
 operation::login[snippets='http-request,request-headers,form-parameters,http-response,response-fields']
 
+=== 인증 요청 제한
+
+CSRF 검증을 통과한 POST 인증 요청에 적용합니다. IP별 로그인 120회/분, 회원가입 60회/10분,
+IP+정규화 이메일별 로그인 실패 5회/5분입니다. 진행 중 로그인도 실패 제한의 슬롯을 예약합니다.
+제한 시 계정 존재 여부와 무관하게 아래 공통 응답을 반환합니다. `Retry-After`의 정수 초만큼 기다린 뒤 수동 재시도하세요.
+단일 프로세스 메모리이므로 재시작 시 초기화됩니다. 여러 인스턴스의 공통 제한은 지원하지 않습니다.
+
+operation::auth-rate-limited[snippets='http-request,http-response,response-headers,response-fields']
+
 === 현재 회원
 
 operation::me[snippets='http-request,http-response,response-fields']

@@ -15,6 +15,8 @@
 - 외부 공개 포트는 Caddy의 80·443 TCP뿐입니다. 앱 8080·MySQL 3306·Caddy 관리 2019는 공개하지 않습니다.
 - DB는 `internal`인 backend 네트워크에 있으며 앱만 같은 네트워크에 연결합니다.
 - Caddy와 앱은 별도 frontend 네트워크로 연결합니다.
+- Caddy는 인증 IP 헤더를 덮어씁니다. 개별 고객 IP로 제한하려면 실제 프록시 주소를 `AUTH_TRUSTED_PROXIES`에 등록하세요.
+  비어 있으면 고객들이 프록시 IP의 한도를 공유합니다. [신뢰 주소 설정](auth-limits.md#프록시와-ip-신뢰)을 참고하세요.
 - DB는 `order_stock_prod` 스키마와 전용 `order_prod` 계정을 사용합니다.
 - 브라우저와 프록시 사이에는 HTTPS를 사용합니다. 프록시→앱 HTTP 및 앱→DB 연결은 같은 호스트의
   Docker 네트워크 안에서만 전달합니다. 다른 호스트나 외부 DB로 변경하면 해당 구간의 TLS도 별도로 구성해야 합니다.

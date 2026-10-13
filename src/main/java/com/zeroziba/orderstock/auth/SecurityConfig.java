@@ -14,6 +14,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfFilter;
+import com.zeroziba.orderstock.monitoring.AuthMetrics;
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
@@ -36,10 +38,13 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AppUserDetailsService userDetailsService,
-                                                   PasswordEncoder passwordEncoder, ObjectMapper mapper) throws Exception {
+                                                   PasswordEncoder passwordEncoder, ObjectMapper mapper,
+                                                   AuthRequestLimiter limiter, AuthClientAddress clients, AuthMetrics authMetrics) throws Exception {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         http.authenticationProvider(provider)
+                // Construct inside this chain to avoid a second servlet-container registration.
+                .addFilterAfter(new AuthRequestLimitFilter(limiter,clients,authMetrics,mapper),CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/storefront/config", "/products", "/actuator/health", "/actuator/health/liveness",

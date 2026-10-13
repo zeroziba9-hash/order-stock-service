@@ -43,6 +43,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${PROD_MYSQL_PASSWORD:?Set PROD_MYSQL_PASSWORD in the production env file}
       SERVER_ADDRESS: 0.0.0.0
       PORT: "8080"
+      APP_AUTH_LIMITS_TRUSTED_PROXIES: ${AUTH_TRUSTED_PROXIES:-}
     networks: [frontend, backend]
     depends_on:
       db:
