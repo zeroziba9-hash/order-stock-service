@@ -19,6 +19,7 @@
 | `feat/catalog-ledger-benchmarks` | 상품 등록·수정·판매 중지, 전체 재고 원장, 차감 방식 반복 비교 | [PR #9](https://github.com/zeroziba9-hash/order-stock-service/pull/9) |
 | `feat/auth-request-limits` | 인증 요청 제한·동시 검사 예약·재시도 화면·인증 지표 | [PR #10](https://github.com/zeroziba9-hash/order-stock-service/pull/10) |
 | `feat/catalog-change-history` | 상품 수정 전후·관리자·시각, 트랜잭션·커서·이력 화면 | [PR #11](https://github.com/zeroziba9-hash/order-stock-service/pull/11) |
+| `feat/monitoring-alert-rules` | 경고 5개·상태 패널·대응 문서·실제 앱 중단/복구·인증 폭주 검증 | [PR #12](https://github.com/zeroziba9-hash/order-stock-service/pull/12) |
 
 현재 `feat/monitoring-alert-rules`에서 경고 규칙·상태 전이·실제 장애 복구를 검증합니다.
 
