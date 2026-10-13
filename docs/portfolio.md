@@ -88,14 +88,18 @@ BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검�
 
 ## 확인한 결과
 
+상품 수정은 [변경 이력](catalog-change-history.md)에 이름·가격·판매 상태 전후 값과 관리자·시각을 저장합니다.
+이력 SQL 이후 오류에서도 상품 수정과 함께 롤백하며, 오래된 수정·동시 수정·변경 없는 저장의 기록 정책을 검증합니다.
+V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권한으로만 조회합니다.
+
 인증은 [요청 제한](auth-limits.md)을 적용합니다. IP별 전체 한도와 IP+계정 실패 한도를 구분하고
 동시 비밀번호 검사도 슬롯에 포함합니다. 계정 전역 잠금에 따른 타인의 로그인 방해를 피하면서 이메일 변경 우회를 제한합니다.
 고정 라벨 지표와 실제 429 이후 브라우저 복구까지 검증하며, 단일 프로세스·재시작 초기화·프록시 신뢰 범위를 명시합니다.
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 265개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 36개 | 일반 14 + 관리자 14 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 273개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium E2E 40개 | 일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |

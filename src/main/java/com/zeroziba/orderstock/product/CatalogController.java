@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/admin/products")
 public class CatalogController {
     private final CatalogService catalog;
-    public CatalogController(CatalogService catalog) { this.catalog=catalog; }
+    private final CatalogChangeHistory changes;
+    public CatalogController(CatalogService catalog, CatalogChangeHistory changes) { this.catalog=catalog; this.changes=changes; }
     @GetMapping public List<CatalogService.Item> list(@AuthenticationPrincipal AuthenticatedUser admin) { return catalog.list(admin.getId()); }
     @PostMapping public ResponseEntity<CatalogService.Created> create(@AuthenticationPrincipal AuthenticatedUser admin,
             @RequestHeader(name="Idempotency-Key",required=false) String key,@Valid @RequestBody CatalogService.Create body) {
@@ -21,4 +22,8 @@ public class CatalogController {
     }
     @PutMapping("/{id}") public CatalogService.Item edit(@AuthenticationPrincipal AuthenticatedUser admin,
             @PathVariable long id,@Valid @RequestBody CatalogService.Edit body) { return catalog.edit(admin.getId(),id,body); }
+    @GetMapping("/{id}/changes") public CatalogChangeHistory.Page changes(@AuthenticationPrincipal AuthenticatedUser admin,
+            @PathVariable long id,@RequestParam(required=false) Long beforeId) {
+        return changes.list(admin.getId(),id,beforeId);
+    }
 }

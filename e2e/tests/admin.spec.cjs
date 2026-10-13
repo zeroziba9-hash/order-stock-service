@@ -158,4 +158,66 @@ test('stale catalog editor reports conflict and preserves newer values',async({p
   await expect(page.locator('#catalog-status')).toContainText('다른 변경이 반영');
   await page.getByRole('button',{name:'↻ 새로고침',exact:true}).click();
   await expect(page.getByLabel('수정 상품명',{exact:true})).toHaveValue('먼저 저장한 이름');
+  await expect(page.locator('#catalog-history .catalog-change')).toHaveCount(1);
+  await expect(page.locator('#catalog-history')).not.toContainText('오래된 화면 변경');
+});
+
+test('catalog change snapshots, no-op save, safe text and cursor pagination',async({page})=>{
+  await account(page,true); await page.goto('/catalog.html');
+  await expect(page.locator('#catalog-workspace')).toBeVisible();
+  const id=await catalogCreate(page,`이력 상품 ${randomUUID()}`);
+  const name='<img src=x onerror=alert(1)> 변경 상품';
+  await page.locator('#edit-name').fill(name); await page.locator('#edit-price').fill('3500');
+  await page.locator('#edit-selling').selectOption('false');
+  await page.locator('#edit-submit').click(); await page.getByRole('button',{name:'확인하고 저장',exact:true}).click();
+  await expect(page.locator('#catalog-history .catalog-change')).toHaveCount(1);
+  await expect(page.locator('#catalog-history')).toContainText('2,500원 → 3,500원');
+  await expect(page.locator('#catalog-history')).toContainText('판매 중 → 판매 중지');
+  await expect(page.locator('#catalog-history')).toContainText(name);
+  await expect(page.locator('#catalog-history img')).toHaveCount(0);
+  const saved=page.waitForResponse(r=>r.request().method()==='PUT'&&new URL(r.url()).pathname===`/admin/products/${id}`);
+  await page.locator('#edit-submit').click(); await page.getByRole('button',{name:'확인하고 저장',exact:true}).click();
+  expect((await(await saved).json()).revision).toBe(1);
+  await expect(page.locator('#catalog-history .catalog-change')).toHaveCount(1);
+  const csrf=await(await page.request.get('/auth/csrf')).json();
+  for(let revision=1;revision<=20;revision++) {
+    expect((await page.request.put(`/admin/products/${id}`,{headers:{[csrf.headerName]:csrf.token},
+      data:{name:`이력 ${revision}`,price:3500+revision,selling:false,revision}})).status()).toBe(200);
+  }
+  await page.locator('#catalog-history-refresh').click();
+  await expect(page.locator('#catalog-history .catalog-change')).toHaveCount(20);
+  await page.locator('#catalog-history-more').click();
+  await expect(page.locator('#catalog-history .catalog-change')).toHaveCount(21);
+  const ids=await page.locator('#catalog-history .catalog-change').evaluateAll(rows=>rows.map(row=>row.dataset.changeId));
+  expect(new Set(ids).size).toBe(21);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('catalog history ignores old product response and recovers after a fetch failure',async({page})=>{
+  await account(page,true); await page.goto('/catalog.html'); await expect(page.locator('#catalog-workspace')).toBeVisible();
+  const first=await catalogCreate(page,`첫 상품 ${randomUUID()}`);
+  const csrf=await(await page.request.get('/auth/csrf')).json();
+  expect((await page.request.put(`/admin/products/${first}`,{headers:{[csrf.headerName]:csrf.token},
+    data:{name:'이전 상품의 변경',price:3000,selling:true,revision:0}})).status()).toBe(200);
+  const second=await catalogCreate(page,`다음 상품 ${randomUUID()}`);
+  let release,received;
+  const gate=new Promise(resolve=>{release=resolve;}); const captured=new Promise(resolve=>{received=resolve;});
+  const firstPath=url=>url.pathname===`/admin/products/${first}/changes`;
+  await page.route(firstPath,async route=>{const response=await route.fetch();received();await gate;await route.fulfill({response});});
+  try {
+    await page.locator(`#catalog-products [data-id="${first}"]`).click(); await captured;
+    await page.locator(`#catalog-products [data-id="${second}"]`).click();
+    await expect(page.locator('#catalog-history-status')).toContainText('기록된 변경이 없어요');
+    const late=page.waitForResponse(r=>new URL(r.url()).pathname===`/admin/products/${first}/changes`);
+    release(); await late;
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await expect(page.locator('#catalog-history .catalog-change')).toHaveCount(0);
+  } finally {release();await page.unroute(firstPath);}
+  const failing=url=>url.pathname===`/admin/products/${first}/changes`;
+  await page.route(failing,route=>route.abort('failed'));
+  await page.locator(`#catalog-products [data-id="${first}"]`).click();
+  await expect(page.locator('#catalog-history-status')).toContainText('불러오지 못했어요');
+  await expect(page.locator('#catalog-history .catalog-change')).toHaveCount(0);
+  await page.unroute(failing); await page.locator('#catalog-history-refresh').click();
+  await expect(page.locator('#catalog-history')).toContainText('이전 상품의 변경');
 });

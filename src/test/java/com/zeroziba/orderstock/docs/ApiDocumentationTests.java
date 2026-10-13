@@ -207,6 +207,24 @@ class ApiDocumentationTests {
                         responseFields(catalogFields(""))));
         mvc.perform(read("/admin/products")).andExpect(status().isOk())
                 .andDo(document("catalog-list",responseFields(catalogFields("[]."))));
+        var historyFields=new ArrayList<FieldDescriptor>();
+        historyFields.add(fieldWithPath("changes").type(JsonFieldType.ARRAY).description("선택 상품의 변경, 최신 ID순 최대 20건"));
+        historyFields.add(fieldWithPath("changes[].changeId").description("변경 ID"));
+        historyFields.add(fieldWithPath("changes[].productId").description("상품 ID"));
+        historyFields.add(fieldWithPath("changes[].actorId").description("변경한 관리자 ID, 이메일 미포함"));
+        historyFields.add(fieldWithPath("changes[].createdAt").description("UTC 변경 시각"));
+        for(String prefix:List.of("changes[].before.","changes[].after.")) {
+            historyFields.add(fieldWithPath(prefix+"name").description("해당 시점 상품명"));
+            historyFields.add(fieldWithPath(prefix+"price").description("원 단위 가격"));
+            historyFields.add(fieldWithPath(prefix+"selling").description("판매 중 여부"));
+            historyFields.add(fieldWithPath(prefix+"revision").description("수정 버전. 변경 전후 1 증가"));
+        }
+        historyFields.add(fieldWithPath("nextBeforeId").type(JsonFieldType.NUMBER).optional().description("이 ID 미만을 요청할 다음 커서, 마지막 null"));
+        mvc.perform(read("/admin/products/{id}/changes",productId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[0].actorId").value(userId))
+                .andDo(document("catalog-changes",pathParameters(parameterWithName("id").description("상품 ID")),
+                        queryParameters(parameterWithName("beforeId").optional().description("양수 변경 ID 미만의 이전 변경")),
+                        responseFields(historyFields)));
         mvc.perform(read("/admin/inventory-movements").queryParam("productId",Long.toString(productId)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.consistent").value(true))
                 .andDo(document("ledger-history",queryParameters(parameterWithName("productId").description("필수 상품 ID"),
