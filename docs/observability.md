@@ -65,8 +65,12 @@ docker compose -p order-stock-monitor-local --env-file .local/monitoring.env -f 
 | `stockroom_expiration_failures_total` | 만료 처리 트랜잭션이 롤백된 횟수; 다음 주기에 재시도 |
 | `http_server_requests_seconds_*` | 정규화된 URI별 요청 수·지연; histogram 활성화 |
 | `hikaricp_connections_*`, `jvm_memory_used_bytes` | DB 연결 풀과 JVM 메모리 |
+| `stockroom_auth_requests_total` | CSRF-valid 인증 HTTP 결과: endpoint·outcome 고정 라벨 |
+| `stockroom_auth_rejections_total` | 제한 사유: request_rate·credential_failures·capacity |
+| `stockroom_auth_limit_entries` | 현재 프로세스 제한 버킷 수, 기본 최대 10,000 |
 
 성공 지표는 `TransactionSynchronization.afterCommit`에서 증가합니다.
+이 문단은 주문 지표에 해당합니다. 인증 지표는 HTTP 응답 결과이며 가입 오류도 failure에 포함합니다. [상세 의미](auth-limits.md#지표와-검증)를 참고하세요.
 SQL flush가 성공해도 외부 트랜잭션에서 롤백되면 집계하지 않습니다.
 멱등 재응답은 새 주문과 분리하고 반복 취소·이미 처리된 만료 후보는 추가 집계하지 않습니다.
 만료 실패는 `afterCompletion(ROLLED_BACK)`에서 기록합니다.
@@ -80,7 +84,7 @@ DB 전체 주문 수가 아닌 **프로세스 실행 이후의 이벤트**이며
 
 ## 대시보드 읽기
 
-13개 패널에서 scrape 상태, 주문 결과, 재고 부족, 만료 롤백, HTTP 처리량·p95·5xx 비율, DB 풀, JVM heap을 확인합니다.
+16개 패널에서 scrape 상태, 주문 결과, 재고 부족, 만료 롤백, HTTP 처리량·p95·5xx 비율, DB 풀, JVM heap, 인증 결과·차단 사유·제한 버킷 수를 확인합니다.
 HTTP 409 재고 부족은 예상 도메인 응답이며 5xx 비율에 넣지 않습니다.
 5초마다 수집하고 1분 구간 `rate()`를 계산합니다. 요청이 없으면 p95가 비어 있거나 NaN일 수 있습니다.
 히스토그램은 1ms~5s 범위의 버킷을 사용하며 p95는 근사값입니다.
@@ -103,7 +107,8 @@ Prometheus 보존 정책은 24시간·256MB입니다. WAL·head 데이터로 실
 3. 신규 생성 11, 재응답 99, 최초 취소 11, 재고 부족 90을 Prometheus에서 DB 결과와 대조합니다.
 4. 새 미결제 주문 한 건을 만들고 **그 전용 DB의 해당 주문만** UTC 기준 만료 기한을 과거로 조정합니다.
 5. 실제 스케줄러가 상태를 EXPIRED로 바꾸고 생성 12·만료 1, 최종 재고 10이 되는지 확인합니다.
-6. 13개 패널의 PromQL, HTTP 히스토그램, JVM·Hikari, Grafana의 데이터 소스 연결과 Viewer 권한을 확인합니다.
+6. 16개 패널의 PromQL, HTTP 히스토그램, JVM·Hikari, Grafana의 데이터 소스 연결과 Viewer 권한을 확인합니다.
+7. 실제 로그인 실패 5회·429 1회, Retry-After와 인증 카운터 증가·제한 버킷 수를 대조합니다.
 
 CI에서만 스케줄러 점검 간격을 1초로 줄이며 기본은 60초입니다. 결제 기한 30분은 그대로 둡니다.
 `verify-observability.py`는 `LOAD_DISPOSABLE=true`, 프로젝트 이름 접두사, 전용 DB 이름, 부하 결과 11건을 확인한 뒤에만 fixture를 씁니다. 이미 검증 주문까지 만료된 12건 상태에서는 읽기만 재검증합니다.

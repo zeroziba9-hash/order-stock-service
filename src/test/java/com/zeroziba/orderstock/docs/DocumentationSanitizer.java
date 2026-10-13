@@ -12,7 +12,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /** Documentation only. Never modifies the live request, response or assertions. */
-final class DocumentationSanitizer extends OperationPreprocessorAdapter {
+public final class DocumentationSanitizer extends OperationPreprocessorAdapter {
     private final JsonMapper mapper = JsonMapper.builder().build();
     private final ContentModifyingOperationPreprocessor content = new ContentModifyingOperationPreprocessor(this::sanitize);
 

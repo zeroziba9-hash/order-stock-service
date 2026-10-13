@@ -97,6 +97,21 @@ def main():
     assert load.database(args, "SELECT COUNT(*) FROM purchase_orders WHERE status='EXPIRED';") == "1"
     assert sample('stockroom_expiration_failures_total{job="stockroom"}') == 0
 
+    # Real HTTP authentication failures and 429; no user row or session is retained in the report.
+    failure_query = 'stockroom_auth_requests_total{job="stockroom",endpoint="login",outcome="failure"}'
+    limit_query = 'stockroom_auth_rejections_total{job="stockroom",endpoint="login",reason="credential_failures"}'
+    failures_before, limits_before = sample(failure_query), sample(limit_query)
+    anonymous = load.Client(base)
+    anonymous.csrf = anonymous.call("/auth/csrf")[1]
+    credentials = {"email": f"missing-{uuid.uuid4().hex}@example.test", "password": "invalid-test-password"}
+    for _ in range(5):
+        assert anonymous.call("/auth/login", credentials, form=True)[0] == 401
+    status, body, headers = anonymous.call("/auth/login", credentials, form=True)
+    assert status == 429 and body["code"] == "AUTH_RATE_LIMITED"
+    assert 1 <= int(headers["Retry-After"]) <= 300
+    eventually(lambda: sample(failure_query) == failures_before + 5 and sample(limit_query) == limits_before + 1)
+    eventually(lambda: sample('stockroom_auth_limit_entries{job="stockroom"}') > 0)
+
     dashboard = json.loads((root / "monitoring/grafana/dashboards/stockroom.json").read_text(encoding="utf-8"))
     for panel in dashboard["panels"]:
         for target in panel["targets"]:
@@ -125,6 +140,7 @@ def main():
               "committedEvents": {outcome: events(outcome) for outcome in ["created", "replayed", "cancelled", "expired"]},
               "insufficientStockResponses": 90, "expirationRollbacks": 0,
               "dashboardPanels": len(dashboard["panels"]), "serverHistogramP95Seconds": latency,
+              "authenticationChecks": {"failures": 5, "rateLimited": 1, "retryAfterPresent": True},
               "mainPortMetricsDenied": True, "grafanaAnonymousViewer": True, "finalStock": 10}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

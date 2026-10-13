@@ -12,9 +12,11 @@
   let afterLogin;
   let ordersRequest = 0;
   let detailRequest = 0;
+  const authCooldown = { login: 0, register: 0 };
+  let authCooldownTimer;
 
   class ApiError extends Error {
-    constructor(message, status, code) { super(message); this.status = status; this.code = code; }
+    constructor(message, status, code, retryAfter = 0) { super(message); this.status = status; this.code = code; this.retryAfter = retryAfter; }
   }
 
   async function api(path, { method = "GET", body, form, key } = {}) {
@@ -35,7 +37,11 @@
         : "응답을 받지 못했어요. 같은 내용으로 다시 시도하면 중복 요청을 확인해요. 새 주문 전에는 내 주문도 확인해 주세요.", 0);
     }
     const data = response.status === 204 ? null : await response.json().catch(() => null);
-    if (!response.ok) throw new ApiError(data?.message || "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.", response.status, data?.code);
+    if (!response.ok) {
+      const retryAfter = Number(response.headers.get("Retry-After"));
+      throw new ApiError(data?.message || "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.", response.status, data?.code,
+        Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 3600) : 0);
+    }
     return data;
   }
 
@@ -151,6 +157,16 @@
     $("#password").autocomplete = state.register ? "new-password" : "current-password";
     $("#password").minLength = state.register ? 8 : 1;
     $("#password-help").hidden = !state.register; $("#auth-error").textContent = "";
+    renderAuthCooldown();
+  }
+
+  function renderAuthCooldown() {
+    clearTimeout(authCooldownTimer);
+    const seconds = Math.max(0, Math.ceil((authCooldown[state.register ? "register" : "login"] - performance.now()) / 1000));
+    const button = $("#auth-submit");
+    button.disabled = seconds > 0 || Boolean($("#auth-dialog").dataset.busy);
+    button.textContent = seconds > 0 ? `${seconds}초 후 다시 시도` : state.register ? "회원가입 →" : "로그인 →";
+    if (seconds > 0) authCooldownTimer = setTimeout(renderAuthCooldown, 250);
   }
 
   function purchase(productId) {
@@ -242,6 +258,8 @@
   $("#auth-switch").addEventListener("click", () => { state.register = !state.register; renderAuth(); });
   $("#auth-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const dialog = $("#auth-dialog");
+    const endpoint = state.register ? "register" : "login";
+    if (dialog.dataset.busy || authCooldown[endpoint] > performance.now()) return;
     const controls = [...dialog.querySelectorAll("button, input")]; controls.forEach((control) => { control.disabled = true; }); dialog.dataset.busy = "true";
     const account = { email: $("#email").value.trim(), password: $("#password").value };
     $("#auth-error").textContent = "";
@@ -254,8 +272,13 @@
       state.user = await api("/auth/login", { method: "POST", form: account }); state.epoch++;
       dialog.close(); $("#auth-form").reset(); renderAccount(); await loadOrders(); notify("스톡룸에 오신 걸 환영해요.");
       const callback = afterLogin; afterLogin = null; callback?.();
-    } catch (error) { handleError(error, "#auth-error"); }
-    finally { controls.forEach((control) => { control.disabled = false; }); delete dialog.dataset.busy; }
+    } catch (error) {
+      if (error.status === 429 && error.code === "AUTH_RATE_LIMITED") {
+        authCooldown[endpoint] = performance.now() + (error.retryAfter || 1) * 1000;
+      }
+      handleError(error, "#auth-error");
+    }
+    finally { controls.forEach((control) => { control.disabled = false; }); delete dialog.dataset.busy; renderAuthCooldown(); }
   });
 
   $("#purchase-form").addEventListener("submit", async (event) => {

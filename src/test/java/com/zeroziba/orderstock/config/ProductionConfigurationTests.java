@@ -50,6 +50,17 @@ class ProductionConfigurationTests {
     }
 
     @Test
+    void disablingAuthenticationLimitsIsRejectedBeforeDatabaseCreation() {
+        assertRejected(prod.withPropertyValues("app.auth.limits.enabled=false"), "Authentication request limits");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"framework", "native"})
+    void automaticForwardedHeaderProcessingIsRejected(String strategy) {
+        assertRejected(prod.withPropertyValues("server.forward-headers-strategy=" + strategy), "original peer address");
+    }
+
+    @Test
     void rootDatabaseAccountIsRejected() {
         assertRejected(prod.withPropertyValues("spring.datasource.username=root"), "dedicated database account");
     }

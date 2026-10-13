@@ -18,9 +18,9 @@
 | `feat/admin-inventory` | 관리자 권한·수동 재고 조정·변경 이력·UI | [PR #8](https://github.com/zeroziba9-hash/order-stock-service/pull/8) |
 | `feat/catalog-ledger-benchmarks` | 상품 등록·수정·판매 중지, 전체 재고 원장, 차감 방식 반복 비교 | [PR #9](https://github.com/zeroziba9-hash/order-stock-service/pull/9) |
 
-현재 `feat/catalog-ledger-benchmarks`에서 상품 관리·전체 재고 원장·반복 성능 비교를 함께 검증합니다.
+현재 `feat/auth-request-limits`에서 인증 요청 제한·재시도 화면·인증 지표를 검증합니다.
 
-위 PR #1~#8은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+위 PR #1~#9는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
 이후 기능도 최신 병합 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
 PR #8은 PR #6 기준으로 시작했으며, PR #7 병합 후 최신 main을 기능 브랜치에 병합해 충돌을 해결했습니다.
 

@@ -88,17 +88,21 @@ BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검�
 
 ## 확인한 결과
 
+인증은 [요청 제한](auth-limits.md)을 적용합니다. IP별 전체 한도와 IP+계정 실패 한도를 구분하고
+동시 비밀번호 검사도 슬롯에 포함합니다. 계정 전역 잠금에 따른 타인의 로그인 방해를 피하면서 이메일 변경 우회를 제한합니다.
+고정 라벨 지표와 실제 429 이후 브라우저 복구까지 검증하며, 단일 프로세스·재시작 초기화·프록시 신뢰 범위를 명시합니다.
+
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 234개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 30개 | 일반 14 + 관리자 14 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 265개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium E2E 36개 | 일반 14 + 관리자 14 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
 | 백업·복원 | 체크섬·빈 별도 DB 복원 후 실제 HTTPS 데이터 비교 | [복구 안내](backup-restore.md) |
 | 배포 후 점검 도구 | 인증서 검증을 유지한 GET 검사 9개, CI의 로컬 HTTPS 대상 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
 | API 계약 문서 | 실제 인증·CSRF·MySQL 응답에서 HTML 생성, 필드·마스킹·누락 참조 검증 | [가이드 생성·다운로드](api-documentation.md) |
-| 관측과 DB 결과 대조 | 커밋 후 생성·재응답·취소·만료 카운터, 13개 패널, HTTP 부하와 스케줄러 연결 | [로컬 모니터링·CI](observability.md) |
+| 관측과 DB 결과 대조 | 커밋 후 생성·재응답·취소·만료 카운터, 16개 패널, HTTP 부하와 스케줄러 연결 | [로컬 모니터링·CI](observability.md) |
 
 추가 검증 코드는 위 독립 PR에서 확인합니다. 자동 만료는 [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5)에 기록했습니다.
 브라우저 검증은 Chromium 데스크톱·모바일 에뮬레이션이며 실제 iOS·Android 기기나 모든 브라우저를 검증한 것은 아닙니다.
