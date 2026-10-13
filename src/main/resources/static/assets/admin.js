@@ -87,6 +87,10 @@
     if(!state.selected) return;
     const epoch=++state.ledgerEpoch;
     $('#ledger-more').disabled=true;
+    if(!append) {
+      $('#ledger-history').replaceChildren(); state.ledgerNext=null; $('#ledger-more').hidden=true;
+      $('#ledger-balance').textContent='선택한 상품의 재고 변동을 불러오고 있어요.';
+    }
     try {
       const data=await api(`/admin/inventory-movements?productId=${state.selected}${append && state.ledgerNext?`&beforeId=${state.ledgerNext}`:''}`);
       if(epoch!==state.ledgerEpoch) return;
@@ -102,6 +106,9 @@
       }
       state.ledgerNext=data.nextBeforeId; $('#ledger-more').hidden=!state.ledgerNext;
       $('#ledger-balance').textContent=`현재 ${number(data.currentStock)}개 / 기록 합계 ${number(data.recordedStock)}개 · ${data.consistent?'일치':'불일치 — DB 직접 변경 여부를 확인하세요.'}`;
+    } catch(error) {
+      if(epoch===state.ledgerEpoch) $('#ledger-balance').textContent='재고 변동을 불러오지 못했어요. 새로고침하세요.';
+      throw error;
     } finally {if(epoch===state.ledgerEpoch) $('#ledger-more').disabled=false;}
   }
   function savePending(intent) { sessionStorage.setItem(storageKey(),JSON.stringify(intent)); state.pending=intent; }

@@ -44,7 +44,7 @@ bash ./gradlew --no-daemon test asciidoctor bootJar
 실제 운영 비밀 값이나 `.local/`을 CI에 복사하지 않습니다. 테스트 프로필은 접속 파일 없이도 환경 변수로 실행됩니다.
 각 통합 테스트는 DB 이름을 확인하고 테스트 데이터만 정리합니다.
 
-실패해도 HTML·JUnit XML 보고서를 `test-reports` 아티팩트에 올립니다.
+실패해도 HTML·JUnit XML 보고서를 `test-reports-locking`/`test-reports-conditional` 아티팩트에 올립니다.
 성공한 경우 각 차감 방식의 실행 JAR를 `order-stock-service-locking`/`order-stock-service-conditional`, [생성 API 가이드](api-documentation.md)를 `api-documentation-locking`/`api-documentation-conditional`
 아티팩트에 올리며 보관 기간은 7일입니다.
 워크플로는 저장소 읽기 권한만 사용하며 자동 배포는 하지 않습니다.

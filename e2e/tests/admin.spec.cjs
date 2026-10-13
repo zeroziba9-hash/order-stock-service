@@ -118,6 +118,14 @@ test('catalog registration, sale stop and full inventory movements',async({page}
   await page.locator(`[data-product-id="${id}"]`).click();
   await expect(page.locator('#ledger-history')).toContainText('신상품 입고');
   await expect(page.locator('#ledger-balance')).toContainText('현재 3개 / 기록 합계 3개 · 일치');
+  const ledgerPath=url=>url.pathname==='/admin/inventory-movements';
+  await page.route(ledgerPath,route=>route.abort('failed'));
+  await page.locator('#admin-products button').first().click();
+  await expect(page.locator('#ledger-balance')).toContainText('새로고침하세요');
+  await expect(page.locator('#ledger-history tr')).toHaveCount(0);
+  await page.unroute(ledgerPath);
+  await page.locator('#admin-refresh').click();
+  await expect(page.locator('#ledger-balance')).toContainText('일치');
 });
 
 test('catalog lost response replays one registration after reload',async({page})=>{
