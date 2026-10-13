@@ -90,7 +90,7 @@ BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 233개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| 백엔드 234개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
 | Chromium E2E 30개 | 일반 14 + 관리자 14 + 자동 만료 2, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |

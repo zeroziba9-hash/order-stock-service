@@ -28,7 +28,7 @@
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 233개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 30개 통과(일반 14 + 관리자 14 + 자동 만료 2).
+**확인된 결과:** 백엔드 테스트 234개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 30개 통과(일반 14 + 관리자 14 + 자동 만료 2).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 테스트 조건과 실제 측정값은 [설계·검증 포트폴리오](docs/portfolio.md)에 정리했습니다.
 브라우저·부하·배포 검증의 추가 코드는 각각 [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1),

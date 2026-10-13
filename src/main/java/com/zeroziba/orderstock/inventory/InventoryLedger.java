@@ -30,14 +30,17 @@ public class InventoryLedger {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(Product product, int before, Type type, String reference, Long actor, String reason) {
-        // All callers hold the product write lock; baseline and event are in the same transaction.
+        // Baselines belong to catalog creation/V11 cutover. Re-upserting an existing
+        // baseline can take primary-index next-key locks and deadlock distributed inserts.
         var now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
-        jdbc.update("""
+        if (type == Type.BASELINE) {
+            jdbc.update("""
                 INSERT INTO inventory_movements
                 (product_id,product_name,movement_type,event_reference,quantity_delta,before_stock,after_stock,reason,created_at)
-                VALUES (?,?,'BASELINE','opening',?,0,?,'기록 시작 재고',?) ON DUPLICATE KEY UPDATE id=id
+                VALUES (?,?,'BASELINE','opening',?,0,?,'기록 시작 재고',?)
                 """, product.getId(), product.getName(), before, before, now);
-        if (type == Type.BASELINE) return;
+            return;
+        }
         jdbc.update("""
                 INSERT INTO inventory_movements
                 (product_id,product_name,movement_type,event_reference,actor_id,quantity_delta,before_stock,after_stock,reason,created_at)

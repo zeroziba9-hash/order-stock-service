@@ -16,6 +16,7 @@
 | `feat/verified-api-docs` | 테스트 기반 REST Docs·API 계약·마스킹 검증 | [PR #6](https://github.com/zeroziba9-hash/order-stock-service/pull/6) |
 | `feat/observability` | Prometheus·Grafana·운영 계측 | [PR #7](https://github.com/zeroziba9-hash/order-stock-service/pull/7) |
 | `feat/admin-inventory` | 관리자 권한·수동 재고 조정·변경 이력·UI | [PR #8](https://github.com/zeroziba9-hash/order-stock-service/pull/8) |
+| `feat/catalog-ledger-benchmarks` | 상품 등록·수정·판매 중지, 전체 재고 원장, 차감 방식 반복 비교 | [PR #9](https://github.com/zeroziba9-hash/order-stock-service/pull/9) |
 
 현재 `feat/catalog-ledger-benchmarks`에서 상품 관리·전체 재고 원장·반복 성능 비교를 함께 검증합니다.
 

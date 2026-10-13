@@ -35,6 +35,7 @@ class CatalogLedgerIntegrationTests {
     @Autowired CatalogService catalog;
     @Autowired InventoryService inventory;
     @Autowired OrderService orders;
+    @Autowired com.zeroziba.orderstock.order.IdempotentOrderService idempotentOrders;
     @Autowired PaymentService payments;
     @Autowired RefundService refunds;
     @Autowired OrderExpirationProcessor expiration;
@@ -174,5 +175,29 @@ class CatalogLedgerIntegrationTests {
         assertThrows(IllegalStateException.class,()->new StockAllocator(null,null,null,env));
         env.setActiveProfiles("benchmark"); assertThatCode(()->new StockAllocator(null,null,null,env)).doesNotThrowAnyException();
         env.setActiveProfiles("prod","benchmark"); assertThrows(IllegalStateException.class,()->new StockAllocator(null,null,null,env));
+    }
+    @Test void distributedConcurrentOrdersDoNotRelockExistingBaselineRows() throws Exception {
+        var ids=new java.util.ArrayList<Long>();
+        for(int i=0;i<8;i++) {
+            long id=catalog.create(admin,"distributed-product-"+i,new CatalogService.Create("분산 상품 "+i,1000L)).productId();
+            inventory.adjust(admin,id,"distributed-stock-"+i,new AdjustInventoryRequest(16,"분산 주문 입고"));
+            ids.add(id);
+        }
+        var start=new java.util.concurrent.CyclicBarrier(8);
+        var pool=Executors.newFixedThreadPool(8);
+        try {
+            var tasks=java.util.stream.IntStream.range(0,8).<Callable<Integer>>mapToObj(worker->()->{
+                start.await(10,TimeUnit.SECONDS);
+                for(int i=0;i<8;i++) idempotentOrders.create(customer,"distributed-"+worker+"-"+i,new CreateOrderRequest(ids.get(worker),1));
+                return 8;
+            }).toList();
+            for(var future:pool.invokeAll(tasks)) assertThat(future.get(30,TimeUnit.SECONDS)).isEqualTo(8);
+        } finally {pool.shutdownNow();}
+        for(long id:ids) {
+            var history=ledger.history(admin,id,null);
+            assertThat(history.consistent()).isTrue(); assertThat(history.currentStock()).isEqualTo(8);
+            assertThat(history.movements().stream().filter(m->m.type().equals("BASELINE"))).hasSize(1);
+            assertThat(history.movements()).hasSize(10);
+        }
     }
 }
