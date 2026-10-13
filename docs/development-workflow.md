@@ -17,6 +17,7 @@
 | `feat/observability` | Prometheus·Grafana·운영 계측 | [PR #7](https://github.com/zeroziba9-hash/order-stock-service/pull/7) |
 | `feat/admin-inventory` | 관리자 권한·수동 재고 조정·변경 이력·UI | [PR #8](https://github.com/zeroziba9-hash/order-stock-service/pull/8) |
 | `feat/catalog-ledger-benchmarks` | 상품 등록·수정·판매 중지, 전체 재고 원장, 차감 방식 반복 비교 | [PR #9](https://github.com/zeroziba9-hash/order-stock-service/pull/9) |
+| `feat/auth-request-limits` | 인증 요청 제한·동시 검사 예약·재시도 화면·인증 지표 | [PR #10](https://github.com/zeroziba9-hash/order-stock-service/pull/10) |
 
 현재 `feat/auth-request-limits`에서 인증 요청 제한·재시도 화면·인증 지표를 검증합니다.
 
