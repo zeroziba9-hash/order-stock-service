@@ -68,6 +68,7 @@ class AuthRequestLimiterTests {
         assertThat(limiter.begin(Endpoint.REGISTER,"overflow",null).reason()).isEqualTo(Reason.CAPACITY);
         assertThat(limiter.trackedEntries()).isEqualTo(16);
         assertThat(registry.get("stockroom.auth.limit.entries").gauge().value()).isEqualTo(16);
+        assertThat(registry.get("stockroom.auth.limit.capacity").gauge().value()).isEqualTo(16);
         clock.set(TimeUnit.SECONDS.toNanos(10));
         assertThat(limiter.begin(Endpoint.REGISTER,"overflow",null).allowed()).isTrue();
         assertThat(limiter.trackedEntries()).isEqualTo(1);
@@ -99,5 +100,13 @@ class AuthRequestLimiterTests {
         assertThrows(IllegalArgumentException.class,()->settings(100,5,15));
         assertThrows(IllegalArgumentException.class,()->new AuthLimitProperties(true,1,1,1,Duration.ZERO,
                 Duration.ofSeconds(1),Duration.ofSeconds(1),16,List.of()));
+    }
+    @Test void disabledLimiterExportsZeroCapacityAndCreatesNoEntries() {
+        var disabled=new AuthLimitProperties(false,1,1,1,Duration.ofSeconds(10),
+                Duration.ofSeconds(10),Duration.ofSeconds(10),16,List.of());
+        var limiter=new AuthRequestLimiter(disabled,registry,clock::get);
+        assertThat(limiter.begin(Endpoint.LOGIN,"ip","a").allowed()).isTrue();
+        assertThat(limiter.trackedEntries()).isZero();
+        assertThat(registry.get("stockroom.auth.limit.capacity").gauge().value()).isZero();
     }
 }

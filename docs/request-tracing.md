@@ -69,7 +69,7 @@ MVC에서 처리되지 않은 RuntimeException은 `500 INTERNAL_ERROR`와 공통
 관리 포트 테스트는 추적 ID가 scrape 지표에 들어가지 않는지 확인하고,
 REST Docs 테스트는 실제 추적 필터를 거쳐 상품 응답의 헤더 설명을 생성합니다.
 
-2026-10-14 KST 로컬 검증에서 locking·conditional 각각 전체 280개 테스트와 API 문서 생성·마스킹 검사·JAR 빌드가 통과했습니다.
+2026-10-14 KST 로컬 검증에서 최신 main 반영 후 locking·conditional 각각 전체 281개 테스트와 API 문서 생성·마스킹 검사·JAR 빌드가 통과했습니다.
 빈 별도 DB로 Docker 이미지를 실행해 200·401·403·404 응답의 ID와 로그 일치, 입력값 제외,
 테스트 전용 오류 경로의 부재를 확인한 뒤 해당 검증용 스택만 정리했습니다.
 

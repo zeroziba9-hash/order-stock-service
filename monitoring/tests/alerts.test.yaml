@@ -1,0 +1,291 @@
+# Synthetic series test the unchanged production rules, including pending and recovery.
+rule_files:
+  - "../rules/stockroom.yaml"
+evaluation_interval: "5s"
+tests:
+  -
+    name: "healthy including business 409 and no traffic"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "http_server_requests_seconds_count{job=\"stockroom\",status=\"409\",uri=\"/orders\"}"
+        values: "0 100 200 300 400 500 600 700 800 900 1000 1100 1200 1300 1400 1500"
+      -
+        series: "http_server_requests_seconds_count{job=\"stockroom\",status=\"500\",uri=\"/orders\"}"
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+      -
+        series: "stockroom_auth_requests_total{job=\"stockroom\",outcome=\"rate_limited\",endpoint=\"login\"}"
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+      -
+        series: "stockroom_auth_limit_entries{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+      -
+        series: "stockroom_auth_limit_capacity{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "16 16 16 16 16 16 16 16 16 16 16 16 16 16 16 16"
+      -
+        series: "stockroom_expiration_failures_total{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+    alert_rule_test:
+      -
+        eval_time: "10m"
+        alertname: "StockroomAppDown"
+        exp_alerts: []
+      -
+        eval_time: "10m"
+        alertname: "StockroomServerErrors"
+        exp_alerts: []
+      -
+        eval_time: "10m"
+        alertname: "StockroomAuthRateLimited"
+        exp_alerts: []
+      -
+        eval_time: "10m"
+        alertname: "StockroomAuthCapacity"
+        exp_alerts: []
+      -
+        eval_time: "10m"
+        alertname: "StockroomExpirationFailures"
+        exp_alerts: []
+  -
+    name: "down waits one minute and resolves on recovery"
+    interval: "5s"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1"
+    alert_rule_test:
+      -
+        eval_time: "60s"
+        alertname: "StockroomAppDown"
+        exp_alerts: []
+      -
+        eval_time: "65s"
+        alertname: "StockroomAppDown"
+        exp_alerts:
+          -
+            exp_labels:
+              job: "stockroom"
+              severity: "critical"
+              instance: "app:9091"
+            exp_annotations:
+              summary: "STOCKROOM metrics endpoint is unavailable"
+              runbook_url: "https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomappdown"
+      -
+        eval_time: "125s"
+        alertname: "StockroomAppDown"
+        exp_alerts: []
+  -
+    name: "missing scrape target is detected"
+    interval: "5s"
+    input_series: []
+    alert_rule_test:
+      -
+        eval_time: "55s"
+        alertname: "StockroomAppDown"
+        exp_alerts: []
+      -
+        eval_time: "60s"
+        alertname: "StockroomAppDown"
+        exp_alerts:
+          -
+            exp_labels:
+              job: "stockroom"
+              severity: "critical"
+            exp_annotations:
+              summary: "STOCKROOM metrics endpoint is unavailable"
+              runbook_url: "https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomappdown"
+  -
+    name: "sustained server error ratio and volume then recovery"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "http_server_requests_seconds_count{job=\"stockroom\",status=\"200\",uri=\"/products\"}"
+        values: "0 94 188 282 376 470 564 658 752 846 940 1034 1128 1222 1316 1410"
+      -
+        series: "http_server_requests_seconds_count{job=\"stockroom\",status=\"500\",uri=\"/products\"}"
+        values: "0 6 12 18 24 30 30 30 30 30 30 30 30 30 30 30"
+    alert_rule_test:
+      -
+        eval_time: "3m"
+        alertname: "StockroomServerErrors"
+        exp_alerts: []
+      -
+        eval_time: "4m"
+        alertname: "StockroomServerErrors"
+        exp_alerts:
+          -
+            exp_labels:
+              job: "stockroom"
+              severity: "critical"
+            exp_annotations:
+              summary: "STOCKROOM HTTP 5xx errors exceed both volume and ratio thresholds"
+              runbook_url: "https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomservererrors"
+      -
+        eval_time: "8m"
+        alertname: "StockroomServerErrors"
+        exp_alerts: []
+  -
+    name: "high ratio with low error volume does not page"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "http_server_requests_seconds_count{job=\"stockroom\",status=\"200\",uri=\"/products\"}"
+        values: "0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15"
+      -
+        series: "http_server_requests_seconds_count{job=\"stockroom\",status=\"500\",uri=\"/products\"}"
+        values: "0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15"
+    alert_rule_test:
+      -
+        eval_time: "10m"
+        alertname: "StockroomServerErrors"
+        exp_alerts: []
+  -
+    name: "auth rejection burst waits and ages out"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "stockroom_auth_requests_total{job=\"stockroom\",outcome=\"rate_limited\",endpoint=\"login\"}"
+        values: "0 12 24 36 48 48 48 48 48 48 48 48 48 48 48 48"
+    alert_rule_test:
+      -
+        eval_time: "2m"
+        alertname: "StockroomAuthRateLimited"
+        exp_alerts: []
+      -
+        eval_time: "3m"
+        alertname: "StockroomAuthRateLimited"
+        exp_alerts:
+          -
+            exp_labels:
+              job: "stockroom"
+              severity: "warning"
+            exp_annotations:
+              summary: "STOCKROOM authentication requests are repeatedly rate limited"
+              runbook_url: "https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomauthratelimited"
+      -
+        eval_time: "10m"
+        alertname: "StockroomAuthRateLimited"
+        exp_alerts: []
+  -
+    name: "auth counter reset alone is not a burst"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "stockroom_auth_requests_total{job=\"stockroom\",outcome=\"rate_limited\",endpoint=\"login\"}"
+        values: "1000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+    alert_rule_test:
+      -
+        eval_time: "2m"
+        alertname: "StockroomAuthRateLimited"
+        exp_alerts: []
+  -
+    name: "custom limiter capacity waits five minutes then resolves"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "stockroom_auth_limit_entries{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "91 91 91 91 91 91 0 0 0 0 0 0 0 0 0 0"
+      -
+        series: "stockroom_auth_limit_capacity{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100"
+    alert_rule_test:
+      -
+        eval_time: "4m"
+        alertname: "StockroomAuthCapacity"
+        exp_alerts: []
+      -
+        eval_time: "5m"
+        alertname: "StockroomAuthCapacity"
+        exp_alerts:
+          -
+            exp_labels:
+              job: "stockroom"
+              severity: "warning"
+              instance: "app:9091"
+            exp_annotations:
+              summary: "STOCKROOM authentication limiter is near its configured capacity"
+              runbook_url: "https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomauthcapacity"
+      -
+        eval_time: "6m"
+        alertname: "StockroomAuthCapacity"
+        exp_alerts: []
+  -
+    name: "disabled limiter does not alert"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "stockroom_auth_limit_entries{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+      -
+        series: "stockroom_auth_limit_capacity{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+    alert_rule_test:
+      -
+        eval_time: "10m"
+        alertname: "StockroomAuthCapacity"
+        exp_alerts: []
+  -
+    name: "expiration rollback is detected and ages out"
+    interval: "1m"
+    input_series:
+      -
+        series: "up{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      -
+        series: "stockroom_expiration_failures_total{job=\"stockroom\",instance=\"app:9091\"}"
+        values: "0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    alert_rule_test:
+      -
+        eval_time: "1m"
+        alertname: "StockroomExpirationFailures"
+        exp_alerts: []
+      -
+        eval_time: "2m"
+        alertname: "StockroomExpirationFailures"
+        exp_alerts:
+          -
+            exp_labels:
+              job: "stockroom"
+              severity: "warning"
+              instance: "app:9091"
+            exp_annotations:
+              summary: "STOCKROOM order expiration transactions rolled back"
+              runbook_url: "https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomexpirationfailures"
+      -
+        eval_time: "6m"
+        alertname: "StockroomExpirationFailures"
+        exp_alerts: []
+  - name: zero HTTP traffic does not produce a server-error alert
+    interval: 1m
+    input_series:
+      - series: 'up{job="stockroom",instance="app:9091"}'
+        values: '1+0x15'
+      - series: 'http_server_requests_seconds_count{job="stockroom",status="200",uri="/products"}'
+        values: '0+0x15'
+      - series: 'http_server_requests_seconds_count{job="stockroom",status="500",uri="/products"}'
+        values: '0+0x15'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: StockroomServerErrors
+        exp_alerts: []
