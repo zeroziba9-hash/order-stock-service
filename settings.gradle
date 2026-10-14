@@ -1,1 +1,10 @@
+pluginManagement {
+    repositories {
+        // Plugin implementation dependencies are published on Maven Central.
+        // Resolve them directly instead of relying solely on the portal's proxy.
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
 rootProject.name = 'order-stock-service'

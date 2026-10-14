@@ -21,6 +21,8 @@ services:
       - --storage.tsdb.retention.size=256MB
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - ./monitoring/tests:/etc/prometheus/tests:ro
       - prometheus-data:/prometheus
     ports: ["127.0.0.1:${PROMETHEUS_PORT:-19090}:9090"]
     networks: [monitoring]

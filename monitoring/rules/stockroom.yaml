@@ -1,0 +1,48 @@
+groups:
+  - name: stockroom-alerts
+    rules:
+      - alert: StockroomAppDown
+        expr: up{job="stockroom"} == 0 or absent(up{job="stockroom"})
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: STOCKROOM metrics endpoint is unavailable
+          runbook_url: https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomappdown
+      - alert: StockroomServerErrors
+        expr: |
+          (sum by (job) (rate(http_server_requests_seconds_count{job="stockroom",uri!~"/actuator.*",status=~"5.."}[5m]))
+           / sum by (job) (rate(http_server_requests_seconds_count{job="stockroom",uri!~"/actuator.*"}[5m])) > 0.05)
+          and (sum by (job) (increase(http_server_requests_seconds_count{job="stockroom",uri!~"/actuator.*",status=~"5.."}[5m])) >= 10)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: STOCKROOM HTTP 5xx errors exceed both volume and ratio thresholds
+          runbook_url: https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomservererrors
+      - alert: StockroomAuthRateLimited
+        expr: sum by (job) (increase(stockroom_auth_requests_total{job="stockroom",outcome="rate_limited"}[5m])) >= 20
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: STOCKROOM authentication requests are repeatedly rate limited
+          runbook_url: https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomauthratelimited
+      - alert: StockroomAuthCapacity
+        expr: |
+          (stockroom_auth_limit_entries{job="stockroom"} / stockroom_auth_limit_capacity{job="stockroom"} > 0.9)
+          and (stockroom_auth_limit_capacity{job="stockroom"} > 0)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: STOCKROOM authentication limiter is near its configured capacity
+          runbook_url: https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomauthcapacity
+      - alert: StockroomExpirationFailures
+        expr: increase(stockroom_expiration_failures_total{job="stockroom"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: STOCKROOM order expiration transactions rolled back
+          runbook_url: https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/alert-runbook.md#stockroomexpirationfailures

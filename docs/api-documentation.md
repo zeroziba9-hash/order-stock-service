@@ -4,6 +4,10 @@ Spring REST Docs 4.0.1(Boot 4.0.8 관리 버전)과 AsciidoctorJ로 인증·상�
 요청·응답 JSON, 필드 설명, 경로·쿼리·폼 파라미터, 멱등 응답 헤더를 테스트와 연결합니다.
 기존 [인증 실습](auth.md)·[주문 실습](order-api.md)은 따라 해보는 설명이고, 생성 가이드는 API 계약을 확인하는 자료입니다.
 
+Gradle 플러그인 저장소는 `settings.gradle`에서 Maven Central과 Plugin Portal을 명시합니다.
+플러그인 전이 의존성은 Central에서 직접 조회해 Portal의 프록시 경로에만 의존하지 않습니다.
+[Gradle 플러그인 저장소 설정](https://docs.gradle.org/9.7.1/userguide/plugins_intermediate.html#sec:custom_plugin_repositories)을 참고하세요.
+
 ## 문서 열기
 
 실행 중인 앱은 필요하지 않지만 실제 MySQL 테스트 DB가 필요합니다.

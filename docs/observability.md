@@ -68,6 +68,8 @@ docker compose -p order-stock-monitor-local --env-file .local/monitoring.env -f 
 | `stockroom_auth_requests_total` | CSRF-valid 인증 HTTP 결과: endpoint·outcome 고정 라벨 |
 | `stockroom_auth_rejections_total` | 제한 사유: request_rate·credential_failures·capacity |
 | `stockroom_auth_limit_entries` | 현재 프로세스 제한 버킷 수, 기본 최대 10,000 |
+| `stockroom_auth_limit_capacity` | 현재 설정 용량, 제한 해제 시 0 |
+| `ALERTS{alertstate="pending"/"firing"}` | Prometheus의 활성 경고 상태, 정상 시 시계열 없음 |
 
 성공 지표는 `TransactionSynchronization.afterCommit`에서 증가합니다.
 이 문단은 주문 지표에 해당합니다. 인증 지표는 HTTP 응답 결과이며 가입 오류도 failure에 포함합니다. [상세 의미](auth-limits.md#지표와-검증)를 참고하세요.
@@ -84,7 +86,7 @@ DB 전체 주문 수가 아닌 **프로세스 실행 이후의 이벤트**이며
 
 ## 대시보드 읽기
 
-16개 패널에서 scrape 상태, 주문 결과, 재고 부족, 만료 롤백, HTTP 처리량·p95·5xx 비율, DB 풀, JVM heap, 인증 결과·차단 사유·제한 버킷 수를 확인합니다.
+18개 패널에서 scrape 상태, 주문 결과, 재고 부족, 만료 롤백, HTTP 처리량·p95·5xx 비율, DB 풀, JVM heap, 인증 결과·차단 사유·제한 버킷 수와 활성 경고 수를 확인합니다.
 HTTP 409 재고 부족은 예상 도메인 응답이며 5xx 비율에 넣지 않습니다.
 5초마다 수집하고 1분 구간 `rate()`를 계산합니다. 요청이 없으면 p95가 비어 있거나 NaN일 수 있습니다.
 히스토그램은 1ms~5s 범위의 버킷을 사용하며 p95는 근사값입니다.
@@ -93,7 +95,10 @@ HTTP 409 재고 부족은 예상 도메인 응답이며 5xx 비율에 넣지 않
 짧은 최초 부하의 지연은 클라이언트 리포트로 확인하고, 서버 지표의 성능 비교는 응답 유형별 예열과 지속·반복 트래픽을 사용합니다.
 낮은 트래픽의 짧은 데모 결과를 운영 용량으로 해석하지 않습니다.
 
-Prometheus 보존 정책은 24시간·256MB입니다. WAL·head 데이터로 실제 볼륨은 더 커질 수 있습니다. 알림 전송, 장기 저장, 실제 서버 장애 대응은 아직 포함하지 않습니다.
+Prometheus 보존 정책은 24시간·256MB입니다. WAL·head 데이터로 실제 볼륨은 더 커질 수 있습니다.
+외부 알림 전송·장기 저장·공개 서버에서의 장애 대응 검증은 아직 포함하지 않습니다.
+5개 경고 규칙과 Grafana의 활성 경고 패널을 제공합니다. [경고 기준·대응·검증](alert-runbook.md)을 참고하세요.
+이메일·Slack 전송과 실제 서버의 외부 감시는 별도 범위입니다.
 만료 롤백 카운터는 개별 만료 트랜잭션만 다루며 후보 조회 실패·스케줄러 중단 전체를 탐지하지 않습니다.
 
 ## 자동 검증
@@ -107,8 +112,14 @@ Prometheus 보존 정책은 24시간·256MB입니다. WAL·head 데이터로 실
 3. 신규 생성 11, 재응답 99, 최초 취소 11, 재고 부족 90을 Prometheus에서 DB 결과와 대조합니다.
 4. 새 미결제 주문 한 건을 만들고 **그 전용 DB의 해당 주문만** UTC 기준 만료 기한을 과거로 조정합니다.
 5. 실제 스케줄러가 상태를 EXPIRED로 바꾸고 생성 12·만료 1, 최종 재고 10이 되는지 확인합니다.
-6. 16개 패널의 PromQL, HTTP 히스토그램, JVM·Hikari, Grafana의 데이터 소스 연결과 Viewer 권한을 확인합니다.
+6. 18개 패널의 PromQL, HTTP 히스토그램, JVM·Hikari, Grafana의 데이터 소스 연결과 Viewer 권한을 확인합니다.
 7. 실제 로그인 실패 5회·429 1회, Retry-After와 인증 카운터 증가·제한 버킷 수를 대조합니다.
+8. promtool로 실제 경고 규칙의 11개 시나리오·26개 기대 상태를 검증합니다.
+
+별도 `alerts` CI 작업은 새 `order-stock-alerts-ci` 스택과 다른 loopback 포트에서 실행합니다.
+실제 앱을 중단해 AppDown의 pending→firing을 확인하고 다시 시작해 해제되는지 확인합니다.
+인증 401 5회·429 25회 뒤 인증 폭주 경고의 pending→firing도 확인합니다. DB 재고 보존과 회원·주문 0건을 대조합니다.
+기존 모니터링·데모 앱을 대상으로 장애 검증을 실행하지 않습니다. 세부 명령과 경계는 [대응 문서](alert-runbook.md)에 있습니다.
 
 CI에서만 스케줄러 점검 간격을 1초로 줄이며 기본은 60초입니다. 결제 기한 30분은 그대로 둡니다.
 `verify-observability.py`는 `LOAD_DISPOSABLE=true`, 프로젝트 이름 접두사, 전용 DB 이름, 부하 결과 11건을 확인한 뒤에만 fixture를 씁니다. 이미 검증 주문까지 만료된 12건 상태에서는 읽기만 재검증합니다.

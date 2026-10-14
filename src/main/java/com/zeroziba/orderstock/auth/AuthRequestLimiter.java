@@ -52,6 +52,8 @@ public class AuthRequestLimiter {
         new SecureRandom().nextBytes(salt);
         Gauge.builder("stockroom.auth.limit.entries", this, AuthRequestLimiter::trackedEntries)
                 .description("Bounded process-local authentication limiter entries").register(registry);
+        Gauge.builder("stockroom.auth.limit.capacity", settings, value -> value.enabled() ? value.maxEntries() : 0)
+                .description("Configured authentication limiter capacity; zero when disabled").register(registry);
     }
 
     public synchronized Admission begin(Endpoint endpoint, String client, String email) {
