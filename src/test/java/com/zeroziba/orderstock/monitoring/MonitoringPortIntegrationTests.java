@@ -29,10 +29,12 @@ class MonitoringPortIntegrationTests {
         var denied = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + application + "/actuator/prometheus"))
                 .timeout(Duration.ofSeconds(10)).header("X-Forwarded-Port", Integer.toString(management)).GET().build(), HttpResponse.BodyHandlers.ofString());
         assertThat(denied.statusCode()).isEqualTo(403);
+        String requestId = denied.headers().firstValue(RequestTracingFilter.HEADER).orElseThrow();
         var scrape = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + management + "/actuator/prometheus"))
                 .timeout(Duration.ofSeconds(10)).GET().build(), HttpResponse.BodyHandlers.ofString());
         assertThat(scrape.statusCode()).isEqualTo(200);
         assertThat(scrape.body()).contains("stockroom_order_events_total", "jvm_memory_used_bytes", "hikaricp_connections");
         assertThat(scrape.body()).doesNotContain("userId=", "orderId=", "email=", "requestKey=");
+        assertThat(scrape.body()).doesNotContain(requestId, "requestId=", "request_id=");
     }
 }

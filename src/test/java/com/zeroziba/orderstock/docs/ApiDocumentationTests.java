@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import com.zeroziba.orderstock.TestAccounts;
+import com.zeroziba.orderstock.monitoring.RequestTracingFilter;
 import com.zeroziba.orderstock.order.CreateOrderRequest;
 import com.zeroziba.orderstock.order.OrderExpirationService;
 import com.zeroziba.orderstock.order.OrderService;
@@ -56,6 +57,7 @@ class ApiDocumentationTests {
     @Autowired private OrderExpirationService expiration;
     @Autowired private EntityManager entityManager;
     @Autowired private PlatformTransactionManager transactions;
+    @Autowired private RequestTracingFilter tracing;
     private MockMvc mvc;
     private MockHttpSession session;
     private String token;
@@ -70,7 +72,7 @@ class ApiDocumentationTests {
         config.operationPreprocessors()
                 .withRequestDefaults(new DocumentationSanitizer(), prettyPrint())
                 .withResponseDefaults(new DocumentationSanitizer(), prettyPrint());
-        mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).apply(config).build();
+        mvc = MockMvcBuilders.webAppContextSetup(context).addFilter(tracing).apply(springSecurity()).apply(config).build();
         userId = TestAccounts.create(jdbc, "reader@example.test");
         product = products.saveAndFlush(new Product("문서 테스트 머그컵", 15000, 100));
         session = login("reader@example.test", TestAccounts.PASSWORD, null);
@@ -93,7 +95,8 @@ class ApiDocumentationTests {
                 fieldWithPath("[].id").description("상품 ID"),
                 fieldWithPath("[].name").description("현재 상품명"),
                 fieldWithPath("[].price").description("원 단위 정수 가격"),
-                fieldWithPath("[].stock").description("주문 가능한 현재 재고"))));
+                fieldWithPath("[].stock").description("주문 가능한 현재 재고")), responseHeaders(
+                headerWithName(RequestTracingFilter.HEADER).description("서버가 매 요청 새로 발급하는 추적 ID. 같은 ID로 서버 로그 조회"))));
         mvc.perform(get("/storefront/config")).andExpect(status().isOk()).andDo(document("storefront-config", responseFields(
                 fieldWithPath("mockPayments").description("모의 결제 쓰기 허용 여부. prod에서는 false"),
                 fieldWithPath("mockRefunds").description("모의 환불 쓰기 허용 여부. prod에서는 false"))));
