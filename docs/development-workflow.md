@@ -23,6 +23,7 @@
 | `feat/request-tracing` | 서버 발급 요청 ID·보안 필터 차단 추적·안전한 오류 로그 | [PR #13](https://github.com/zeroziba9-hash/order-stock-service/pull/13) |
 | `docs/project-documentation` | 프로젝트 소개·설계 문서·API 안내·화면 문구 | [PR #14](https://github.com/zeroziba9-hash/order-stock-service/pull/14) |
 | `feat/jdbc-sessions` | MySQL 세션 저장·재시작 유지·만료·로그아웃·복구 시 세션 무효화 | [PR #15](https://github.com/zeroziba9-hash/order-stock-service/pull/15) |
+| `feat/account-management` | 내 계정·비밀번호 변경·다른 접속 종료·인증 버전·이전 세션 호환 | [PR #16](https://github.com/zeroziba9-hash/order-stock-service/pull/16) |
 
 현재 `feat/account-management`에서 내 계정·비밀번호 변경·다른 접속 종료를 검증합니다. PR #15 병합 후 최신 main에서 분기했습니다.
 PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
