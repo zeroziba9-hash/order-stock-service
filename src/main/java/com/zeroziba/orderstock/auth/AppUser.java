@@ -22,6 +22,9 @@ public class AppUser {
     @Column(nullable = false, length = 100)
     private String passwordHash;
 
+    @Column(nullable = false)
+    private long authVersion;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "user_role", nullable = false, length = 10)
     private UserRole role = UserRole.USER;
@@ -36,5 +39,10 @@ public class AppUser {
     public Long getId() { return id; }
     public String getEmail() { return email; }
     public String getPasswordHash() { return passwordHash; }
+    public long getAuthVersion() { return authVersion; }
+    public void changePassword(String hash) {
+        authVersion = Math.addExact(authVersion, 1);
+        passwordHash = hash;
+    }
     public UserRole getRole() { return role; }
 }

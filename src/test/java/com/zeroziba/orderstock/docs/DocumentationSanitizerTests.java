@@ -12,11 +12,13 @@ class DocumentationSanitizerTests {
 
     @Test
     void masksJsonSecretsIncludingEscapedQuotesWithoutCorruptingKorean() {
-        String json = "{\"email\":\"한국@example.test\",\"password\":\"a\\\"b\\\\c\",\"token\":\"private-token\"}";
+        String json = "{\"email\":\"한국@example.test\",\"password\":\"a\\\"b\\\\c\",\"currentPassword\":\"old-secret\",\"newPassword\":\"new-secret\",\"token\":\"private-token\"}";
         var sanitized = JsonMapper.builder().build().readTree(sanitizer.sanitize(json.getBytes(StandardCharsets.UTF_8), MediaType.APPLICATION_JSON));
         assertThat(sanitized.path("email").asString()).isEqualTo("한국@example.test");
         assertThat(sanitized.path("password").asString()).isEqualTo("<redacted>");
         assertThat(sanitized.path("token").asString()).isEqualTo("<redacted>");
+        assertThat(sanitized.path("currentPassword").asString()).isEqualTo("<redacted>");
+        assertThat(sanitized.path("newPassword").asString()).isEqualTo("<redacted>");
     }
 
     @Test

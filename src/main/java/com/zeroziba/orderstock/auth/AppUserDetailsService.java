@@ -22,6 +22,6 @@ public class AppUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) {
         AppUser user = userRepository.findByEmail(normalizeEmail(email))
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
-        return new AuthenticatedUser(user.getId(), user.getEmail(), user.getPasswordHash(), user.getRole());
+        return new AuthenticatedUser(user.getId(), user.getEmail(), user.getPasswordHash(), user.getRole(), user.getAuthVersion());
     }
 }

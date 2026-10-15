@@ -70,7 +70,7 @@ tasks.register('verifyApiSnippets') {
 			~/TestPass123!|DocPass123!|WrongDocPass123!/,
 			~/(?im)^Set-Cookie\s*:/,
 			~/(?im)^X-CSRF-TOKEN:(?![ \t]*<csrf-token>[ \t]*\r?$).*$/,
-			~/"(?:token|password)"\s*:\s*"(?!<redacted>")[^"]*"/,
+			~/"(?:token|password|currentPassword|newPassword)"\s*:\s*"(?!<redacted>")[^"]*"/,
 			~/(?i)password=(?!(?:%3Credacted%3E|<redacted>)(?:[&\s'"]|$))[^&\s'"]+/,
 			~/(?im)^Cookie:(?![ \t]*JSESSIONID=<session-id>[ \t]*\r?$).*$/
 		]

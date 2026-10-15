@@ -12,8 +12,10 @@
   let afterLogin;
   let ordersRequest = 0;
   let detailRequest = 0;
-  const authCooldown = { login: 0, register: 0 };
+  const authCooldown = { login: 0, register: 0, password: 0 };
   let authCooldownTimer;
+  let passwordCooldownTimer;
+  let sessionsRequest = 0;
 
   class ApiError extends Error {
     constructor(message, status, code, retryAfter = 0) { super(message); this.status = status; this.code = code; this.retryAfter = retryAfter; }
@@ -34,6 +36,8 @@
         body: form ? new URLSearchParams(form) : body === undefined ? undefined : JSON.stringify(body) });
     } catch {
       throw new ApiError(method === "GET" ? "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요."
+        : path === "/auth/password" ? "변경 결과를 확인하지 못했어요. 로그아웃 후 새 비밀번호로 로그인을 확인해 주세요."
+        : path === "/auth/sessions/logout-others" ? "종료 결과를 확인하지 못했어요. 접속 목록을 새로고침해 주세요."
         : "응답을 받지 못했어요. 같은 내용으로 다시 시도하면 중복 요청을 확인해요. 새 주문 전에는 내 주문도 확인해 주세요.", 0);
     }
     const data = response.status === 204 ? null : await response.json().catch(() => null);
@@ -54,6 +58,7 @@
     if (error.status === 401 && state.user) {
       state.user = null; state.epoch++; state.orders = []; state.next = null;
       renderAccount(); renderOrders();
+      renderProfile();
       error.message = "로그인이 만료됐어요. 다시 로그인해 주세요.";
     }
     if (target) $(target).textContent = error.message; else notify(error.message);
@@ -137,11 +142,88 @@
 
   function route() {
     const orders = location.hash === "#orders";
-    $("#shop-view").hidden = orders; $("#orders-view").hidden = !orders;
-    $("#shop-nav").toggleAttribute("aria-current", !orders); $("#orders-nav").toggleAttribute("aria-current", orders);
-    if (orders) $("#orders-nav").setAttribute("aria-current", "page"); else $("#shop-nav").setAttribute("aria-current", "page");
+    const account = location.hash === "#account";
+    $("#shop-view").hidden = orders || account; $("#orders-view").hidden = !orders; $("#account-view").hidden = !account;
+    for (const [id, active] of [["#shop-nav", !orders && !account], ["#orders-nav", orders], ["#account-nav", account]]) {
+      if (active) $(id).setAttribute("aria-current", "page"); else $(id).removeAttribute("aria-current");
+    }
+    $("#change-password-form").reset();
     if (orders) loadOrders();
+    if (account) { renderProfile(); loadSessions(); }
   }
+
+  function renderProfile() {
+    $("#account-gate").hidden = Boolean(state.user); $("#account-content").hidden = !state.user;
+    $("#profile-email").textContent = state.user?.email || "";
+    $("#login-sessions").replaceChildren(); $("#sessions-error").textContent = "";
+    $("#change-password-error").textContent = ""; $("#change-password-form").reset();
+    $("#logout-others").disabled = true;
+  }
+
+  async function loadSessions() {
+    if (!state.user) return;
+    const epoch = state.epoch; const requestId = ++sessionsRequest;
+    $("#refresh-sessions").disabled = true; $("#logout-others").disabled = true;
+    $("#sessions-error").textContent = ""; $("#login-sessions").textContent = "접속을 확인하고 있어요.";
+    try {
+      const result = await api("/auth/sessions");
+      if (epoch !== state.epoch || requestId !== sessionsRequest) return;
+      $("#login-sessions").innerHTML = result.sessions.map((session) => `<article class="session-row"><strong>${session.current ? "현재 접속" : "다른 접속"}</strong><p>접속 시작 · <time datetime="${escape(session.createdAt)}">${escape(date(session.createdAt))}</time><br>최근 활동 · <time datetime="${escape(session.lastAccessedAt)}">${escape(date(session.lastAccessedAt))}</time></p></article>`).join("") || '<p class="field-help">표시할 접속이 없어요. 새로고침해 주세요.</p>';
+      if (result.truncated) $("#login-sessions").insertAdjacentHTML("beforeend", '<p class="field-help">최근 접속 100개까지 표시해요. 다른 기기 로그아웃은 표시되지 않은 접속에도 적용돼요.</p>');
+      $("#logout-others").disabled = !result.truncated && !result.sessions.some((session) => !session.current);
+    } catch (error) {
+      if (epoch !== state.epoch || requestId !== sessionsRequest) return;
+      $("#login-sessions").replaceChildren(); handleError(error, "#sessions-error");
+    } finally { if (requestId === sessionsRequest) $("#refresh-sessions").disabled = false; }
+  }
+
+  function renderPasswordCooldown() {
+    clearTimeout(passwordCooldownTimer);
+    const seconds = Math.max(0, Math.ceil((authCooldown.password - performance.now()) / 1000));
+    $("#change-password-submit").disabled = seconds > 0 || Boolean($("#change-password-form").dataset.busy);
+    $("#change-password-submit").textContent = seconds > 0 ? `${seconds}초 후 다시 시도` : "비밀번호 변경";
+    if (seconds > 0) passwordCooldownTimer = setTimeout(renderPasswordCooldown, 250);
+  }
+
+  $("#refresh-sessions").addEventListener("click", loadSessions);
+  $("#logout-others").addEventListener("click", async () => {
+    const epoch = state.epoch;
+    let actionError;
+    const button = $("#logout-others"); button.disabled = true;
+    try {
+      if (!await confirmAction("다른 기기의 접속을 모두 종료할까요? 이 브라우저는 로그인 상태를 유지해요.")) return;
+      if (epoch !== state.epoch || !state.user) return;
+      await api("/auth/sessions/logout-others", { method: "POST" }); if (epoch === state.epoch) notify("다른 기기의 접속을 종료했어요.");
+    } catch (error) { actionError = error; }
+    finally {
+      await loadSessions();
+      if (actionError && epoch === state.epoch) handleError(actionError, "#sessions-error");
+    }
+  });
+
+  $("#change-password-form").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form = event.currentTarget;
+    if (form.dataset.busy || authCooldown.password > performance.now()) return;
+    $("#change-password-error").textContent = "";
+    if ($("#new-password").value !== $("#confirm-password").value) { $("#change-password-error").textContent = "새 비밀번호 확인이 일치하지 않아요."; return; }
+    if (new TextEncoder().encode($("#new-password").value).length > 72 || new TextEncoder().encode($("#current-password").value).length > 72) {
+      $("#change-password-error").textContent = "비밀번호는 UTF-8 기준 72바이트 이하로 입력해 주세요."; return;
+    }
+    const epoch = state.epoch; form.dataset.busy = "true";
+    const controls = [...form.querySelectorAll("button, input")]; controls.forEach((control) => { control.disabled = true; });
+    try {
+      if (!await confirmAction("비밀번호를 변경하면 모든 접속이 종료돼요. 변경할까요?")) return;
+      if (epoch !== state.epoch || !state.user) return;
+      await api("/auth/password", { method: "POST", body: { currentPassword: $("#current-password").value, newPassword: $("#new-password").value } });
+      if (epoch !== state.epoch) return;
+      state.user = null; state.epoch++; state.orders = []; state.next = null;
+      renderAccount(); renderOrders(); renderProfile(); notify("비밀번호를 변경했어요. 새 비밀번호로 다시 로그인해 주세요.");
+    } catch (error) {
+      if (epoch !== state.epoch) return;
+      if (error.status === 429) authCooldown.password = performance.now() + (error.retryAfter || 1) * 1000;
+      handleError(error, "#change-password-error");
+    } finally { form.reset(); delete form.dataset.busy; controls.forEach((control) => { control.disabled = false; }); renderPasswordCooldown(); }
+  });
 
   function showAuth(callback) {
     afterLogin = callback; state.register = false; renderAuth(); $("#auth-form").reset();
@@ -270,7 +352,7 @@
         state.register = false; renderAuth(); notify("회원가입이 완료됐어요. 입력한 정보로 로그인해 주세요."); return;
       }
       state.user = await api("/auth/login", { method: "POST", form: account }); state.epoch++;
-      dialog.close(); $("#auth-form").reset(); renderAccount(); await loadOrders(); notify("스톡룸에 오신 걸 환영해요.");
+      dialog.close(); $("#auth-form").reset(); renderAccount(); renderProfile(); await loadOrders(); if (location.hash === "#account") await loadSessions(); notify("스톡룸에 오신 걸 환영해요.");
       const callback = afterLogin; afterLogin = null; callback?.();
     } catch (error) {
       if (error.status === 429 && error.code === "AUTH_RATE_LIMITED") {
@@ -305,7 +387,7 @@
   $("#account").addEventListener("click", async (event) => {
     const button = event.target.closest("#logout-button"); if (!button) return;
     button.disabled = true;
-    try { await api("/auth/logout", { method: "POST" }); state.user = null; state.epoch++; state.orders = []; state.next = null; renderAccount(); renderOrders(); notify("로그아웃했어요."); }
+    try { await api("/auth/logout", { method: "POST" }); state.user = null; state.epoch++; state.orders = []; state.next = null; renderAccount(); renderOrders(); renderProfile(); notify("로그아웃했어요."); }
     catch (error) { handleError(error); button.disabled = false; }
   });
   window.addEventListener("hashchange", route);
@@ -314,7 +396,7 @@
     const epoch = state.epoch;
     renderOrders(); route();
     await Promise.all([loadProducts(), (async () => { try { state.config = await api("/storefront/config"); } catch { /* Mock actions remain hidden if configuration is unavailable. */ } })(),
-      (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); if (location.hash === "#orders") await loadOrders(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } })()]);
+      (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); renderProfile(); if (location.hash === "#orders") await loadOrders(); if (location.hash === "#account") await loadSessions(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } })()]);
   }
   init();
 })();

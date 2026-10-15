@@ -84,7 +84,7 @@ class DisabledMockApiIntegrationTests {
         mvc.perform(get("/orders/" + orderId + "/" + path))
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/orders/" + orderId + "/" + path)
-                .with(user(new AuthenticatedUser(owner.getId() + 1, "other@example.test", null))))
+                .with(user(new AuthenticatedUser(TestAccounts.create(jdbc, "other@example.test"), "other@example.test", null))))
                 .andExpect(status().isNotFound());
     }
 }
