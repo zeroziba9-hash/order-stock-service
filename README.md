@@ -34,7 +34,7 @@
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 307개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 46개 통과(일반 14 + 관리자 18 + 계정 6 + 자동 만료 2 + 인증 제한 6).
+**확인된 결과:** 백엔드 테스트 326개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 54개 통과(일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 자동 만료 2 + 인증 제한 6).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 후속 차감 방식 비교는 워밍업과 36회 반복 측정에서 성공 주문 8,640건·원장 잔액·취소 후 복구를 확인했고, 개선 근거가 부족해 기본 행 잠금 방식을 유지했습니다.
 테스트 조건과 실제 측정값은 [설계와 검증 기록](docs/design-and-validation.md)에 정리했습니다.
@@ -58,6 +58,8 @@ docker compose up --build --wait --wait-timeout 240
 - [요청 추적 ID·민감정보를 제외한 장애 로그](docs/request-tracing.md)
 - [MySQL 세션 저장·재시작·만료·복구 정책](docs/session-persistence.md)
 - [내 계정·비밀번호 변경·다른 접속 종료](docs/account-management.md)
+- [상품·주문 검색·관리자 기간 조회·장바구니와 여러 상품 주문](docs/store-operations-expansion.md)
+- [공개 배포 사전 검사·릴리스 확인·V16 이후 복구](docs/production-readiness.md)
 - [기능 브랜치·PR 작업 규칙](docs/development-workflow.md)
 - [인증](docs/auth.md) · [인증 요청 제한](docs/auth-limits.md) · [주문 API](docs/order-api.md) · [주문 규칙](docs/order-rules.md)
 - [멱등 요청](docs/idempotency.md) · [모의 결제](docs/payments.md) · [모의 환불](docs/refunds.md)
@@ -185,7 +187,7 @@ DB 시작·접속·종료 방법은 [MySQL 안내](docs/mysql.md)를 참고하�
 주문 기능은 `order/OrderController.java` → `OrderService.java` →
 `ProductRepository.findByIdForUpdate()` → `OrderRepository` 순서로 읽어보세요.
 `src/main/resources/db/migration`의 SQL은 Flyway가 순서대로 한 번씩 실행합니다.
-이미 적용한 파일을 수정하지 말고, 다음 변경은 `V11__설명.sql`처럼 새 파일로 추가하세요.
+이미 적용한 파일을 수정하지 말고, 다음 변경은 `V18__설명.sql`처럼 새 파일로 추가하세요.
 JPA의 `ddl-auto=validate`는 테이블 구조를 검증하며 DB를 초기화하지 않습니다.
 
 ### DB 값과 API 응답 연결하기
