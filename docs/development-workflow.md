@@ -20,10 +20,12 @@
 | `feat/auth-request-limits` | 인증 요청 제한·동시 검사 예약·재시도 화면·인증 지표 | [PR #10](https://github.com/zeroziba9-hash/order-stock-service/pull/10) |
 | `feat/catalog-change-history` | 상품 수정 전후·관리자·시각, 트랜잭션·커서·이력 화면 | [PR #11](https://github.com/zeroziba9-hash/order-stock-service/pull/11) |
 | `feat/monitoring-alert-rules` | 경고 5개·상태 패널·대응 문서·실제 앱 중단/복구·인증 폭주 검증 | [PR #12](https://github.com/zeroziba9-hash/order-stock-service/pull/12) |
+| `feat/request-tracing` | 서버 발급 요청 ID·보안 필터 차단 추적·안전한 오류 로그 | [PR #13](https://github.com/zeroziba9-hash/order-stock-service/pull/13) |
 
-현재 `feat/monitoring-alert-rules`에서 경고 규칙·상태 전이·실제 장애 복구를 검증합니다.
+현재 `feat/request-tracing`에서 응답 ID와 서버 로그 연결·민감정보 제외·동시 요청 격리를 검증합니다.
+PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
 
-위 PR #1~#11은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+위 PR #1~#12는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
 이후 기능도 최신 병합 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
 PR #8은 PR #6 기준으로 시작했으며, PR #7 병합 후 최신 main을 기능 브랜치에 병합해 충돌을 해결했습니다.
 

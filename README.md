@@ -27,11 +27,12 @@
 | 차감 방식 성능 비교 | 기본 행 잠금과 실험용 조건부 UPDATE, 워밍업·교대·3회 반복 | 충분한 재고의 성공 주문만 측정, 상품별 원장·취소 복구 확인 |
 | 처리 결과와 실행 상태 관측 | 커밋 후 주문 지표, 내부 관리 포트, Prometheus·Grafana | 롤백·동시 요청·실제 만료와 18개 패널 쿼리 CI |
 | 장애 감지와 복구 확인 | 앱 scrape·5xx·인증 제한·용량·만료 롤백 경고, 지속 시간·대응 문서 | promtool 26개 기대 상태, 실제 앱 중단→복구·인증 폭주 경고 CI |
+| 장애 요청과 로그 연결 | 서버 발급 추적 ID, 보안 필터 앞 완료 로그, 안전한 500 처리 | 실제 Tomcat의 인증·CSRF·제한·오류 응답, 동시 스레드 격리·민감정보 제외 |
 
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 274개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 40개 통과(일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6).
+**확인된 결과:** 백엔드 테스트 281개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 40개 통과(일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 후속 차감 방식 비교는 워밍업과 36회 반복 측정에서 성공 주문 8,640건·원장 잔액·취소 후 복구를 확인했고, 개선 근거가 부족해 기본 행 잠금 방식을 유지했습니다.
 테스트 조건과 실제 측정값은 [설계·검증 포트폴리오](docs/portfolio.md)에 정리했습니다.
@@ -52,6 +53,7 @@ docker compose up --build --wait --wait-timeout 240
 
 - [설계 선택·정합성·측정·면접 설명](docs/portfolio.md)
 - [테스트 기반 API 가이드 생성·다운로드](docs/api-documentation.md)
+- [요청 추적 ID·민감정보를 제외한 장애 로그](docs/request-tracing.md)
 - [기능 브랜치·PR 작업 규칙](docs/development-workflow.md)
 - [인증](docs/auth.md) · [인증 요청 제한](docs/auth-limits.md) · [주문 API](docs/order-api.md) · [주문 규칙](docs/order-rules.md)
 - [멱등 요청](docs/idempotency.md) · [모의 결제](docs/payments.md) · [모의 환불](docs/refunds.md)

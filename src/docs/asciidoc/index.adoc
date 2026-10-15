@@ -23,6 +23,9 @@
   로그인 시 세션 ID와 토큰이 교체되므로 로그인 전 토큰을 재사용하지 마세요.
 * 모의 결제·환불은 로컬/테스트용이며 실제 돈이 오가지 않습니다. 운영에서는 쓰기가 `404 MOCK_API_DISABLED`입니다.
   본인 결제·환불 이력 조회는 운영에서도 가능합니다. 설정을 먼저 확인하세요.
+* 응답의 `X-Request-ID`는 서버가 매 요청 새로 발급하는 UUID입니다. 인증 거부·CSRF·요청 제한·500 응답에도 제공합니다.
+  장애 문의 시 이 ID와 발생 시각으로 서버 로그를 찾습니다. 클라이언트가 보낸 같은 이름의 헤더는 신뢰하지 않습니다.
+  주문 중복 방지용 `Idempotency-Key`와 별개이며, 같은 주문을 재시도해도 추적 ID는 달라집니다.
 
 === API 목록
 
@@ -55,7 +58,7 @@
 
 ID 오름차순입니다. 재고는 응답 시점의 값이며 이후 주문 성공을 보장하지 않습니다.
 
-operation::products[snippets='http-request,http-response,response-fields']
+operation::products[snippets='http-request,http-response,response-headers,response-fields']
 
 === 모의 기능 허용 여부
 

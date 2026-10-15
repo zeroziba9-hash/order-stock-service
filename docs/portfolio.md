@@ -102,7 +102,7 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 274개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| 백엔드 281개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
 | Chromium E2E 40개 | 일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
@@ -111,6 +111,7 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 | 배포 후 점검 도구 | 인증서 검증을 유지한 GET 검사 9개, CI의 로컬 HTTPS 대상 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
 | API 계약 문서 | 실제 인증·CSRF·MySQL 응답에서 HTML 생성, 필드·마스킹·누락 참조 검증 | [가이드 생성·다운로드](api-documentation.md) |
 | 관측과 DB 결과 대조 | 커밋 후 생성·재응답·취소·만료 카운터, 18개 패널, HTTP 부하와 스케줄러 연결 | [로컬 모니터링·CI](observability.md) |
+| 장애 요청 추적 | 실제 서버의 응답 헤더·완료 로그·예외 위치 연결, 보안 필터 차단·동시 MDC 정리·민감정보 제외 | [요청 추적과 장애 조사](request-tracing.md) |
 
 추가 검증 코드는 위 독립 PR에서 확인합니다. 자동 만료는 [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5)에 기록했습니다.
 브라우저 검증은 Chromium 데스크톱·모바일 에뮬레이션이며 실제 iOS·Android 기기나 모든 브라우저를 검증한 것은 아닙니다.

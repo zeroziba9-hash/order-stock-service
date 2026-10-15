@@ -1,6 +1,10 @@
 package com.zeroziba.orderstock.common;
 
 import com.zeroziba.orderstock.monitoring.OrderMetrics;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -10,9 +14,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.ErrorResponse;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
     private final OrderMetrics metrics;
 
     public ApiExceptionHandler(OrderMetrics metrics) { this.metrics = metrics; }
@@ -44,5 +50,29 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleLockConflict(PessimisticLockingFailureException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError("ORDER_CONFLICT", "다른 주문과 충돌했습니다. 잠시 후 다시 시도하세요."));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiError> handleUnexpectedFailure(RuntimeException exception) {
+        // Preserve framework-defined statuses, including method/header validation errors.
+        if (exception instanceof ErrorResponse error && !error.getStatusCode().is5xxServerError()) {
+            return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders())
+                    .body(new ApiError("INVALID_REQUEST", "요청 형식과 입력 값을 확인하세요."));
+        }
+        Throwable cause = exception;
+        for (int depth = 0; depth < 8 && cause.getCause() != null && cause.getCause() != cause; depth++) {
+            cause = cause.getCause();
+        }
+        String location = Arrays.stream(exception.getStackTrace())
+                .filter(frame -> frame.getClassName().startsWith("com.zeroziba.orderstock."))
+                .limit(8).map(StackTraceElement::toString).collect(Collectors.joining(","));
+        // Exception messages, SQL values and Throwable rendering may contain credentials or personal data.
+        log.error("unexpected_failure type={} causeType={} location={}",
+                exception.getClass().getName(), cause.getClass().getName(), location);
+        var response = exception instanceof ErrorResponse error
+                ? ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders())
+                : ResponseEntity.internalServerError();
+        return response
+                .body(new ApiError("INTERNAL_ERROR", "서버에서 요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요."));
     }
 }
