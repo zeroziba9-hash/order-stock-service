@@ -51,17 +51,24 @@ public class InventoryLedger {
 
     @Transactional(readOnly = true)
     public History history(long adminId, long productId, Long beforeId) {
+        return history(adminId,productId,beforeId,null,null);
+    }
+    @Transactional(readOnly=true)
+    public History history(long adminId,long productId,Long beforeId,java.time.LocalDate from,java.time.LocalDate to) {
         admins.require(adminId);
         if (productId < 1 || (beforeId != null && beforeId < 1))
             throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_REQUEST","상품과 커서 ID를 확인하세요.");
         var product=products.findById(productId).orElseThrow(() ->
                 new ApiException(HttpStatus.NOT_FOUND,"PRODUCT_NOT_FOUND","상품을 찾을 수 없습니다."));
+        var range=com.zeroziba.orderstock.common.DateRange.of(from,to);
         var rows=jdbc.query("""
-                SELECT * FROM inventory_movements WHERE product_id=? AND id<? ORDER BY id DESC LIMIT 21
+                SELECT * FROM inventory_movements WHERE product_id=? AND id<?
+                AND (? IS NULL OR created_at>=?) AND (? IS NULL OR created_at<?) ORDER BY id DESC LIMIT 21
                 """, (row,index) -> new Movement(row.getLong("id"),row.getLong("product_id"),row.getString("product_name"),
                         row.getString("movement_type"),row.getString("event_reference"),row.getObject("actor_id",Long.class),
                         row.getInt("quantity_delta"),row.getInt("before_stock"),row.getInt("after_stock"),row.getString("reason"),
-                        row.getObject("created_at",LocalDateTime.class).toInstant(ZoneOffset.UTC)),productId,beforeId==null?Long.MAX_VALUE:beforeId);
+                        row.getObject("created_at",LocalDateTime.class).toInstant(ZoneOffset.UTC)),productId,beforeId==null?Long.MAX_VALUE:beforeId,
+                        range.from(),range.from(),range.until(),range.until());
         // Compare against the complete ledger, not just this cursor page.
         long recorded=jdbc.queryForObject("SELECT COALESCE(SUM(quantity_delta),0) FROM inventory_movements WHERE product_id=?",Long.class,productId);
         return new History(rows.stream().limit(20).toList(),rows.size()>20?rows.get(19).movementId():null,

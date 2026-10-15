@@ -40,36 +40,48 @@ public class OrderService {
 
     @Transactional
     public OrderResponse create(long userId, CreateOrderRequest request) {
+        return createItems(userId,java.util.List.of(request));
+    }
+
+    @Transactional
+    public OrderResponse createItems(long userId,List<CreateOrderRequest> requests) {
         requireUser(userId);
-        if (request.productId() == null || request.productId() < 1
-                || request.quantity() == null || request.quantity() < 1) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "상품 ID와 주문 수량은 1 이상이어야 합니다.");
-        }
-        var allocation=allocator.allocate(request.productId(),request.quantity());
-        Product product=allocation.product();
-        long totalAmount;
+        var items=new CartOrderRequest(requests).normalized();
+        var allocations=new java.util.ArrayList<StockAllocator.Allocation>();
+        long totalAmount=0;
         try {
-            totalAmount = Math.multiplyExact(product.getPrice(), (long) request.quantity());
+            // All paths acquire product locks in ascending ID order, including reversed cart submissions.
+            for(var item:items){
+                var allocation=allocator.allocate(item.productId(),item.quantity()); allocations.add(allocation);
+                totalAmount=Math.addExact(totalAmount,Math.multiplyExact(allocation.product().getPrice(),(long)item.quantity()));
+            }
         } catch (ArithmeticException exception) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_AMOUNT", "주문 금액이 허용 범위를 초과합니다.");
         }
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        PurchaseOrder order = new PurchaseOrder(userId, product, request.quantity(), totalAmount,
+        PurchaseOrder order = new PurchaseOrder(userId,allocations.get(0).product(),items.get(0).quantity(),totalAmount,
                 now, now.plus(expiration.paymentWindow()));
+        for(int i=1;i<items.size();i++)order.addItem(allocations.get(i).product(),items.get(i).quantity());
         // 저장 실패는 RuntimeException으로 전파되어 재고 변경과 주문 전체가 롤백된다.
         orderRepository.saveAndFlush(order);
-        ledger.record(product,allocation.beforeStock(),InventoryLedger.Type.ORDER,order.getId().toString(),userId,"주문 재고 차감");
+        for(var allocation:allocations)ledger.record(allocation.product(),allocation.beforeStock(),InventoryLedger.Type.ORDER,order.getId().toString(),userId,"주문 재고 차감");
         metrics.afterCommit(OrderMetrics.Outcome.CREATED);
         return OrderResponse.from(order);
     }
 
     @Transactional(readOnly = true)
     public OrderListResponse findRecent(long userId, Long beforeId) {
+        return findRecent(userId,beforeId,null,null,null);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderListResponse findRecent(long userId, Long beforeId, PurchaseOrder.Status status, java.time.LocalDate from, java.time.LocalDate to) {
         requireUser(userId);
         if (beforeId != null && beforeId < 1) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "이전 주문 ID는 1 이상이어야 합니다.");
         }
-        List<Long> ids = orderRepository.findRecentIds(userId, beforeId, PageRequest.of(0, 21));
+        var range=com.zeroziba.orderstock.common.DateRange.of(from,to);
+        List<Long> ids = orderRepository.findFilteredIds(userId, beforeId,status,range.from(),range.until(),PageRequest.of(0, 21));
         boolean hasMore = ids.size() > 20;
         List<Long> page = ids.stream().limit(20).toList();
         List<OrderResponse> orders = page.isEmpty() ? List.of()

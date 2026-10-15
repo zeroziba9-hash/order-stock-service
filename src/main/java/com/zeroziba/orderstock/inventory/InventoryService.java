@@ -65,11 +65,15 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public History history(long adminId, Long productId, Long beforeId) {
+        return history(adminId,productId,beforeId,null,null);
+    }
+    @Transactional(readOnly=true)
+    public History history(long adminId,Long productId,Long beforeId,java.time.LocalDate from,java.time.LocalDate to) {
         requireAdmin(adminId);
         if ((productId != null && productId < 1) || (beforeId != null && beforeId < 1)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "상품 ID와 이전 이력 ID는 1 이상이어야 합니다.");
         }
-        var rows = inventory.recent(productId, beforeId);
+        var rows = inventory.recent(productId,beforeId,com.zeroziba.orderstock.common.DateRange.of(from,to));
         var page = rows.stream().limit(20).toList();
         return new History(page, rows.size() > 20 ? page.get(19).adjustmentId() : null);
     }

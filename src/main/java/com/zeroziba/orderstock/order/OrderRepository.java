@@ -20,6 +20,16 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
     @Query("select o.id from PurchaseOrder o where o.userId = :userId and (:beforeId is null or o.id < :beforeId) order by o.id desc")
     List<Long> findRecentIds(@Param("userId") long userId, @Param("beforeId") Long beforeId, Pageable pageable);
 
+    @Query("""
+            select o.id from PurchaseOrder o where o.userId=:userId
+            and (:beforeId is null or o.id<:beforeId) and (:status is null or o.status=:status)
+            and (:fromAt is null or o.createdAt>=:fromAt) and (:untilAt is null or o.createdAt<:untilAt)
+            order by o.id desc
+            """)
+    List<Long> findFilteredIds(@Param("userId") long userId,@Param("beforeId") Long beforeId,
+            @Param("status") PurchaseOrder.Status status,@Param("fromAt") LocalDateTime fromAt,
+            @Param("untilAt") LocalDateTime untilAt,Pageable pageable);
+
     @EntityGraph(attributePaths = "items")
     List<PurchaseOrder> findByUserIdAndIdInOrderByIdDesc(Long userId, List<Long> ids);
 

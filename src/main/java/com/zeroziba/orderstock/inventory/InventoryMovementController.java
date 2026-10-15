@@ -10,7 +10,8 @@ public class InventoryMovementController {
     public InventoryMovementController(InventoryLedger ledger) { this.ledger=ledger; }
     @GetMapping("/admin/inventory-movements")
     public InventoryLedger.History history(@AuthenticationPrincipal AuthenticatedUser admin,
-            @RequestParam long productId,@RequestParam(required=false) Long beforeId) {
-        return ledger.history(admin.getId(),productId,beforeId);
+            @RequestParam long productId,@RequestParam(required=false) Long beforeId,
+            @RequestParam(required=false) java.time.LocalDate from,@RequestParam(required=false) java.time.LocalDate to) {
+        return ledger.history(admin.getId(),productId,beforeId,from,to);
     }
 }

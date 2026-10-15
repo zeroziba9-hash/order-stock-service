@@ -122,6 +122,37 @@ operation::account-password[snippets='http-request,request-headers,request-field
 
 == 관리자 재고 조정
 
+=== 상품 검색과 기간별 이력
+
+공개 상품 검색은 판매 중인 상품만 반환하며 기존 `GET /products` 배열 API는 유지합니다.
+20개씩 조회하고 다음 페이지 여부를 반환합니다. 가격 정렬은 가격·ID로 순서를 정합니다.
+페이지 사이에 상품이 수정되면 결과가 바뀔 수 있어 검색 조건 변경 시 첫 페이지부터 다시 조회합니다.
+
+operation::product-search[snippets='http-request,query-parameters,http-response,response-fields']
+
+관리자 검색은 현재 DB 역할을 확인하고 판매 중지·재고 부족 조건을 추가합니다.
+
+operation::admin-product-search[snippets='http-request,query-parameters,http-response,response-fields']
+
+주문 상태·기간 조회는 현재 회원 소유 조건과 함께 적용합니다. 날짜는 한국 시간 기준이고 시작·종료일을 모두 포함합니다.
+다음 주문 페이지에도 같은 조건과 `beforeId`를 전달합니다.
+
+operation::order-filter[snippets='http-request,query-parameters,http-response,response-fields']
+
+수동 조정·재고 원장·상품 수정 이력에도 선택한 상품·커서와 함께 `from`, `to` 날짜를 전달할 수 있습니다.
+조회 기간과 관계없이 재고 잔액 대조는 전체 원장을 사용합니다.
+
+operation::admin-history-dates[snippets='http-request,query-parameters,http-response']
+
+=== 여러 상품 주문
+
+`POST /orders/cart`는 로그인·CSRF·필수 멱등 키와 중복 없는 1~20종 상품을 받습니다.
+상품 순서를 정규화해 같은 내용의 순서만 바뀐 재시도도 같은 주문을 반환합니다. 단일 상품 API와 키 공간을 공유하며
+서로 다른 내용의 키 재사용은 거부합니다. 가격·합계는 서버에서 결정합니다.
+하나라도 재고 부족·판매 중지·저장 실패·금액 초과이면 요청 키·주문·모든 상품 재고·원장을 함께 롤백합니다.
+
+operation::cart-order[snippets='http-request,request-headers,request-fields,http-response,response-fields']
+
 회원가입은 항상 USER입니다. 관리자는 웹 API로 지정하지 않으며, 운영자가 DB 접근 권한으로 기존 회원의 역할을 변경합니다.
 역할 부여 후 다시 로그인해야 새 권한이 세션에 반영됩니다. 권한 회수 후에는 기존 관리자 세션도 이 API에서 거부합니다.
 

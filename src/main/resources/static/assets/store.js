@@ -16,6 +16,11 @@
   let authCooldownTimer;
   let passwordCooldownTimer;
   let sessionsRequest = 0;
+  let productsRequest = 0;
+  let productPage = 0, productMore = false;
+  let productQuery = "", productSort = "ID_ASC";
+  let orderFilters = {};
+  let cartOwner = null, cart = [], cartPending = null, cartBusy = false;
 
   class ApiError extends Error {
     constructor(message, status, code, retryAfter = 0) { super(message); this.status = status; this.code = code; this.retryAfter = retryAfter; }
@@ -79,6 +84,17 @@
   function badge(order) { return `<span class="status ${escape(order.status)}">${escape(statuses[order.status] || order.status)}</span>`; }
 
   function renderAccount() {
+    const owner = state.user?.userId || null;
+    if (cartOwner !== owner) {
+      cartOwner = owner; cart = []; cartPending = null;
+      if (owner) try {
+        const stored = JSON.parse(sessionStorage.getItem(`stockroom-cart:${owner}`) || "[]");
+        if (Array.isArray(stored) && stored.length <= 20 && stored.every(item => Number.isSafeInteger(item.id) && item.id > 0 && Number.isInteger(item.quantity) && item.quantity > 0 && item.quantity <= 2147483647 && typeof item.name === "string" && item.name.length <= 100 && Number.isSafeInteger(item.price) && item.price >= 0)) cart = stored;
+        const pending = JSON.parse(sessionStorage.getItem(`stockroom-cart-pending:${owner}`) || "null");
+        if (pending && typeof pending.key === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/.test(pending.key) && Array.isArray(pending.body?.items) && pending.body.items.length > 0 && pending.body.items.length <= 20 && pending.body.items.every(item => Number.isSafeInteger(item.productId) && item.productId > 0 && Number.isInteger(item.quantity) && item.quantity > 0)) cartPending = pending;
+      } catch { /* Browsers without storage can browse; checkout requires saving its request first. */ }
+      renderCart();
+    }
     $("#account").innerHTML = state.user
       ? `<span class="account-email" title="${escape(state.user.email)}">${escape(state.user.email)}</span><button class="button ghost small" id="logout-button">로그아웃</button>`
       : '<button class="button small" id="login-button">로그인 <span aria-hidden="true">↗</span></button>';
@@ -98,17 +114,28 @@
     const products = state.products.filter((product) => state.filter !== "available" || product.stock > 0);
     $("#products").innerHTML = products.length ? products.map((product) => {
       const type = product.name.includes("머그") ? "mugs" : product.name.includes("스티커") ? "stickers" : "generic";
-      return `<article class="product-card"><div class="product-image ${type}" role="img" aria-label="${escape(product.name)}을 표현한 일러스트"><span class="product-badge">STOCKROOM EDITION</span>${productArt(product)}</div><div class="product-meta"><span class="product-category">${type === "mugs" ? "EVERYDAY OBJECTS" : type === "stickers" ? "LITTLE EXPRESSIONS" : "THE COLLECTION"}</span><span class="stock-tag ${product.stock === 0 ? "sold" : product.stock <= 5 ? "low" : ""}"><span class="live-dot"></span>${product.stock === 0 ? "품절" : `${escape(product.stock)}개 남음`}</span></div><h3>${escape(product.name)}</h3><div class="product-bottom"><p class="price">${escape(money(product.price))}</p><button class="buy-button" data-buy="${escape(product.id)}" ${product.stock === 0 ? "disabled" : ""}>${product.stock === 0 ? "다음 기회를 기다려요" : '주문하기 <span aria-hidden="true">↗</span>'}</button></div></article>`;
+      return `<article class="product-card"><div class="product-image ${type}" role="img" aria-label="${escape(product.name)}을 표현한 일러스트"><span class="product-badge">STOCKROOM EDITION</span>${productArt(product)}</div><div class="product-meta"><span class="product-category">${type === "mugs" ? "EVERYDAY OBJECTS" : type === "stickers" ? "LITTLE EXPRESSIONS" : "THE COLLECTION"}</span><span class="stock-tag ${product.stock === 0 ? "sold" : product.stock <= 5 ? "low" : ""}"><span class="live-dot"></span>${product.stock === 0 ? "품절" : `${escape(product.stock)}개 남음`}</span></div><h3>${escape(product.name)}</h3><div class="product-bottom"><p class="price">${escape(money(product.price))}</p><button class="buy-button" data-buy="${escape(product.id)}" ${product.stock === 0 ? "disabled" : ""}>${product.stock === 0 ? "다음 기회를 기다려요" : '주문하기 <span aria-hidden="true">↗</span>'}</button></div><button class="button ghost small full" data-add-cart="${escape(product.id)}" ${product.stock === 0 ? "disabled" : ""}>장바구니 담기</button></article>`;
     }).join("") : '<p class="empty">지금 구매할 수 있는 상품이 없어요.<br>다음 컬렉션을 기다려 주세요.</p>';
   }
 
-  async function loadProducts() {
+  async function loadProducts(append = false) {
+    if (typeof append !== "boolean") append = false;
+    const requestId = ++productsRequest;
     const button = $("#refresh-products"); button.disabled = true;
-    try { state.products = await api("/products"); renderProducts(); }
+    $("#products-more").disabled = true;
+    const page = append ? productPage + 1 : 0;
+    if (!append) { state.products = []; productMore = false; $("#products-more").hidden = true; $("#products").textContent = "상품을 불러오고 있어요."; }
+    try {
+      const result = await api(`/products/search?${new URLSearchParams({ q: productQuery, sort: productSort, available: String(state.filter === "available"), page })}`);
+      if (requestId !== productsRequest) return;
+      state.products = append ? [...state.products, ...result.products.filter(item => !state.products.some(old => old.id === item.id))] : result.products;
+      productPage = page; productMore = result.hasMore; renderProducts(); $("#products-more").hidden = !productMore;
+    }
     catch (error) {
+      if (requestId !== productsRequest) return;
       if (!state.products.length) $("#products").innerHTML = '<p class="empty">상품을 불러오지 못했어요.<br>재고 새로고침을 눌러 다시 시도해 주세요.</p>';
       handleError(error);
-    } finally { button.disabled = false; }
+    } finally { if (requestId === productsRequest) { button.disabled = false; $("#products-more").disabled = false; } }
   }
 
   function renderOrders() {
@@ -125,7 +152,9 @@
     const epoch = state.epoch; const requestId = ++ordersRequest; state.ordersLoading = true;
     $("#refresh-orders").disabled = true; $("#load-more").disabled = true;
     try {
-      const page = await api(`/orders${append && state.next ? `?beforeId=${encodeURIComponent(state.next)}` : ""}`);
+      const parameters = new URLSearchParams(orderFilters);
+      if (append && state.next) parameters.set("beforeId",state.next);
+      const page = await api(`/orders${parameters.size ? `?${parameters}` : ""}`);
       if (epoch !== state.epoch || requestId !== ordersRequest) return;
       state.orders = append ? [...state.orders, ...page.orders] : page.orders;
       state.next = page.nextBeforeId; renderOrders();
@@ -143,14 +172,78 @@
   function route() {
     const orders = location.hash === "#orders";
     const account = location.hash === "#account";
-    $("#shop-view").hidden = orders || account; $("#orders-view").hidden = !orders; $("#account-view").hidden = !account;
-    for (const [id, active] of [["#shop-nav", !orders && !account], ["#orders-nav", orders], ["#account-nav", account]]) {
+    const basket = location.hash === "#cart";
+    $("#shop-view").hidden = orders || account || basket; $("#orders-view").hidden = !orders; $("#account-view").hidden = !account; $("#cart-view").hidden = !basket;
+    for (const [id, active] of [["#shop-nav", !orders && !account && !basket], ["#orders-nav", orders], ["#account-nav", account], ["#cart-nav", basket]]) {
       if (active) $(id).setAttribute("aria-current", "page"); else $(id).removeAttribute("aria-current");
     }
     $("#change-password-form").reset();
     if (orders) loadOrders();
     if (account) { renderProfile(); loadSessions(); }
+    if (basket) renderCart();
   }
+
+  function saveCart() {
+    try { if (cartOwner) sessionStorage.setItem(`stockroom-cart:${cartOwner}`, JSON.stringify(cart)); } catch { /* Retain the in-memory basket. */ }
+    renderCart();
+  }
+  function renderCart() {
+    $("#cart-count").textContent = cart.length; $("#cart-count").hidden = !cart.length;
+    $("#cart-pending").hidden = !cartPending;
+    $("#cart-items").innerHTML = !state.user ? '<p class="empty">로그인하고 장바구니를 이용하세요.<br><button class="button" data-login>로그인하기 →</button></p>' : !cart.length ? '<p class="empty">장바구니가 비어 있어요. 컬렉션에서 상품을 담아보세요.</p>' : cart.map(item => `<article class="cart-row"><div><strong>${escape(item.name)}</strong><p>${escape(money(item.price))} / 개</p></div><div><label for="cart-quantity-${item.id}">수량</label><input id="cart-quantity-${item.id}" data-cart-quantity="${item.id}" type="number" min="1" max="2147483647" step="1" value="${item.quantity}" ${cartPending || cartBusy ? "disabled" : ""}><button class="button small" data-cart-remove="${item.id}" ${cartPending || cartBusy ? "disabled" : ""}>빼기</button></div></article>`).join("");
+    let total = 0n; for (const item of cart) total += BigInt(item.price) * BigInt(item.quantity);
+    $("#cart-total").textContent = new Intl.NumberFormat("ko-KR").format(total) + "원";
+    $("#cart-checkout").disabled = !state.user || (!cart.length && !cartPending) || cartBusy;
+    $("#cart-checkout").textContent = cartPending ? "같은 주문 결과 다시 확인 →" : "함께 주문하기 →";
+  }
+  function addToCart(id) {
+    if (!state.user) return showAuth(() => addToCart(id));
+    if (cartPending || cartBusy) return notify("이전 장바구니 주문의 결과를 먼저 확인하세요.");
+    const product = state.products.find(item => item.id === id); if (!product || product.stock < 1) return;
+    const existing = cart.find(item => item.id === id);
+    if (existing) existing.quantity = Math.min(existing.quantity + 1,2147483647);
+    else { if (cart.length >= 20) return notify("상품은 최대 20종까지 담을 수 있어요."); cart.push({ id, name: product.name, price: product.price, quantity: 1 }); }
+    saveCart(); notify("장바구니에 담았어요.");
+  }
+  $("#cart-items").addEventListener("change",event => {
+    const input=event.target.closest("[data-cart-quantity]"); if (!input || cartPending || cartBusy) return;
+    const item=cart.find(item => item.id === Number(input.dataset.cartQuantity));
+    const value=Number(input.value); if (item && Number.isInteger(value) && value>0 && value<=2147483647) item.quantity=value;
+    saveCart();
+  });
+  $("#cart-checkout").addEventListener("click",async () => {
+    if (!state.user || cartBusy) return;
+    const epoch=state.epoch; cartBusy=true; renderCart(); $("#cart-error").textContent="";
+    try {
+      if (!cartPending) {
+        if (!await confirmAction("선택한 상품을 함께 주문할까요? 모든 상품의 재고가 있어야 주문이 완료돼요.")) return;
+        if (epoch!==state.epoch) return;
+        const body={items:cart.map(item=>({productId:item.id,quantity:item.quantity})).sort((a,b)=>a.productId-b.productId)};
+        const request=requestKey("cart",body);
+        const pending={body,key:request.key};
+        try {sessionStorage.setItem(`stockroom-cart-pending:${cartOwner}`,JSON.stringify(pending));}
+        catch {throw new Error("요청 정보를 저장할 수 없어 주문을 보내지 않았어요. 브라우저 저장소를 확인하세요.");}
+        cartPending=pending;
+      }
+      const order=await api("/orders/cart",{method:"POST",body:cartPending.body,key:cartPending.key});
+      if(epoch!==state.epoch)return;
+      sessionStorage.removeItem(`stockroom-cart-pending:${cartOwner}`); requestKey("cart",cartPending.body).done(); cartPending=null; cart=[]; saveCart();
+      notify(`주문 #${order.orderId}이 완료됐어요.`); await Promise.all([loadProducts(),loadOrders()]); location.hash="orders";
+    } catch(error) {
+      if(epoch!==state.epoch)return;
+      if(error.status>=400 && error.status<500 && error.status!==401 && cartPending){
+        sessionStorage.removeItem(`stockroom-cart-pending:${cartOwner}`); requestKey("cart",cartPending.body).done(); cartPending=null;
+      }
+      handleError(error,"#cart-error");
+    } finally {cartBusy=false;renderCart();}
+  });
+  $("#product-search").addEventListener("submit",event=>{event.preventDefault();productQuery=$("#product-query").value.trim();productSort=$("#product-sort").value;loadProducts();});
+  $("#products-more").addEventListener("click",()=>loadProducts(true));
+  $("#order-search").addEventListener("submit",event=>{
+    event.preventDefault();orderFilters={};
+    for(const field of ["status","from","to"]){const value=$("#order-"+field).value;if(value)orderFilters[field]=value;}
+    state.next=null;state.orders=[];loadOrders();
+  });
 
   function renderProfile() {
     $("#account-gate").hidden = Boolean(state.user); $("#account-content").hidden = !state.user;
@@ -327,13 +420,15 @@
     if (button.matches("[data-close]")) button.closest("dialog").close();
     else if (button.id === "login-button" || button.matches("[data-login]")) showAuth();
     else if (button.matches("[data-buy]")) purchase(Number(button.dataset.buy));
+    else if (button.matches("[data-add-cart]")) addToCart(Number(button.dataset.addCart));
+    else if (button.matches("[data-cart-remove]") && !cartPending && !cartBusy) {cart=cart.filter(item=>item.id!==Number(button.dataset.cartRemove));saveCart();}
     else if (button.matches("[data-detail]")) detail(Number(button.dataset.detail));
     else if (button.matches("[data-cancel]")) changeOrder(button, "cancel", Number(button.dataset.cancel));
     else if (button.matches("[data-mock]")) changeOrder(button, button.dataset.mock, Number(button.dataset.id));
     else if (button.matches("[data-filter]")) {
       state.filter = button.dataset.filter;
       document.querySelectorAll("[data-filter]").forEach((filter) => { filter.classList.toggle("active", filter === button); filter.setAttribute("aria-pressed", String(filter === button)); });
-      renderProducts();
+      loadProducts();
     }
   });
 

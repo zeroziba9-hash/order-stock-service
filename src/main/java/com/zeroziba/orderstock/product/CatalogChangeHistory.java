@@ -45,20 +45,26 @@ public class CatalogChangeHistory {
 
     @Transactional(readOnly = true)
     public Page list(long admin, long productId, Long beforeId) {
+        return list(admin,productId,beforeId,null,null);
+    }
+    @Transactional(readOnly=true)
+    public Page list(long admin,long productId,Long beforeId,java.time.LocalDate from,java.time.LocalDate to) {
         admins.require(admin);
         if (productId < 1 || (beforeId != null && beforeId < 1))
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "상품과 커서 ID를 확인하세요.");
         if (!products.existsById(productId))
             throw new ApiException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "상품을 찾을 수 없습니다.");
+        var range=com.zeroziba.orderstock.common.DateRange.of(from,to);
         var rows = jdbc.query("""
-                SELECT * FROM catalog_changes WHERE product_id=? AND id<? ORDER BY id DESC LIMIT 21
+                SELECT * FROM catalog_changes WHERE product_id=? AND id<?
+                AND (? IS NULL OR created_at>=?) AND (? IS NULL OR created_at<?) ORDER BY id DESC LIMIT 21
                 """, (row, index) -> new Change(row.getLong("id"), row.getLong("product_id"), row.getLong("actor_id"),
                         new Snapshot(row.getString("before_name"), row.getLong("before_price"),
                                 row.getBoolean("before_selling"), row.getLong("before_revision")),
                         new Snapshot(row.getString("after_name"), row.getLong("after_price"),
                                 row.getBoolean("after_selling"), row.getLong("after_revision")),
                         row.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC)),
-                productId, beforeId == null ? Long.MAX_VALUE : beforeId);
+                productId, beforeId == null ? Long.MAX_VALUE : beforeId,range.from(),range.from(),range.until(),range.until());
         return new Page(rows.stream().limit(20).toList(), rows.size() > 20 ? rows.get(19).changeId() : null);
     }
 }

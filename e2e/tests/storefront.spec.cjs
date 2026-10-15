@@ -163,10 +163,10 @@ test('expired session returns to the login gate', async ({ page }) => {
 });
 
 test('catalog network failure shows a retry and recovers', async ({ page }) => {
-  await page.route('**/products', route => route.abort('failed'));
+  await page.route('**/products/search?**', route => route.abort('failed'));
   await page.reload();
   await expect(page.locator('#products')).toContainText('상품을 불러오지 못했어요.');
-  await page.unroute('**/products');
+  await page.unroute('**/products/search?**');
   await page.getByRole('button', { name: '재고 새로고침', exact: true }).click();
   await expect(page.locator('.product-card')).toHaveCount(2);
 });

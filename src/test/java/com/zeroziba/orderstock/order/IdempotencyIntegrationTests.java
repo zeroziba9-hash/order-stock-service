@@ -188,7 +188,7 @@ class IdempotencyIntegrationTests {
         doAnswer(invocation -> {
             String key = invocation.getArgument(1);
             long orderId = invocation.getArgument(2);
-            jdbcTemplate.update("UPDATE order_requests SET order_id = ? WHERE user_id = ? AND request_key = ?", orderId, testUserId, key);
+            jdbcTemplate.update("INSERT INTO order_request_completions(order_id,request_id) SELECT ?,id FROM order_requests WHERE user_id=? AND request_key=?", orderId, testUserId, key);
             assertThat(stockOf(product.getId())).isEqualTo(8);
             assertThat(requestCount()).isEqualTo(1);
             assertThat(orderRepository.count()).isEqualTo(1);

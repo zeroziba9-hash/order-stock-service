@@ -173,6 +173,46 @@ class ApiDocumentationTests {
     }
 
     @Test
+    void productSearchCartAndFilteredOrdersContracts() throws Exception {
+        mvc.perform(get("/products/search").param("q","문서").param("available","true").param("sort","PRICE_ASC").param("page","0"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.products.length()").value(1))
+            .andDo(document("product-search",queryParameters(
+                parameterWithName("q").description("상품명 부분 검색, 최대 100자. %, _, !도 문자 그대로 검색"),
+                parameterWithName("available").description("true이면 재고가 있는 판매 중 상품만"),
+                parameterWithName("sort").description("ID_ASC / PRICE_ASC / PRICE_DESC. 가격 동률은 ID 오름차순"),
+                parameterWithName("page").description("0부터 시작, 페이지당 20개, 최대 10000")),responseFields(
+                fieldWithPath("products").description("판매 중 상품, 최대 20개"),fieldWithPath("products[].id").description("상품 ID"),
+                fieldWithPath("products[].name").description("상품명"),fieldWithPath("products[].price").description("현재 가격"),
+                fieldWithPath("products[].stock").description("현재 재고"),fieldWithPath("page").description("조회한 페이지"),fieldWithPath("hasMore").description("다음 페이지 존재"))));
+        var second=products.saveAndFlush(new Product("문서 테스트 노트",2000,10));
+        mvc.perform(write("/orders/cart").header("Idempotency-Key","docs-cart").content("{\"items\":[{\"productId\":"+product.getId()+",\"quantity\":1},{\"productId\":"+second.getId()+",\"quantity\":2}]}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.items.length()").value(2)).andExpect(jsonPath("$.totalAmount").value(19000))
+            .andDo(document("cart-order",orderHeaders(),requestFields(fieldWithPath("items").description("중복 없는 상품 1~20종. 순서는 멱등 비교에 영향 없음"),
+                fieldWithPath("items[].productId").description("양의 상품 ID"),fieldWithPath("items[].quantity").description("양의 정수 수량, 가격은 서버에서 결정")),replayHeaders(),responseFields(orderFields(""))));
+        mvc.perform(read("/orders").param("status","CREATED").param("from","1970-01-01").param("to","2099-12-31"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.orders.length()").value(1))
+            .andDo(document("order-filter",queryParameters(parameterWithName("status").description("주문 상태, 생략 시 전체"),
+                parameterWithName("from").description("한국 시간 기준 시작일, 포함"),parameterWithName("to").description("한국 시간 기준 종료일, 포함")),responseFields(pageFields())));
+    }
+
+    @Test
+    void adminSearchAndHistoryDateContracts() throws Exception {
+        jdbc.update("UPDATE app_users SET user_role='ADMIN' WHERE id=?",userId);
+        session=login("reader@example.test",TestAccounts.PASSWORD,null);token=csrfToken(session);
+        mvc.perform(read("/admin/products/search").param("q","문서").param("selling","true").param("lowStock","100").param("page","0"))
+            .andExpect(status().isOk()).andDo(document("admin-product-search",queryParameters(
+                parameterWithName("q").description("상품명 부분 검색"),parameterWithName("selling").description("판매 여부, 생략 시 전체"),
+                parameterWithName("lowStock").description("이 수량 이하의 상품, 0~1000000, 생략 시 전체"),parameterWithName("page").description("0부터 20개씩 조회")),
+                responseFields(fieldWithPath("products").description("관리 상품 목록, 최대 20개"),fieldWithPath("products[].id").description("상품 ID"),fieldWithPath("products[].name").description("상품명"),
+                fieldWithPath("products[].price").description("가격"),fieldWithPath("products[].stock").description("재고"),fieldWithPath("products[].selling").description("판매 여부"),
+                fieldWithPath("products[].revision").description("상품 수정 버전"),fieldWithPath("page").description("페이지"),fieldWithPath("hasMore").description("다음 페이지 존재"))));
+        mvc.perform(read("/admin/inventory-movements").param("productId",product.getId().toString()).param("from","2090-01-01").param("to","2090-01-02"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.movements.length()").value(0))
+            .andDo(document("admin-history-dates",queryParameters(parameterWithName("productId").description("상품 ID"),
+                parameterWithName("from").description("한국 시간 기준 시작일, 포함"),parameterWithName("to").description("한국 시간 기준 종료일, 포함"))));
+    }
+
+    @Test
     void adminInventoryAdjustmentReplayAndHistory() throws Exception {
         mvc.perform(get("/admin/inventory-adjustments").session(session)).andExpect(status().isForbidden())
                 .andDo(document("inventory-forbidden", responseFields(errorFields())));
