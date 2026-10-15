@@ -22,6 +22,7 @@
 | `feat/monitoring-alert-rules` | 경고 5개·상태 패널·대응 문서·실제 앱 중단/복구·인증 폭주 검증 | [PR #12](https://github.com/zeroziba9-hash/order-stock-service/pull/12) |
 | `feat/request-tracing` | 서버 발급 요청 ID·보안 필터 차단 추적·안전한 오류 로그 | [PR #13](https://github.com/zeroziba9-hash/order-stock-service/pull/13) |
 | `docs/project-documentation` | 프로젝트 소개·설계 문서·API 안내·화면 문구 | [PR #14](https://github.com/zeroziba9-hash/order-stock-service/pull/14) |
+| `feat/jdbc-sessions` | MySQL 세션 저장·재시작 유지·만료·로그아웃·복구 시 세션 무효화 | [PR #15](https://github.com/zeroziba9-hash/order-stock-service/pull/15) |
 
 현재 `feat/jdbc-sessions`에서 MySQL 세션 저장·재시작·만료·백업 복원 정책을 검증합니다.
 PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
