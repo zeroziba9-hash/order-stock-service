@@ -75,6 +75,9 @@ def main():
         assert sql("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '10' AND success = 1;") == "1"
         assert sql("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '11' AND success = 1;") == "1"
         assert sql("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '12' AND success = 1;") == "1"
+        assert sql("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '13' AND success = 1;") == "1"
+        assert sql("SELECT COUNT(*) FROM app_sessions;") == "0", "Legacy memory sessions must not be fabricated"
+        assert sql("SELECT COUNT(*) FROM app_sessions_ATTRIBUTES;") == "0"
         assert sql("SELECT COUNT(*) FROM catalog_changes;") == "0"
         assert sql("SELECT COUNT(*) FROM products WHERE selling <> TRUE OR catalog_revision <> 0;") == "0"
         assert sql("SELECT COUNT(*) FROM products p WHERE p.stock <> (SELECT COALESCE(SUM(quantity_delta),0) FROM inventory_movements m WHERE m.product_id=p.id);") == "0"
@@ -111,7 +114,7 @@ def main():
         assert client.stock(state["product"]["id"]) == state["product"]["stock"] - 2
         assert sql("SELECT COUNT(*) FROM products p WHERE p.stock <> (SELECT COALESCE(SUM(quantity_delta),0) FROM inventory_movements m WHERE m.product_id=p.id);") == "0"
         assert sql(f"SELECT COUNT(*) FROM inventory_movements WHERE movement_type='EXPIRE' AND event_reference='{overdue_id}';") == "1"
-        print("PASS: V9-V12 migration, no fabricated catalog changes, inventory ledger reconciliation, stock restored once, ownership/history/key preservation")
+        print("PASS: V9-V13 migration, empty initial session store, no fabricated catalog changes, inventory ledger reconciliation, stock restored once, ownership/history/key preservation")
 
 
 if __name__ == "__main__":

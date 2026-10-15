@@ -54,6 +54,10 @@ jobs:
           docker compose down
           docker compose up --no-build --wait --wait-timeout 240
           python3 .github/scripts/compose-smoke.py verify --state-file "$RUNNER_TEMP/compose-state.json"
+      - name: Recreate app again and reject the logged-out cookie
+        run: |
+          docker compose up --no-build --no-deps --force-recreate --wait --wait-timeout 120 app
+          python3 .github/scripts/compose-smoke.py verify-logged-out --state-file "$RUNNER_TEMP/compose-state.json"
       - name: Show container state and failure logs
         if: failure()
         run: |

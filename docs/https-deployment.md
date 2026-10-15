@@ -128,7 +128,8 @@ docker compose --env-file deploy/compose.prod.env -f deploy/compose.prod.yaml lo
 세션 쿠키는 Secure·HttpOnly·SameSite=Lax이며 HTTP로 보내지 않습니다.
 모의 결제·환불 POST는 `404 MOCK_API_DISABLED`입니다. 실제 결제사는 아직 연동하지 않았습니다.
 
-서버 재시작 후 회원·주문·재고는 남지만 메모리 세션은 사라지므로 다시 로그인합니다.
+회원·주문·재고와 로그인 세션은 MySQL에 남아 유효한 쿠키로 앱 재시작 뒤에도 인증을 이어갑니다.
+V13 최초 적용과 백업 복원 뒤에는 다시 로그인합니다. [세션 정책](session-persistence.md)을 참고하세요.
 
 ## 5. 데이터 보존·업데이트
 

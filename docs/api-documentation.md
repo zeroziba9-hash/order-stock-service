@@ -65,6 +65,7 @@ HTTP 실행과 검증을 마친 뒤, **문서 생성 직전**에 비밀번호·C
 
 MockMvc는 HTTP 서버 대신 세션 객체를 직접 연결합니다. 따라서 HTTP 스니펫에는 쿠키가 생략되며,
 실제 클라이언트에서는 같은 출처 브라우저 또는 쿠키를 보관하는 클라이언트를 사용해야 합니다.
+MockMvc의 MockHttpSession 계약 검증과 별도로 [JDBC 세션 검증](session-persistence.md)은 실제 Tomcat·MySQL·컨테이너 재생성을 확인합니다.
 마스킹된 값을 그대로 복사해서 호출할 수는 없습니다. 실행 예제는 [인증 API 안내](auth.md)를 참고하세요.
 
 ## API 변경 시

@@ -18,6 +18,7 @@
 | 반복 취소·환불 | 주문 잠금과 상태 전이, 재고 한 번만 복구 | 동시 취소·환불·결제 경쟁 검증 |
 | 미결제 재고 장기 점유 | 생성 시 마감 고정, 배치 자동 만료, 늦은 결제 차단 | 실제 스케줄러·만료/취소/결제 경쟁·롤백 |
 | 다른 회원의 주문 접근 | 세션 인증, 소유자 조건 조회, CSRF | 타인 상세·이력 접근 거부와 세션 만료 검증 |
+| 앱 재시작 때 로그인 유실 | MySQL 세션 저장, 유휴 만료·로그아웃 삭제, 복구 시 과거 세션 무효화 | 실제 컨테이너 재생성·같은 쿠키/CSRF·권한 회수·백업 복원 검증 |
 | 인증 요청 폭주 | IP별 요청 수 + IP·이메일별 실패/진행 중 검사 제한 | 동시 로그인·헤더 위조·429 대기·수동 복구·고정 라벨 지표 |
 | 운영·복구 | prod 보호, Caddy HTTPS, 별도 빈 DB 복원 | Compose·TLS·백업 복원 CI |
 | API와 문서 불일치 | 실제 보안 필터·MySQL 테스트에서 REST Docs 생성 | 필드 계약 검증, 토큰 마스킹 검사, HTML 생성 CI |
@@ -32,7 +33,7 @@
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 281개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 40개 통과(일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6).
+**확인된 결과:** 백엔드 테스트 292개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 40개 통과(일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 후속 차감 방식 비교는 워밍업과 36회 반복 측정에서 성공 주문 8,640건·원장 잔액·취소 후 복구를 확인했고, 개선 근거가 부족해 기본 행 잠금 방식을 유지했습니다.
 테스트 조건과 실제 측정값은 [설계와 검증 기록](docs/design-and-validation.md)에 정리했습니다.
@@ -54,6 +55,7 @@ docker compose up --build --wait --wait-timeout 240
 - [설계 선택·정합성·측정 결과](docs/design-and-validation.md)
 - [테스트 기반 API 가이드 생성·다운로드](docs/api-documentation.md)
 - [요청 추적 ID·민감정보를 제외한 장애 로그](docs/request-tracing.md)
+- [MySQL 세션 저장·재시작·만료·복구 정책](docs/session-persistence.md)
 - [기능 브랜치·PR 작업 규칙](docs/development-workflow.md)
 - [인증](docs/auth.md) · [인증 요청 제한](docs/auth-limits.md) · [주문 API](docs/order-api.md) · [주문 규칙](docs/order-rules.md)
 - [멱등 요청](docs/idempotency.md) · [모의 결제](docs/payments.md) · [모의 환불](docs/refunds.md)
@@ -253,7 +255,7 @@ MySQL 실행 후, 최초 한 번 테스트 전용 DB를 준비합니다.
 3. 충분한 실행 시간·반복 측정과 서버 계측을 추가한 뒤 성능 개선을 비교합니다.
 
 기존 익명 주문과 요청 키는 소유자 없이 보존하며, 신규 회원에게 자동 귀속하지 않습니다.
-현재 세션은 메모리에 보관하므로 서버 재시작 시 다시 로그인해야 합니다.
+로그인 세션은 MySQL에 저장하므로 유효한 쿠키가 있으면 앱 재시작 뒤에도 유지됩니다. 최초 V13 적용과 백업 복원 뒤에는 다시 로그인합니다.
 
 주문 규칙은 [주문 규칙 문서](docs/order-rules.md)에 정리합니다.
 

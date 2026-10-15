@@ -7,7 +7,7 @@
 회원가입·상품·주문·모의 결제·모의 환불을 웹 화면에서 직접 체험하고 실제 MySQL 결과로 검증합니다.
 
 구현 범위는 단일 상품 주문·전액 모의 환불·단일 앱 인스턴스입니다.
-실제 PG·배송·장바구니·분산 세션은 포함하지 않습니다. 관리자 상품 등록·수정·판매 중지와 전체 재고 이동 원장을 제공합니다.
+실제 PG·배송·장바구니·다중 인스턴스 운영 검증은 포함하지 않습니다. 관리자 상품 등록·수정·판매 중지와 전체 재고 이동 원장을 제공합니다.
 공개 서버·도메인은 아직 연결하지 않았습니다.
 
 ## 아키텍처
@@ -20,14 +20,14 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V11"] --> DB
+    Flyway["Flyway V1~V13"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
 같은 출처에서 정적 프론트와 API를 제공해 별도의 프론트 배포나 교차 출처 인증 설정 없이 세션 로그인을 사용합니다.
 핵심 테이블은 `products`, `app_users`, `purchase_orders`, `order_items`, `order_requests`,
 `payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`,
-`inventory_movements`, `catalog_creation_requests`입니다.
+`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`입니다.
 주문 항목은 당시 상품명·가격을, 수동 조정은 실행자·사유·당시 상품명·변경 전후 수량을 보관합니다.
 
 ## 설계 선택
@@ -72,7 +72,8 @@ DB 유니크 제약은 주문당 성공 결제·성공 환불을 각각 최대 �
 
 BCrypt 비밀번호, 로그인 시 세션 ID 교체, 쓰기 요청의 CSRF 검증을 사용합니다.
 주문·이력 조회는 로그인한 회원의 소유자 조건으로 조회합니다. 타인 주문은 `404`, 비로그인은 `401`입니다.
-운영 세션 쿠키는 Secure·HttpOnly·SameSite=Lax입니다. 메모리 세션이므로 앱 재시작 뒤 재로그인이 필요합니다.
+운영 세션 쿠키는 Secure·HttpOnly·SameSite=Lax입니다. [MySQL 세션 저장](session-persistence.md)으로 앱 재시작 뒤에도 유효한 쿠키를 사용합니다.
+로그아웃·유휴 만료는 접근을 거부하고, V13 최초 적용과 백업 복원 뒤에는 다시 로그인합니다.
 운영 설정은 DB 연결·Flyway 이전에 검사하며 root DB 계정·잘못된 프로필 조합·모의 쓰기 허용을 거부합니다.
 
 ### 관리자 조정도 주문과 같은 상품 잠금 사용
@@ -102,7 +103,7 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 281개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| 백엔드 292개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
 | Chromium E2E 40개 | 일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
@@ -112,6 +113,7 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 | API 계약 문서 | 실제 인증·CSRF·MySQL 응답에서 HTML 생성, 필드·마스킹·누락 참조 검증 | [가이드 생성·다운로드](api-documentation.md) |
 | 관측과 DB 결과 대조 | 커밋 후 생성·재응답·취소·만료 카운터, 18개 패널, HTTP 부하와 스케줄러 연결 | [로컬 모니터링·CI](observability.md) |
 | 장애 요청 추적 | 실제 서버의 응답 헤더·완료 로그·예외 위치 연결, 보안 필터 차단·동시 MDC 정리·민감정보 제외 | [요청 추적과 장애 조사](request-tracing.md) |
+| 로그인 세션 복구 | 앱·DB 재생성 후 원래 쿠키·CSRF 유지, 로그아웃 후 재생성 거부, 백업 복원 시 과거 세션 무효화 | [저장·만료·복구 정책](session-persistence.md) |
 
 추가 검증 코드는 위 독립 PR에서 확인합니다. 자동 만료는 [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5)에 기록했습니다.
 브라우저 검증은 Chromium 데스크톱·모바일 에뮬레이션이며 실제 iOS·Android 기기나 모든 브라우저를 검증한 것은 아닙니다.

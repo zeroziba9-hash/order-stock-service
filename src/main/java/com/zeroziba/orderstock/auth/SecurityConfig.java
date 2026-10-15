@@ -59,7 +59,7 @@ public class SecurityConfig {
                                 ((AuthenticatedUser) authentication.getPrincipal()).response()))
                         .failureHandler((request, response, exception) -> write(mapper, response, 401,
                                 new ApiError("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다."))))
-                .logout(logout -> logout.logoutUrl("/auth/logout").deleteCookies("JSESSIONID")
+                .logout(logout -> logout.logoutUrl("/auth/logout")
                         .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) -> write(mapper, response, 401,
