@@ -54,7 +54,7 @@ docker compose ps
 |---|---|
 | 이미지 빌드 | Temurin Java 17 JDK에서 Gradle Wrapper로 `bootJar` 실행 |
 | 앱 실행 | Java 17 JRE, UID/GID 10001의 전용 사용자 |
-| 앱 프로필 | 로컬 학습용 `local`: 세션 로그인·CSRF·모의 결제·환불 사용 가능 |
+| 앱 프로필 | 로컬 개발용 `local`: 세션 로그인·CSRF·모의 결제·환불 사용 가능 |
 | DB | MySQL 8.4, `order_stock` 스키마에 접근하는 `order_app` 계정 |
 | 시작 순서 | DB 계정의 TCP `SELECT 1` 성공 후 앱 시작, 앱 readiness로 준비 확인 |
 | 네트워크 | 앱은 컨테이너에서 `0.0.0.0:8080`, 호스트에는 `127.0.0.1:18080`만 공개 |
@@ -70,12 +70,12 @@ DB 준비 대기는 [Compose의 `service_healthy`](https://docs.docker.com/compo
 `docker compose config`와 `docker inspect`에는 실행 환경 변수가 보일 수 있으므로 출력 공유 시 주의하세요.
 설정 검증만 필요하면 위처럼 `config --quiet`를 사용합니다.
 
-이 Compose 파일은 본인 컴퓨터에서 HTTP로 실습하기 위한 구성입니다.
+이 Compose 파일은 본인 컴퓨터에서 HTTP로 실행하기 위한 구성입니다.
 외부 서버에 그대로 공개하지 마세요. 실제 운영은 [배포 안내](deployment.md)의 `prod`·HTTPS·운영 DB 구성을 사용합니다.
 운영 Docker 구성은 [HTTPS 배포 안내](https-deployment.md)의 별도 Compose 파일을 사용합니다.
 Docker 이미지를 단독 실행할 때는 기본 `prod`이며, 운영 접속 정보를 주지 않으면 시작을 거부합니다.
 
-## 인증·주문 실습
+## 인증·주문 API 안내
 
 [인증](auth.md), [주문](order-api.md), [결제](payments.md), [환불](refunds.md) 문서의 URL에서
 `http://localhost:8080`을 `http://localhost:18080`으로 바꿔 사용합니다.
@@ -120,7 +120,7 @@ docker compose exec db mysql --user=order_app --password order_stock
 3. 실제 HTTP 회원가입·로그인·CSRF, 주문과 재요청, 반복 취소, 모의 결제·환불과 재고 복구.
 4. `down` 후 같은 볼륨으로 컨테이너를 새로 만들고 회원·주문·재고·결제·환불 이력 보존 확인.
 
-CI의 비밀번호와 실습 회원은 매번 임의로 생성하며 CI 종료 시 전용 DB 볼륨을 정리합니다.
+CI의 비밀번호와 테스트 회원은 매번 임의로 생성하며 CI 종료 시 전용 DB 볼륨을 정리합니다.
 애플리케이션 통합 테스트 151개는 기존 [Backend CI](../.github/workflows/ci.yml)가 별도로 실행합니다.
 Docker 빌드의 `bootJar` 단계 자체가 테스트 실행을 대신하지 않습니다.
 

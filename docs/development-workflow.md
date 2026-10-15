@@ -6,12 +6,12 @@
 
 ## PR별 작업 기록
 
-| 브랜치 | 범위 | 검토 |
+| 작업 | 범위 | 검토 |
 |---|---|---|
 | `feat/browser-e2e` | 데스크톱·모바일 브라우저 테스트 | [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1) |
 | `feat/load-testing` | HTTP 동시 요청·실제 DB 결과·측정 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | `feat/deployment-verification` | HTTPS 배포 결과 점검·CI·운영 기록 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
-| `docs/portfolio` | README·아키텍처·설계 근거·검증 문서 | [PR #4](https://github.com/zeroziba9-hash/order-stock-service/pull/4) |
+| 설계·검증 문서 | README·아키텍처·설계 근거·검증 문서 | [PR #4](https://github.com/zeroziba9-hash/order-stock-service/pull/4) |
 | `feat/order-expiration` | 미결제 주문 자동 만료·V8→V9 업그레이드·브라우저 검증 | [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5) |
 | `feat/verified-api-docs` | 테스트 기반 REST Docs·API 계약·마스킹 검증 | [PR #6](https://github.com/zeroziba9-hash/order-stock-service/pull/6) |
 | `feat/observability` | Prometheus·Grafana·운영 계측 | [PR #7](https://github.com/zeroziba9-hash/order-stock-service/pull/7) |
@@ -21,11 +21,12 @@
 | `feat/catalog-change-history` | 상품 수정 전후·관리자·시각, 트랜잭션·커서·이력 화면 | [PR #11](https://github.com/zeroziba9-hash/order-stock-service/pull/11) |
 | `feat/monitoring-alert-rules` | 경고 5개·상태 패널·대응 문서·실제 앱 중단/복구·인증 폭주 검증 | [PR #12](https://github.com/zeroziba9-hash/order-stock-service/pull/12) |
 | `feat/request-tracing` | 서버 발급 요청 ID·보안 필터 차단 추적·안전한 오류 로그 | [PR #13](https://github.com/zeroziba9-hash/order-stock-service/pull/13) |
+| `docs/project-documentation` | 프로젝트 소개·설계 문서·API 안내·화면 문구 | [PR #14](https://github.com/zeroziba9-hash/order-stock-service/pull/14) |
 
-현재 `feat/request-tracing`에서 응답 ID와 서버 로그 연결·민감정보 제외·동시 요청 격리를 검증합니다.
+현재 `docs/project-documentation`에서 프로젝트 소개·설계 문서·화면 문구를 정리합니다.
 PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
 
-위 PR #1~#12는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+위 PR #1~#13은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
 이후 기능도 최신 병합 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
 PR #8은 PR #6 기준으로 시작했으며, PR #7 병합 후 최신 main을 기능 브랜치에 병합해 충돌을 해결했습니다.
 

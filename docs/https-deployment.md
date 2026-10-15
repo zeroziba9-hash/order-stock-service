@@ -1,7 +1,7 @@
 # 단일 Linux 서버에 HTTPS로 배포하기
 
 `deploy/compose.prod.yaml`은 MySQL·Spring Boot·Caddy를 한 서버에서 실행하는 운영용 구성입니다.
-로컬 실습용 `compose.yaml`과 별개의 Compose 프로젝트·DB·볼륨을 사용합니다.
+로컬 개발용 `compose.yaml`과 별개의 Compose 프로젝트·DB·볼륨을 사용합니다.
 앱은 `prod`로 실행하며 모의 결제·환불 쓰기는 차단합니다.
 현재 외부 서버·DNS·공개 인증서 발급은 연결하지 않았습니다. 이 문서는 서버가 준비된 후 적용할 절차입니다.
 
@@ -123,7 +123,7 @@ docker compose --env-file deploy/compose.prod.env -f deploy/compose.prod.yaml lo
 
 ## 4. HTTPS에서 로그인·주문 확인
 
-[인증 실습](auth.md)과 [주문 API 실습](order-api.md)의 기본 URL을 `https://본인도메인`으로 바꿉니다.
+[인증 API 안내](auth.md)와 [주문 API 안내](order-api.md)의 기본 URL을 `https://본인도메인`으로 바꿉니다.
 로그인 성공 후 CSRF 토큰을 다시 받고 주문을 생성·조회·취소합니다.
 세션 쿠키는 Secure·HttpOnly·SameSite=Lax이며 HTTP로 보내지 않습니다.
 모의 결제·환불 POST는 `404 MOCK_API_DISABLED`입니다. 실제 결제사는 아직 연동하지 않았습니다.

@@ -4,7 +4,7 @@
 실제 배포 서버와 도메인은 아직 연결하지 않았습니다.
 이 문서는 Java 17 실행 JAR와 Linux systemd를 기준으로 합니다.
 본인 컴퓨터에서 앱과 DB를 함께 실행하는 방법은 [Docker Compose 안내](docker.md)를 참고하세요.
-루트의 `compose.yaml`은 로컬 학습용입니다.
+루트의 `compose.yaml`은 로컬 개발용입니다.
 Docker로 운영 배포할 때는 별도의 [운영 Compose·Caddy HTTPS 안내](https-deployment.md)를 사용하세요.
 
 ## 환경별 동작
@@ -28,7 +28,7 @@ Docker로 운영 배포할 때는 별도의 [운영 Compose·Caddy HTTPS 안내]
 - 인증 요청 제한 해제와 원격 IP를 바꾸는 자동 forwarded-header 처리를 거부합니다.
 
 환경 변수 이름은 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`입니다.
-프로필을 생략하면 로컬 실습용으로 시작하므로 실제 서버에는 반드시 `prod`를 지정하세요.
+프로필을 생략하면 로컬 개발용으로 시작하므로 실제 서버에는 반드시 `prod`를 지정하세요.
 프로필 규칙은 [Spring Boot 공식 문서](https://docs.spring.io/spring-boot/4.0/reference/features/profiles.html)를 참고하세요.
 
 ## CI: push·PR마다 실제 MySQL 테스트
@@ -98,7 +98,7 @@ curl --fail http://127.0.0.1:8080/actuator/health/readiness
 현재 컴퓨터의 로컬 MySQL 접속 설정은 운영 TLS 설정으로 사용하지 않습니다.
 
 앱은 기본적으로 `127.0.0.1:8080`에 바인딩합니다. 외부 요청은 프록시의 HTTPS 주소로 받아 내부 앱에 전달합니다.
-운영 쿠키가 Secure이므로 브라우저 실습도 HTTPS 주소를 사용해야 합니다.
+운영 쿠키가 Secure이므로 브라우저에서도 HTTPS 주소를 사용해야 합니다.
 서버가 `Forwarded` 헤더를 신뢰하도록 별도 설정하지 않았으며, 앱 포트를 외부에 직접 노출하지 않습니다.
 컨테이너 등 별도 네트워크에서는 실제 배치에 맞게 `SERVER_ADDRESS`를 지정하세요.
 
