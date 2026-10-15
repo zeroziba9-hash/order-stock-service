@@ -24,6 +24,7 @@
 | `docs/project-documentation` | 프로젝트 소개·설계 문서·API 안내·화면 문구 | [PR #14](https://github.com/zeroziba9-hash/order-stock-service/pull/14) |
 | `feat/jdbc-sessions` | MySQL 세션 저장·재시작 유지·만료·로그아웃·복구 시 세션 무효화 | [PR #15](https://github.com/zeroziba9-hash/order-stock-service/pull/15) |
 | `feat/account-management` | 내 계정·비밀번호 변경·다른 접속 종료·인증 버전·이전 세션 호환 | [PR #16](https://github.com/zeroziba9-hash/order-stock-service/pull/16) |
+| `feat/store-operations-expansion` | CI 교착 수정·검색·운영 이력 조회·장바구니·공개 배포 사전 검사 | [PR #17](https://github.com/zeroziba9-hash/order-stock-service/pull/17) |
 
 현재 `feat/store-operations-expansion`에서 CI 교착 수정·검색·관리자 운영 조회·장바구니·공개 배포 준비를 검증합니다.
 PR #16 병합 후 최신 main에서 분기했으며, 서로 연결된 API·화면·마이그레이션을 한 기능 브랜치에서 통합 검증합니다.
