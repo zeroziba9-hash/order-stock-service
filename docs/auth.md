@@ -1,4 +1,4 @@
-# 회원가입·로그인·본인 주문 실습
+# 회원가입·로그인·본인 주문 API 안내
 
 상품 목록과 서버 상태는 누구나 조회할 수 있습니다. 주문 생성·조회·취소는 로그인이 필요합니다.
 아래 명령은 같은 PowerShell 터미널에서 순서대로 실행하세요.
@@ -81,7 +81,7 @@ Invoke-RestMethod -Method Post -Uri "$base/orders/$($order.orderId)/cancel" `
 같은 회원이 같은 키·내용으로 재요청하면 본인의 기존 주문을 반환합니다.
 
 PowerShell의 세션 쿠키는 브라우저와 별도로 관리됩니다. 본인 주문 조회도 위처럼 같은 세션으로 요청하세요.
-이 예제는 미결제 주문을 취소합니다. 결제 실습은 새 주문을 만들어 [모의 결제 안내](payments.md)를 따라가세요.
+이 예제는 미결제 주문을 취소합니다. 모의 결제는 새 주문을 만들어 [모의 결제 안내](payments.md)를 따라가세요.
 결제 완료 주문은 [모의 환불](refunds.md)로 환불과 취소를 함께 처리합니다.
 
 ## 5. 로그아웃
@@ -113,7 +113,7 @@ Spring Security의 로그인·로그아웃 필터, 세션 ID 교체, 기본 CSRF
 주문 조회와 잠금 쿼리에 사용자 ID를 함께 넣고, 요청 키의 유니크 범위는 `(user_id, request_key)`입니다.
 실제 로그인 세션, CSRF, 비밀번호 해시, 중복 가입, 타인 주문 접근 차단, 회원별 요청 키를 테스트합니다.
 
-기본 `local`은 HTTP 실습용입니다. 운영 `prod`는 Secure 쿠키를 강제하고 HTTPS 주소로 접속해야 합니다.
+기본 `local`은 로컬 HTTP 환경입니다. 운영 `prod`는 Secure 쿠키를 강제하고 HTTPS 주소로 접속해야 합니다.
 환경 변수·프로필·배포 방법은 [배포 안내](deployment.md)를 참고하세요.
 공식 문서: [세션 관리](https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html),
 [CSRF](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html).

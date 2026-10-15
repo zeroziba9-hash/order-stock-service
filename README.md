@@ -1,6 +1,6 @@
 # STOCKROOM — 한정 수량 주문·재고 서비스
 
-동시 주문과 네트워크 재시도에도 재고·주문 상태를 일관되게 유지하는 Java/Spring 백엔드 포트폴리오입니다.
+동시 주문과 네트워크 재시도에도 재고·주문 상태를 일관되게 유지하는 Java/Spring 기반 주문·재고 서비스입니다.
 상품 조회부터 회원가입·로그인·주문·취소와 로컬 모의 결제·환불까지 웹 화면에서 실행합니다.
 
 [GitHub 저장소](https://github.com/zeroziba9-hash/order-stock-service) ·
@@ -35,7 +35,7 @@ HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Gr
 **확인된 결과:** 백엔드 테스트 281개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 40개 통과(일반 14 + 관리자 18 + 자동 만료 2 + 인증 제한 6).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 후속 차감 방식 비교는 워밍업과 36회 반복 측정에서 성공 주문 8,640건·원장 잔액·취소 후 복구를 확인했고, 개선 근거가 부족해 기본 행 잠금 방식을 유지했습니다.
-테스트 조건과 실제 측정값은 [설계·검증 포트폴리오](docs/portfolio.md)에 정리했습니다.
+테스트 조건과 실제 측정값은 [설계와 검증 기록](docs/design-and-validation.md)에 정리했습니다.
 브라우저·부하·배포 검증의 추가 코드는 각각 [PR #1](https://github.com/zeroziba9-hash/order-stock-service/pull/1),
 [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2),
 [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3)에서 독립적으로 검토할 수 있습니다.
@@ -51,7 +51,7 @@ docker compose up --build --wait --wait-timeout 240
 로컬 화면은 [http://localhost:18080/](http://localhost:18080/)입니다.
 외부 공개 서버·도메인은 아직 연결하지 않았습니다. 실제 결제 연동은 없으며 모의 쓰기는 운영에서 차단합니다.
 
-- [설계 선택·정합성·측정·면접 설명](docs/portfolio.md)
+- [설계 선택·정합성·측정 결과](docs/design-and-validation.md)
 - [테스트 기반 API 가이드 생성·다운로드](docs/api-documentation.md)
 - [요청 추적 ID·민감정보를 제외한 장애 로그](docs/request-tracing.md)
 - [기능 브랜치·PR 작업 규칙](docs/development-workflow.md)
@@ -67,14 +67,14 @@ docker compose up --build --wait --wait-timeout 240
 - [웹 프론트](docs/frontend.md) · [HTTPS 배포](docs/https-deployment.md) · [백업·복원](docs/backup-restore.md)
 
 <details>
-<summary>단계별 실습·Java 직접 실행·테스트 상세</summary>
+<summary>API 사용 예제·Java 직접 실행·테스트 상세</summary>
 
 ## 주문·결제·환불과 웹 프론트·Docker 실행·CI
 
 Java 17, Spring Boot 4.0.8, MySQL 8.4, Spring Data JPA, Flyway를 사용합니다.
 Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
 상품 조회는 공개이며, 주문 생성·조회·취소는 로그인한 회원의 본인 주문만 처리합니다.
-회원가입·로그인·주문까지 실행하는 방법은 [인증 실습](docs/auth.md)을 먼저 참고하세요.
+회원가입·로그인·주문까지 실행하는 방법은 [인증 API 안내](docs/auth.md)를 먼저 참고하세요.
 `GET /products`는 판매 중인 상품을 ID 오름차순으로 반환합니다. 판매 중지 상품은 새 주문도 차단하며, 기존 주문 취소·환불·만료는 재고를 복구합니다.
 가격은 원 단위 정수이며, 가격과 재고에는 음수를 금지하는 DB 제약 조건이 있습니다.
 `POST /orders`로 상품 한 종류를 주문하고 `GET /orders/{orderId}`로 주문을 조회합니다.
@@ -84,7 +84,7 @@ Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
 `POST /orders/{orderId}/cancel`로 미결제 주문을 취소하면 주문 수량만큼 재고를 복구합니다.
 같은 주문을 반복 취소해도 재고는 한 번만 복구하며 최초 취소 시각을 유지합니다.
 주문 생성에 `Idempotency-Key` 헤더를 붙이면 같은 키·같은 상품·같은 수량의 재요청은 기존 주문을 반환합니다.
-같은 키로 다른 내용을 요청하면 `409` 오류입니다. [중복 요청 실습](docs/idempotency.md)을 참고하세요.
+같은 키로 다른 내용을 요청하면 `409` 오류입니다. [멱등 요청 안내](docs/idempotency.md)를 참고하세요.
 
 `POST /orders/{orderId}/payments`로 모의 결제 성공·실패를 선택할 수 있습니다.
 결제 성공은 `PAID`로 바꾸고, 실패는 이력을 남긴 채 `CREATED`를 유지합니다.
@@ -92,10 +92,10 @@ Spring Security의 세션 로그인과 CSRF 검증을 사용합니다.
 결제 완료 주문에 `/cancel`을 요청하면 `409 REFUND_REQUIRED`입니다.
 `POST /orders/{orderId}/refunds`로 모의 전액 환불과 주문 취소를 함께 처리합니다.
 환불 성공은 `REFUNDED`로 바꾸고 재고를 한 번만 복구합니다. 실패는 이력을 남기고 `PAID`를 유지합니다.
-환불에도 요청 키가 필수입니다. [모의 환불 실습](docs/refunds.md)을 참고하세요.
-실제 돈이 오가지 않는 로컬 학습용 API입니다. [모의 결제 실습](docs/payments.md)을 참고하세요.
+환불에도 요청 키가 필수입니다. [모의 환불 안내](docs/refunds.md)를 참고하세요.
+실제 돈이 오가지 않는 로컬 개발용 API입니다. [모의 결제 안내](docs/payments.md)를 참고하세요.
 
-기본 `local` 프로필에서 기존 실습을 계속할 수 있습니다. `prod` 프로필은 별도 DB 환경 변수와 Secure 쿠키를 요구하며
+기본 `local` 프로필에서 모의 결제·환불을 실행할 수 있습니다. `prod` 프로필은 별도 DB 환경 변수와 Secure 쿠키를 요구하며
 모의 결제·환불 쓰기를 차단합니다. GitHub Actions 워크플로는 MySQL 통합 테스트와 실행 JAR 빌드를 구성합니다.
 운영 실행·CI·검증 범위는 [배포 안내](docs/deployment.md)를 참고하세요.
 Docker 운영 구성과 Caddy HTTPS 연결 절차는 [HTTPS 배포 안내](docs/https-deployment.md)에 정리했습니다.
@@ -110,7 +110,7 @@ Docker 운영 구성과 Caddy HTTPS 연결 절차는 [HTTPS 배포 안내](docs/
 직접 Java로 실행한 경우 [8080 프론트](http://localhost:8080/)를 사용합니다.
 구성과 검증 방법은 [프론트 안내](docs/frontend.md)에 정리했습니다.
 
-주문 요청 예시와 오류 응답은 [주문 API 실습](docs/order-api.md)을 참고하세요.
+주문 요청 예시와 오류 응답은 [주문 API 안내](docs/order-api.md)를 참고하세요.
 
 ### 실행
 
@@ -123,7 +123,7 @@ docker compose up --build --wait --wait-timeout 240
 
 Docker 실행 주소는 [웹 화면](http://localhost:18080/), [상품 API](http://localhost:18080/products)와
 [준비 상태](http://localhost:18080/actuator/health/readiness)입니다.
-기존 로컬 DB와 별도 볼륨을 사용하며, 모의 결제·환불을 포함한 로컬 실습용 구성입니다.
+기존 로컬 DB와 별도 볼륨을 사용하며, 모의 결제·환불을 포함한 로컬 개발용 구성입니다.
 Java·MySQL 직접 실행은 아래 안내를 사용하세요.
 
 이 컴퓨터에는 프로젝트 전용 MySQL DB와 로컬 접속 파일이 준비되어 있습니다.
@@ -141,7 +141,7 @@ VS Code에서 이 폴더를 열고 PowerShell 터미널에서 실행합니다.
 - [서버 상태](http://localhost:8080/actuator/health)
 
 브라우저 주소창은 조회 요청을 보냅니다. 주문 생성은 아래처럼 PowerShell에서 실행합니다.
-먼저 [인증 실습](docs/auth.md)의 1~3번으로 로그인해 `$session`을 준비하세요.
+먼저 [인증 API 안내](docs/auth.md)의 1~3번으로 로그인해 `$session`을 준비하세요.
 `productId`는 상품 목록에서 확인한 ID로 지정합니다.
 
 ```powershell
@@ -155,7 +155,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/orders' `
 새 키의 주문이 성공하면 실제 재고가 줄어듭니다. 같은 `$headers`로 마지막 명령을 다시 실행하면 기존 주문을 반환합니다.
 새 주문에는 새 키를 발급하세요. 키를 생략하면 요청할 때마다 새 주문이 생성됩니다.
 반환된 `orderId`로 주문 상세를 조회할 수 있습니다.
-취소 실습은 [주문 API 안내](docs/order-api.md)의 4번을 참고하세요.
+취소 요청은 [주문 API 안내](docs/order-api.md)의 4번을 참고하세요.
 
 터미널에서 실행한 서버는 `Ctrl+C`로 종료합니다.
 현재 백그라운드에서 실행 중인 이 프로젝트의 서버는 다음 명령으로 종료할 수 있습니다.
@@ -184,7 +184,7 @@ DB 시작·접속·종료 방법은 [MySQL 안내](docs/mysql.md)를 참고하�
 이미 적용한 파일을 수정하지 말고, 다음 변경은 `V11__설명.sql`처럼 새 파일로 추가하세요.
 JPA의 `ddl-auto=validate`는 테이블 구조를 검증하며 DB를 초기화하지 않습니다.
 
-### 첫 실습: DB 값과 API 응답 연결하기
+### DB 값과 API 응답 연결하기
 
 상품을 조회합니다.
 
@@ -200,7 +200,7 @@ JPA의 `ddl-auto=validate`는 테이블 구조를 검증하며 DB를 초기화�
 ```
 
 `/products`를 새로고침하면 서버 재시작 없이 바뀐 가격이 표시됩니다.
-서버를 재시작해도 변경한 가격이 유지됩니다. 실습 후 같은 SQL로 원래 가격을 복원하세요.
+서버를 재시작해도 변경한 가격이 유지됩니다. 확인 후 같은 SQL로 원래 가격을 복원하세요.
 
 ### 테스트
 

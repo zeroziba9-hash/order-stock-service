@@ -3,10 +3,10 @@
 주문 버튼을 두 번 누르거나 응답을 받지 못해 재시도할 때, 같은 요청 키를 사용하면 주문을 한 개만 만듭니다.
 현재 단일 상품 주문의 내용은 `productId`와 `quantity`로 비교합니다.
 
-## 직접 실습
+## 요청 예제
 
 상품 ID와 재고를 먼저 확인한 뒤 PowerShell에서 실행합니다.
-먼저 [인증 실습](auth.md)의 1~3번으로 로그인하고 같은 터미널의 `$session`을 사용하세요.
+먼저 [인증 API 안내](auth.md)의 1~3번으로 로그인하고 같은 터미널의 `$session`을 사용하세요.
 
 ```powershell
 Invoke-RestMethod 'http://localhost:8080/products' | Format-Table

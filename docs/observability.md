@@ -8,7 +8,7 @@ Micrometer → Prometheus → Grafana로 주문 처리, HTTP 지연, JVM과 DB �
 ## 실행
 
 Docker Desktop을 실행한 뒤 저장소 루트에서 아래 PowerShell 명령을 실행합니다.
-기존 실습 DB와 분리된 `order-stock-monitor-local` 프로젝트와 앱 18086 포트를 사용합니다.
+기존 개발 DB와 분리된 `order-stock-monitor-local` 프로젝트와 앱 18086 포트를 사용합니다.
 비밀 파일이 이미 있으면 새로 만들지 말고 다음 실행 명령부터 사용하세요.
 
 ```powershell
