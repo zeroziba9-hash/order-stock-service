@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 public class AuthRequestLimitFilter extends OncePerRequestFilter {
     private final AuthRequestLimiter limiter;
@@ -22,12 +23,19 @@ public class AuthRequestLimitFilter extends OncePerRequestFilter {
     }
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
         String path=request.getRequestURI().substring(request.getContextPath().length());
-        return !request.getMethod().equals("POST") || !(path.equals("/auth/login") || path.equals("/auth/register"));
+        return !request.getMethod().equals("POST") || !(path.equals("/auth/login") || path.equals("/auth/register") || path.equals("/auth/password"));
     }
     @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain)
             throws ServletException,IOException {
-        Endpoint endpoint=request.getRequestURI().endsWith("/login") ? Endpoint.LOGIN : Endpoint.REGISTER;
-        var admission=limiter.begin(endpoint,clients.resolve(request),endpoint==Endpoint.LOGIN ? request.getParameter("email") : null);
+        String path=request.getRequestURI();
+        Endpoint endpoint=path.endsWith("/login") ? Endpoint.LOGIN : path.endsWith("/password") ? Endpoint.PASSWORD : Endpoint.REGISTER;
+        String email=endpoint==Endpoint.LOGIN ? request.getParameter("email") : null;
+        if (endpoint==Endpoint.PASSWORD) {
+            var auth=SecurityContextHolder.getContext().getAuthentication();
+            if (auth==null || !(auth.getPrincipal() instanceof AuthenticatedUser user)) { chain.doFilter(request,response); return; }
+            email=user.getUsername();
+        }
+        var admission=limiter.begin(endpoint,clients.resolve(request),email);
         if (!admission.allowed()) {
             metrics.rejected(endpoint,admission.reason());
             response.setStatus(429); response.setHeader("Retry-After",Long.toString(admission.retryAfter()));
@@ -38,7 +46,7 @@ public class AuthRequestLimitFilter extends OncePerRequestFilter {
         int status=500;
         try { chain.doFilter(request,response); status=response.getStatus(); }
         finally {
-            limiter.finish(admission,status);
+            limiter.finish(admission,endpoint==Endpoint.PASSWORD && status==400 ? 401 : status);
             metrics.result(endpoint,status>=500 ? Outcome.ERROR : status>=200 && status<300 ? Outcome.SUCCESS : Outcome.FAILURE);
         }
     }

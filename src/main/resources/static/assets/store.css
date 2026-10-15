@@ -733,10 +733,22 @@ footer>span {
   color:var(--muted)
 }
 
-#orders-view {
+#orders-view, #account-view {
   min-height:65vh;
   padding-bottom:50px
 }
+
+.account-summary { overflow-wrap:anywhere; margin-bottom:28px; }
+.account-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+.account-panel { min-width:0; padding:28px; border:1px solid var(--line); border-radius:12px; }
+.account-panel h2 { margin:0 0 20px; font-size:22px; }
+.account-panel .section-heading { flex-wrap:wrap; gap:12px; margin-bottom:12px; }
+.account-panel .section-heading h2 { margin:0; }
+.account-panel label { display:block; margin-top:20px; margin-bottom:8px; }
+.session-row { border-top:1px solid var(--line); padding:18px 0; }
+.session-row p { font-size:13px; line-height:1.8; color:var(--muted); margin:8px 0 0; }
+#login-sessions { margin:20px 0; }
+@media(max-width:800px) { .account-grid { grid-template-columns:1fr; } .account-panel { padding:22px; } }
 
 .empty {
   text-align:center;

@@ -41,7 +41,7 @@ public final class DocumentationSanitizer extends OperationPreprocessorAdapter {
             // JSON is UTF-8 even on a Windows Java 17 VM whose default charset is not UTF-8.
             var json = mapper.readTree(original);
             if (json instanceof ObjectNode object) {
-                for (String field : new String[]{"password", "token"}) {
+                for (String field : new String[]{"password", "currentPassword", "newPassword", "token"}) {
                     if (object.has(field)) {
                         object.put(field, "<redacted>");
                     }

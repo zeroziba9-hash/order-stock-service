@@ -14,7 +14,7 @@
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
   <header class="header">
     <a class="brand" href="#shop" aria-label="Stockroom 홈"><span class="brand-icon" aria-hidden="true">s<span>r</span></span>STOCKROOM<span class="brand-dot">®</span></a>
-    <nav aria-label="주 메뉴"><a href="#shop" id="shop-nav" aria-current="page">컬렉션</a><a href="#orders" id="orders-nav">내 주문 <span id="order-count" class="count" hidden></span></a><a href="/admin.html" id="admin-nav" hidden>재고 관리</a></nav>
+    <nav aria-label="주 메뉴"><a href="#shop" id="shop-nav" aria-current="page">컬렉션</a><a href="#orders" id="orders-nav">내 주문 <span id="order-count" class="count" hidden></span></a><a href="#account" id="account-nav">내 계정</a><a href="/admin.html" id="admin-nav" hidden>재고 관리</a></nav>
     <div class="account" id="account"><button class="button small" id="login-button">로그인 <span aria-hidden="true">↗</span></button></div>
   </header>
   <main id="main">
@@ -31,6 +31,33 @@
       <aside class="note-strip"><span class="note-symbol" aria-hidden="true">✳</span><div><strong>마음에 드는 순간, 필요한 만큼.</strong><p>한정 수량 상품입니다. 주문 완료 시 재고가 확보되며, 미결제 주문은 취소할 수 있어요.</p></div><span class="note-number" aria-hidden="true">01 — 02</span></aside>
     </section>
     <section id="orders-view" hidden aria-labelledby="orders-title"><div class="page-intro"><p class="eyebrow">YOUR LITTLE COLLECTION</p><h1 id="orders-title">내 주문<span class="period">.</span></h1><p>담아 둔 취향과 주문의 모든 순간을 확인하세요.</p></div><div class="section-heading"><h2>주문 내역</h2><button class="button ghost small" id="refresh-orders">↻ 새로고침</button></div><div id="orders" aria-live="polite"></div><button class="button load-more" id="load-more" hidden>이전 주문 더 보기 ↓</button></section>
+    <section id="account-view" hidden aria-labelledby="account-title">
+      <div class="page-intro"><p class="eyebrow">YOUR ACCOUNT</p><h1 id="account-title">내 계정<span class="period">.</span></h1><p>비밀번호와 로그인한 접속을 관리하세요.</p></div>
+      <div id="account-gate" class="empty" hidden>계정 정보를 보려면 로그인해 주세요.<br><button class="button primary" data-login>로그인하기 →</button></div>
+      <div id="account-content" hidden>
+        <p class="account-summary">로그인 이메일 · <strong id="profile-email"></strong></p>
+        <div class="account-grid">
+          <section class="account-panel" aria-labelledby="sessions-title">
+            <div class="section-heading"><h2 id="sessions-title">로그인한 접속</h2><button class="button ghost small" id="refresh-sessions">↻ 새로고침</button></div>
+            <p class="field-help">브라우저마다 별도 접속으로 표시돼요. 다른 접속을 종료해도 이 브라우저는 로그인 상태를 유지해요.</p>
+            <div id="login-sessions" aria-live="polite"></div>
+            <button class="button full" id="logout-others">다른 기기 로그아웃</button>
+            <p class="form-error" id="sessions-error" role="alert"></p>
+          </section>
+          <section class="account-panel" aria-labelledby="password-title">
+            <h2 id="password-title">비밀번호 변경</h2><p class="field-help">변경하면 현재 접속을 포함해 모든 접속이 종료돼요. 새 비밀번호로 다시 로그인하세요.</p>
+            <form id="change-password-form">
+              <label for="current-password">현재 비밀번호</label><input id="current-password" type="password" autocomplete="current-password" maxlength="72" required>
+              <label for="new-password">새 비밀번호</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+              <label for="confirm-password">새 비밀번호 확인</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+              <p class="field-help">8자 이상, UTF-8 기준 72바이트 이하로 입력하세요.</p>
+              <p class="form-error" id="change-password-error" role="alert"></p>
+              <button class="button primary full" id="change-password-submit" type="submit">비밀번호 변경</button>
+            </form>
+          </section>
+        </div>
+      </div>
+    </section>
   </main>
   <footer><a class="footer-brand" href="#shop">STOCKROOM®</a><p>작은 취향을 담는 곳.</p><span>SMALL THINGS, GOOD DAYS · 2026</span></footer>
   <div id="toast" role="status" aria-live="polite" hidden></div>

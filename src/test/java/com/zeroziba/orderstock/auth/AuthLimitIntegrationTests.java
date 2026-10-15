@@ -118,8 +118,15 @@ class AuthLimitIntegrationTests {
         assertThat(counter("failure")-failures).isEqualTo(3);
         assertThat(counter("success")-successes).isEqualTo(1);
         assertThat(counter("rate_limited")-limited).isEqualTo(1);
-        for(var meter:metrics.getMeters()) if(meter.getId().getName().startsWith("stockroom.auth"))
-            assertThat(meter.getId().getTags().toString()).doesNotContain("@",client,"email","password");
+        for(var meter:metrics.getMeters()) if(meter.getId().getName().startsWith("stockroom.auth")) {
+            assertThat(meter.getId().getTags().toString()).doesNotContain("@",client,"email");
+            for (var tag : meter.getId().getTags()) {
+                assertThat(tag.getKey()).isIn("endpoint", "outcome", "reason");
+                if (tag.getKey().equals("endpoint")) assertThat(tag.getValue()).isIn("login", "register", "password");
+                if (tag.getKey().equals("outcome")) assertThat(tag.getValue()).isIn("success", "failure", "rate_limited", "error");
+                if (tag.getKey().equals("reason")) assertThat(tag.getValue()).isIn("request_rate", "credential_failures", "capacity");
+            }
+        }
     }
     private double counter(String outcome) { return metrics.get("stockroom.auth.requests")
             .tags("endpoint","login","outcome",outcome).counter().count(); }

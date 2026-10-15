@@ -59,8 +59,8 @@ public class AuthRequestLimiter {
     public synchronized Admission begin(Endpoint endpoint, String client, String email) {
         if (!settings.enabled()) return new Admission(null,null,0);
         long now=ticker.getAsLong(); cleanup(now);
-        long window=(endpoint==Endpoint.LOGIN ? settings.loginWindow() : settings.registrationWindow()).toNanos();
-        int limit=endpoint==Endpoint.LOGIN ? settings.loginAttempts() : settings.registrationAttempts();
+        long window=(endpoint!=Endpoint.REGISTER ? settings.loginWindow() : settings.registrationWindow()).toNanos();
+        int limit=endpoint!=Endpoint.REGISTER ? settings.loginAttempts() : settings.registrationAttempts();
         Bucket request=bucket(endpoint+":"+fingerprint(client),now,window);
         if (request==null) return rejected(Reason.CAPACITY,1);
         request.renew(now);

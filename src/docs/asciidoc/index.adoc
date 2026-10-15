@@ -35,6 +35,8 @@
 |GET |`/products`, `/storefront/config`, `/auth/csrf` |불필요
 |POST |`/auth/register`, `/auth/login` |불필요, CSRF 필요
 |GET |`/auth/me` |필요
+|GET |`/auth/sessions` |필요, 본인 유효 접속 메타데이터만 조회
+|POST |`/auth/password`, `/auth/sessions/logout-others` |필요, CSRF 필요
 |POST |`/auth/logout` |CSRF 필요
 |POST |`/orders` |필요, CSRF 필요
 |GET |`/orders`, `/orders/{orderId}` |필요
@@ -99,6 +101,24 @@ operation::me[snippets='http-request,http-response,response-fields']
 성공 시 본문 없는 `204 No Content`입니다. 브라우저의 인증 상태와 보관 중인 CSRF 토큰을 함께 비우세요.
 
 operation::logout[snippets='http-request,request-headers,http-response']
+
+=== 내 접속과 비밀번호 관리
+
+로그인한 회원만 본인의 유효한 접속 메타데이터를 조회합니다. 현재 접속 우선·최근 활동순으로 최대 100개를 표시하며
+세션 ID·쿠키·IP·브라우저 원문은 응답하지 않습니다. 접속 시작은 세션 생성 시각으로, 로그인 시각과 다를 수 있습니다.
+
+operation::account-sessions[snippets='http-request,http-response,response-fields']
+
+다른 기기 로그아웃은 현재 접속을 유지하고 같은 계정의 나머지 저장 세션을 삭제합니다. 반복 실행은 `204`입니다.
+
+operation::account-logout-others[snippets='http-request,request-headers,http-response']
+
+비밀번호 변경은 현재 비밀번호 확인 후 해시·인증 버전·세션 삭제를 한 트랜잭션에 저장합니다.
+성공 `204` 뒤에는 현재 브라우저도 새 비밀번호로 다시 로그인해야 합니다. 잘못된 현재 값은 `400 CURRENT_PASSWORD_INVALID`,
+동일한 새 값은 `400 PASSWORD_UNCHANGED`이며 변경하지 않습니다. 유효 세션과 CSRF가 필요합니다.
+비밀번호 변경 요청에는 로그인과 같은 IP별 요청 한도와 IP·계정별 실패 한도를 적용합니다. `400` 입력 오류도 실패에 포함합니다.
+
+operation::account-password[snippets='http-request,request-headers,request-fields,http-response']
 
 == 관리자 재고 조정
 

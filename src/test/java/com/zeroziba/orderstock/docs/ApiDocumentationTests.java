@@ -149,6 +149,30 @@ class ApiDocumentationTests {
     }
 
     @Test
+    void accountSessionAndPasswordContracts() throws Exception {
+        long now = System.currentTimeMillis();
+        jdbc.update("INSERT INTO app_sessions VALUES (?,?,?,?,?,?,?)", java.util.UUID.randomUUID().toString(), session.getId(), now, now, 1800, now + 1_800_000, "reader@example.test");
+        mvc.perform(get("/auth/sessions").session(session)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessions[0].current").value(true))
+                .andDo(document("account-sessions", responseFields(
+                        fieldWithPath("sessions").description("본인 유효 접속, 현재 접속 우선·최근 활동순, 최대 100개"),
+                        fieldWithPath("sessions[].current").description("요청한 브라우저의 접속이면 true"),
+                        fieldWithPath("sessions[].createdAt").description("세션 생성 시각. 로그인 이전 익명 세션 생성 시각일 수 있음"),
+                        fieldWithPath("sessions[].lastAccessedAt").description("직전 저장된 최근 활동 시각"),
+                        fieldWithPath("sessions[].expiresAt").description("직전 저장된 유휴 만료 시각. 활동 시 연장"),
+                        fieldWithPath("truncated").description("표시 한도를 초과하면 true. 로그아웃은 전체에 적용"))));
+        mvc.perform(post("/auth/sessions/logout-others").session(session).header("X-CSRF-TOKEN", token))
+                .andExpect(status().isNoContent()).andDo(document("account-logout-others", csrfHeader()));
+        mvc.perform(post("/auth/password").session(session).header("X-CSRF-TOKEN", token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"currentPassword\":\"TestPass123!\",\"newPassword\":\"DocPass123!\"}"))
+                .andExpect(status().isNoContent()).andDo(document("account-password", csrfHeader(), requestFields(
+                        fieldWithPath("currentPassword").description("현재 비밀번호. 공백 구분, UTF-8 72바이트 이하"),
+                        fieldWithPath("newPassword").description("새 비밀번호. 8~72자, UTF-8 72바이트 이하, 공백만 사용 불가, 현재 값과 달라야 함"))));
+        assertThat(session.isInvalid()).isTrue();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM app_sessions WHERE PRINCIPAL_NAME=?", Integer.class, "reader@example.test")).isZero();
+    }
+
+    @Test
     void adminInventoryAdjustmentReplayAndHistory() throws Exception {
         mvc.perform(get("/admin/inventory-adjustments").session(session)).andExpect(status().isForbidden())
                 .andDo(document("inventory-forbidden", responseFields(errorFields())));
