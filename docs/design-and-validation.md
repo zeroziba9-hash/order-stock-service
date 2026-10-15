@@ -20,14 +20,14 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V17"] --> DB
+    Flyway["Flyway V1~V18"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
 같은 출처에서 정적 프론트와 API를 제공해 별도의 프론트 배포나 교차 출처 인증 설정 없이 세션 로그인을 사용합니다.
 핵심 테이블은 `products`, `app_users`, `purchase_orders`, `order_items`, `order_requests`, `order_request_completions`,
 `payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`,
-`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`입니다.
+`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`, `saved_carts`, `saved_cart_items`, `checkout_quotes`, `checkout_quote_items`입니다.
 주문 항목은 당시 상품명·가격을, 수동 조정은 실행자·사유·당시 상품명·변경 전후 수량을 보관합니다.
 
 ## 설계 선택
@@ -161,6 +161,8 @@ Java 17·MySQL 8.4, Docker가 보고한 CPU 16개·메모리 약 15.4 GiB 환경
 | 주문 응답 유실 후 같은 키로 재시도 | 기존 주문 반환, 주문 생성·재고 차감 1회 | [멱등 요청](idempotency.md)·[브라우저 검증](browser-tests.md) |
 | 저장 도중 오류 발생 | 주문·재고·요청 키·원장 변경 전체 롤백 | MySQL 통합 테스트의 실패 주입 시나리오 |
 | 같은 상품과 여러 상품의 동시 주문 비교 | 성공 주문·원장 잔액 확인 후 처리량과 지연 비교 | [워밍업·반복 측정](paired-benchmark.md) |
+
+계정별 장바구니·확인한 가격으로 주문하는 흐름은 [가격 확인 주문](checkout-and-cart.md)에, 실제 앱/DB 중단·복구와 제한된 반복 검증은 [복구 검증](recovery-verification.md)에 정리했습니다.
 
 ## 남은 작업
 

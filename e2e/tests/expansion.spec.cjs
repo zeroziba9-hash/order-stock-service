@@ -46,7 +46,7 @@ test('product search and price sorting use server results',async({page})=>{
 test('multi-product cart order and status-date filters work together',async({page})=>{
   await login(page);const products=await(await page.request.get('/products')).json();await fillCart(page,products);
   await page.locator(`[data-cart-quantity="${products[0].id}"]`).fill('2');await page.locator(`[data-cart-quantity="${products[0].id}"]`).blur();
-  const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/orders/cart'&&r.request().method()==='POST');
+  const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/orders/cart/checkout'&&r.request().method()==='POST');
   await page.locator('#cart-checkout').click();await confirm(page);const created=await response;expect(created.status()).toBe(201);
   const order=await created.json();expect(order.items).toHaveLength(2);expect(order.totalAmount).toBe(products[0].price*2+products[1].price);
   await expect(page.locator('.order-card')).toHaveCount(1);
@@ -59,14 +59,14 @@ test('multi-product cart order and status-date filters work together',async({pag
 test('lost cart response survives reload with the same key and frozen items',async({page})=>{
   await login(page);const products=await(await page.request.get('/products')).json();await fillCart(page,products);
   const keys=[];let drop=true;
-  await page.route('**/orders/cart',async route=>{
+  await page.route('**/orders/cart/checkout',async route=>{
     keys.push(route.request().headers()['idempotency-key']);
     if(drop){drop=false;const response=await route.fetch();expect(response.status()).toBe(201);await route.abort('failed');}
     else await route.continue();
   });
   await page.locator('#cart-checkout').click();await confirm(page);await expect(page.locator('#cart-error')).toContainText('응답을 받지 못했어요');
   await page.reload();await expect(page.locator('#cart-pending')).toBeVisible();await expect(page.locator('[data-cart-quantity]').first()).toBeDisabled();
-  const replay=page.waitForResponse(r=>new URL(r.url()).pathname==='/orders/cart');await page.locator('#cart-checkout').click();
+  const replay=page.waitForResponse(r=>new URL(r.url()).pathname==='/orders/cart/checkout');await page.locator('#cart-checkout').click();
   expect((await replay).status()).toBe(200);await expect(page.locator('.order-card')).toHaveCount(1);
   expect(keys.length).toBe(2);expect(Boolean(keys[0])&&keys[0]===keys[1]).toBe(true);
   const fresh=await(await page.request.get('/products')).json();for(const product of products)expect(fresh.find(p=>p.id===product.id).stock).toBe(product.stock-1);

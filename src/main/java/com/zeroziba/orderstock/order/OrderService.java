@@ -45,6 +45,16 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createItems(long userId,List<CreateOrderRequest> requests) {
+        return createItems(userId,requests,java.util.Map.of(),null);
+    }
+
+    @Transactional
+    public OrderResponse createConfirmed(long userId,List<CheckoutService.Expected> expected,java.time.Instant expiresAt) {
+        var byId=expected.stream().collect(java.util.stream.Collectors.toMap(CheckoutService.Expected::productId,item->item));
+        return createItems(userId,expected.stream().map(item->new CreateOrderRequest(item.productId(),item.quantity())).toList(),byId,expiresAt);
+    }
+
+    private OrderResponse createItems(long userId,List<CreateOrderRequest> requests,java.util.Map<Long,CheckoutService.Expected> expected,java.time.Instant expiresAt) {
         requireUser(userId);
         var items=new CartOrderRequest(requests).normalized();
         var allocations=new java.util.ArrayList<StockAllocator.Allocation>();
@@ -53,11 +63,15 @@ public class OrderService {
             // All paths acquire product locks in ascending ID order, including reversed cart submissions.
             for(var item:items){
                 var allocation=allocator.allocate(item.productId(),item.quantity()); allocations.add(allocation);
+                var confirmed=expected.get(item.productId());
+                if(confirmed!=null && (allocation.product().getPrice()!=confirmed.price() || allocation.product().getCatalogRevision()!=confirmed.revision()))
+                    throw new ApiException(HttpStatus.CONFLICT,"QUOTE_CHANGED","상품 정보가 바뀌었어요. 최신 가격과 상품을 다시 확인하세요.");
                 totalAmount=Math.addExact(totalAmount,Math.multiplyExact(allocation.product().getPrice(),(long)item.quantity()));
             }
         } catch (ArithmeticException exception) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_AMOUNT", "주문 금액이 허용 범위를 초과합니다.");
         }
+        if(expiresAt!=null && !expiresAt.isAfter(clock.instant()))throw new ApiException(HttpStatus.CONFLICT,"QUOTE_EXPIRED","확인 시간이 지났어요. 최신 가격을 다시 확인하세요.");
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         PurchaseOrder order = new PurchaseOrder(userId,allocations.get(0).product(),items.get(0).quantity(),totalAmount,
                 now, now.plus(expiration.paymentWindow()));

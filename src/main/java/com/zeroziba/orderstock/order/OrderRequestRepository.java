@@ -21,12 +21,19 @@ public class OrderRequestRepository {
     }
     public StoredRequest reserveAndLock(long userId,String key,java.util.List<CreateOrderRequest> items) {
         var request=items.get(0);
+        return reserve(userId,key,request.productId(),request.quantity(),CartOrderRequest.fingerprint(items));
+    }
+    public StoredRequest reserveQuoteAndLock(long userId,String key,String hash) {
+        // Quote-backed requests use their own fingerprint; these legacy columns are not dereferenced.
+        return reserve(userId,key,1L,1,hash);
+    }
+    private StoredRequest reserve(long userId,String key,long productId,int quantity,String hash) {
         // 신규 키는 삽입하고 기존 키는 내용을 바꾸지 않는다. 같은 키의 요청은 여기서 대기한다.
         // 상품 FK는 두지 않는다. 주문 생성 전 상품의 공유 잠금을 잡으면 쓰기 잠금 승격 시 교착될 수 있다.
         jdbcTemplate.update("""
                 INSERT INTO order_requests (user_id, request_key, product_id, quantity,request_hash) VALUES (?, ?, ?, ?,?)
                 ON DUPLICATE KEY UPDATE request_key = request_key
-                """, userId, key, request.productId(), request.quantity(),CartOrderRequest.fingerprint(items));
+                """, userId, key, productId, quantity,hash);
         return jdbcTemplate.queryForObject("""
                 SELECT product_id, quantity,request_hash,
                     (SELECT order_id FROM order_request_completions c WHERE c.request_id=r.id) order_id
