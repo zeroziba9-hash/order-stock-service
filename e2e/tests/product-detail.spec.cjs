@@ -32,6 +32,7 @@ test('catalog links open public detail, reload retains it and guest purchase req
   await page.getByRole('link',{name:product.name+' 상세 보기',exact:true}).click();await expect(page.locator('#product-title')).toHaveText(product.name);
   await expect(page.locator('#product-description-section')).toBeHidden();await expect(page.locator('#product-specification-section')).toBeHidden();
   await page.reload();await expect(page.locator('#product-title')).toHaveText(product.name);
+  await expect(page.locator('#product-title')).toBeInViewport();
   await page.getByLabel('담을 수량',{exact:true}).fill('2');await expect(page.locator('#product-subtotal')).toHaveText((product.price*2).toLocaleString('ko-KR')+'원');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.locator('#product-add').click();await expect(page.locator('#auth-dialog')).toBeVisible();
@@ -91,6 +92,7 @@ test('late product response cannot replace a newer detail selection',async({page
     await page.getByRole('link',{name:products[0].name+' 상세 보기',exact:true}).click();await received;
     await page.getByRole('link',{name:'← 컬렉션으로 돌아가기',exact:true}).click();
     await page.getByRole('link',{name:products[1].name+' 상세 보기',exact:true}).click();await expect(page.locator('#product-title')).toHaveText(products[1].name);
+    await expect(page.locator('#product-title')).toBeInViewport();
     const completed=page.waitForResponse(r=>new URL(r.url()).pathname==='/products/'+products[0].id);release();await completed;
     await expect(page.locator('#product-title')).toHaveText(products[1].name);await expect(page.locator('#product-content')).toBeVisible();
   }finally{release();}

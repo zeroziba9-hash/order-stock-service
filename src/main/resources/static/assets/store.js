@@ -204,6 +204,8 @@
       $("#product-quantity").value = 1; $("#product-quantity").max = Math.max(1,Math.min(product.stock,2147483647));
       $("#product-quantity").disabled = product.stock < 1; $("#product-action-status").textContent = "";
       $("#product-content").hidden = false; updateProductSubtotal(); syncProductActions();
+      // A detail hash has no native anchor: do not inherit scroll from a lower catalog row.
+      $("#product-title").focus({ preventScroll: true }); window.scrollTo(0,0);
     } catch (error) {
       if (request !== productDetailRequest || location.hash !== routeHash) return;
       $("#product-error-message").textContent = error.message; $("#product-error").hidden = false;

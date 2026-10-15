@@ -26,6 +26,7 @@
 | `feat/account-management` | 내 계정·비밀번호 변경·다른 접속 종료·인증 버전·이전 세션 호환 | [PR #16](https://github.com/zeroziba9-hash/order-stock-service/pull/16) |
 | `feat/store-operations-expansion` | CI 교착 수정·검색·운영 이력 조회·장바구니·공개 배포 사전 검사 | [PR #17](https://github.com/zeroziba9-hash/order-stock-service/pull/17) |
 | `feat/checkout-confirmation` | 가격 확인 주문·계정 장바구니·동시 수정 보호·앱/DB 중단 복구 | [PR #18](https://github.com/zeroziba9-hash/order-stock-service/pull/18) |
+| `feat/storefront-product-details` | 상품 탐색 배치·가독성·상세 화면·설명 편집과 이력 | [PR #19](https://github.com/zeroziba9-hash/order-stock-service/pull/19) |
 
 현재 `feat/storefront-product-details`에서 상품 목록 배치·가독성·상세 화면·관리자 설명 편집을 검증합니다.
 PR #18 병합 후 최신 main에서 분기했으며, 연결된 화면·API·V19 마이그레이션을 통합 검증합니다.
