@@ -103,13 +103,14 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 326개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 54개 | 일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 352개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium E2E 70개 | 일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
 | 백업·복원 | 체크섬·빈 별도 DB 복원 후 실제 HTTPS 데이터 비교 | [복구 안내](backup-restore.md) |
-| 배포 후 점검 도구 | 인증서 검증을 유지한 GET 검사 9개, CI의 로컬 HTTPS 대상 | [PR #3](https://github.com/zeroziba9-hash/order-stock-service/pull/3) |
+| 배포 후 점검 도구 | 인증서 검증을 유지한 GET 검사 12개, CI의 로컬 HTTPS 대상·익명 장바구니 거부 | [공개 배포 준비](production-readiness.md) |
+| 중단과 재기동 | 실제 앱 SIGKILL·DB 중단/복구·중단 중 고정 기한 경과·제한된 연속 주문 | [복구 검증](recovery-verification.md) |
 | API 계약 문서 | 실제 인증·CSRF·MySQL 응답에서 HTML 생성, 필드·마스킹·누락 참조 검증 | [가이드 생성·다운로드](api-documentation.md) |
 | 관측과 DB 결과 대조 | 커밋 후 생성·재응답·취소·만료 카운터, 18개 패널, HTTP 부하와 스케줄러 연결 | [로컬 모니터링·CI](observability.md) |
 | 장애 요청 추적 | 실제 서버의 응답 헤더·완료 로그·예외 위치 연결, 보안 필터 차단·동시 MDC 정리·민감정보 제외 | [요청 추적과 장애 조사](request-tracing.md) |

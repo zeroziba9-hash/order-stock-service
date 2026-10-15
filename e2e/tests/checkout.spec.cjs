@@ -99,3 +99,26 @@ test('legacy pending cart replays its original endpoint and request key after up
   expect((await replay).status()).toBe(200);await expect(page.locator('.order-card')).toHaveCount(1);
   expect((await(await page.request.get('/orders')).json()).orders[0].orderId).toBe(original.orderId);
 });
+test('ambiguous conflict, CSRF and rate-limit responses retain the original checkout key',async({page})=>{
+  const {products}=await setup(page);
+  for(const [status,code] of [[409,'ORDER_CONFLICT'],[403,'ACCESS_DENIED'],[429,'RATE_LIMITED']]){
+    const saved=await(await page.request.get('/cart')).json();
+    if(!saved.items.length){
+      expect((await send(page.request,'/cart',{revision:saved.revision,items:products.map(p=>({productId:p.id,quantity:1}))},'put')).status()).toBe(200);
+      await page.goto('/#cart');await page.reload();await expect(page.locator('.cart-row')).toHaveCount(2);
+    }
+    let first=true;const keys=[];
+    await page.route('**/orders/cart/checkout',async route=>{
+      keys.push(route.request().headers()['idempotency-key']);
+      if(!first)return route.continue();first=false;
+      const committed=await route.fetch();expect(committed.status()).toBe(201);
+      await route.fulfill({status,contentType:'application/json',body:JSON.stringify({code,message:'일시적인 처리 오류'})});
+    });
+    await page.locator('#cart-checkout').click();await confirm(page);await expect(page.locator('#cart-error')).toContainText('일시적인 처리 오류');
+    await page.reload();await expect(page.locator('#cart-pending')).toBeVisible();await expect(page.locator('[data-cart-quantity]').first()).toBeDisabled();
+    const replay=page.waitForResponse(r=>new URL(r.url()).pathname==='/orders/cart/checkout');await page.locator('#cart-checkout').click();
+    expect((await replay).status()).toBe(200);await expect(page.locator('#orders-view')).toBeVisible();
+    expect(keys).toHaveLength(2);expect(keys[0]).toBe(keys[1]);await page.unrouteAll({behavior:'ignoreErrors'});
+  }
+  expect((await(await page.request.get('/orders')).json()).orders).toHaveLength(3);
+});

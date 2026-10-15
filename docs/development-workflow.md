@@ -25,6 +25,7 @@
 | `feat/jdbc-sessions` | MySQL 세션 저장·재시작 유지·만료·로그아웃·복구 시 세션 무효화 | [PR #15](https://github.com/zeroziba9-hash/order-stock-service/pull/15) |
 | `feat/account-management` | 내 계정·비밀번호 변경·다른 접속 종료·인증 버전·이전 세션 호환 | [PR #16](https://github.com/zeroziba9-hash/order-stock-service/pull/16) |
 | `feat/store-operations-expansion` | CI 교착 수정·검색·운영 이력 조회·장바구니·공개 배포 사전 검사 | [PR #17](https://github.com/zeroziba9-hash/order-stock-service/pull/17) |
+| `feat/checkout-confirmation` | 가격 확인 주문·계정 장바구니·동시 수정 보호·앱/DB 중단 복구 | [PR #18](https://github.com/zeroziba9-hash/order-stock-service/pull/18) |
 
 현재 `feat/checkout-confirmation`에서 가격 확인 주문·계정 장바구니·앱/DB 중단 복구 검증을 진행합니다.
 PR #17 병합 후 최신 main에서 분기했으며, 연결된 API·화면·V18 마이그레이션을 통합 검증합니다.

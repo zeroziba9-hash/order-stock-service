@@ -274,6 +274,10 @@
     sessionStorage.removeItem(pendingSlot(kind));
     if (kind === "cart") cartPending = null;
   }
+  function definitiveRejection(error) {
+    // Authentication/CSRF/rate-limit/lock failures do not prove that an earlier ambiguous attempt failed.
+    return error.status >= 400 && error.status < 500 && ![401,403,429].includes(error.status) && error.code !== "ORDER_CONFLICT";
+  }
   $("#cart-checkout").addEventListener("click",async () => {
     if (!state.user || cartBusy) return;
     const epoch=state.epoch; cartBusy=true; cartRequest++; renderCart(); $("#cart-error").textContent="";
@@ -298,7 +302,7 @@
       await Promise.all([loadProducts(),loadOrders()]); location.hash="orders";
     } catch(error) {
       if(epoch!==state.epoch)return;
-      if(error.status>=400 && error.status<500 && error.status!==401 && cartPending)forgetPending("cart");
+      if(definitiveRejection(error) && cartPending)forgetPending("cart");
       handleError(error,"#cart-error");
     } finally {if(epoch===state.epoch){cartBusy=false;renderCart();if(!cartReady)loadCart();}}
   });
@@ -542,7 +546,7 @@
       await Promise.all([loadProducts(), loadOrders()]); location.hash = "orders";
     } catch (error) {
       if (epoch !== state.epoch) return;
-      if (error.status >= 400 && error.status < 500 && error.status !== 401) forgetPending("direct");
+      if (definitiveRejection(error)) forgetPending("direct");
       handleError(error, "#purchase-error"); if (error.code === "INSUFFICIENT_STOCK") await loadProducts();
     }
     finally {
