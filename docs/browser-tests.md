@@ -6,9 +6,10 @@
 
 ## 검증 범위
 
-데스크톱 1280×900과 모바일 375×812에서 각각 일반 7개·관리자 9개·계정 3개·검색/장바구니/운영 조회 4개·가격 확인/계정 장바구니 8개, 총 62개 시나리오를 실행합니다.
-이후 테스트 앱만 5초 마감·1초 주기로 재시작하고 [자동 만료](order-expiration.md) 시나리오를 각 1개씩 추가합니다. 마지막으로 인증 제한용 앱 설정으로 재시작해 각 3개씩 추가하여 총 70개를 검증합니다.
+데스크톱 1280×900과 모바일 375×812에서 각각 일반 7개·관리자 9개·계정 3개·검색/장바구니/운영 조회 4개·가격 확인/계정 장바구니 8개·상품 상세 5개, 총 72개 시나리오를 실행합니다.
+이후 테스트 앱만 5초 마감·1초 주기로 재시작하고 [자동 만료](order-expiration.md) 시나리오를 각 1개씩 추가합니다. 마지막으로 인증 제한용 앱 설정으로 재시작해 각 3개씩 추가하여 총 80개를 검증합니다.
 
+- 상품 상세 직접 접속·새로고침·수량 선택·로그인 후 이어 담기·가격 확인 주문·통신 실패 재시도·판매 중지·설명 안전 표시·편집 충돌·늦은 응답 무시.
 - 다른 접속의 계정 장바구니·저장소 삭제 후 유지·수정 충돌·최신 가격 표시·확인 중 가격 변경 거부·판매 중지·다른 기기 수정 보존·이전 보류 주문 재시도.
 - 내 계정 로그인 안내·본인 접속·확인 취소·다른 접속 종료·비밀번호 변경·모든 접속 종료·새 비밀번호 로그인·조회 실패 복구.
 
@@ -29,7 +30,9 @@
 
 정상 데이터는 API 응답을 꾸미지 않습니다. 통신 실패 시나리오에서만 네트워크를 의도적으로 끊습니다.
 자동 재시도는 0회입니다. 실패한 테스트를 재실행으로 숨기지 않습니다.
-한 worker가 실행하며 계정은 테스트마다 새로 생성합니다. 후처리는 해당 계정의 주문만 취소·환불합니다.
+한 worker가 실행하며 계정은 테스트마다 새로 생성합니다.
+일반 화면 검증에서는 전용 `.github/compose.browser-test.yaml`로 로그인·가입 테스트 계정 한도를 500회로 설정합니다. 제한기는 활성화하며 일반 서비스 설정은 수정하지 않습니다.
+마지막 인증 제한 단계는 전용 auth overlay를 나중에 적용해 로그인 6회·가입 2회 등의 짧은 한도로 다시 검사합니다. 후처리는 해당 계정의 주문만 취소·환불합니다.
 
 ## 로컬 실행 (PowerShell)
 
@@ -42,7 +45,7 @@ $env:COMPOSE_PROJECT_NAME = 'order-stock-browser-dev'
 $env:E2E_ENV_FILE = (Resolve-Path .env).Path
 # python3로 실행할 수 없다면 실제 Python 실행 파일을 지정합니다.
 $env:E2E_PYTHON = 'python'
-docker compose --project-name order-stock-browser-dev --env-file .env up --build --wait --wait-timeout 240
+docker compose --project-name order-stock-browser-dev --env-file .env -f compose.yaml -f .github/compose.browser-test.yaml up --build --wait --wait-timeout 240
 Set-Location e2e
 npm ci
 npx playwright install chromium
@@ -58,7 +61,7 @@ Linux에서 브라우저 시스템 의존성이 없다면 `npx playwright instal
 
 ```powershell
 Set-Location ..
-docker compose --project-name order-stock-browser-dev --env-file .env -f compose.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+docker compose --project-name order-stock-browser-dev --env-file .env -f compose.yaml -f .github/compose.browser-test.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
 Set-Location e2e
 $env:E2E_EXPIRATION = 'true'
 npm test
@@ -71,7 +74,7 @@ Remove-Item Env:E2E_EXPIRATION
 
 ```powershell
 Set-Location ..
-docker compose --project-name order-stock-browser-dev --env-file .env -f compose.yaml -f .github/compose.auth-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+docker compose --project-name order-stock-browser-dev --env-file .env -f compose.yaml -f .github/compose.browser-test.yaml -f .github/compose.auth-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
 Set-Location e2e
 $env:E2E_AUTH_LIMITS = 'true'
 npm test

@@ -19,6 +19,7 @@
   let productsRequest = 0;
   let productPage = 0, productMore = false;
   let productQuery = "", productSort = "ID_ASC";
+  let selectedProduct = null, productDetailRequest = 0;
   let orderFilters = {};
   let cartOwner = null, cart = [], cartPending = null, cartBusy = false, cartReady = false, cartRevision = 0, cartRequest = 0;
 
@@ -112,8 +113,8 @@
     const products = state.products.filter((product) => state.filter !== "available" || product.stock > 0);
     $("#products").innerHTML = products.length ? products.map((product) => {
       const type = product.name.includes("머그") ? "mugs" : product.name.includes("스티커") ? "stickers" : "generic";
-      return `<article class="product-card"><div class="product-image ${type}" role="img" aria-label="${escape(product.name)}을 표현한 일러스트"><span class="product-badge">STOCKROOM EDITION</span>${productArt(product)}</div><div class="product-meta"><span class="product-category">${type === "mugs" ? "EVERYDAY OBJECTS" : type === "stickers" ? "LITTLE EXPRESSIONS" : "THE COLLECTION"}</span><span class="stock-tag ${product.stock === 0 ? "sold" : product.stock <= 5 ? "low" : ""}"><span class="live-dot"></span>${product.stock === 0 ? "품절" : `${escape(product.stock)}개 남음`}</span></div><h3>${escape(product.name)}</h3><div class="product-bottom"><p class="price">${escape(money(product.price))}</p><button class="buy-button" data-buy="${escape(product.id)}" ${product.stock === 0 ? "disabled" : ""}>${product.stock === 0 ? "다음 기회를 기다려요" : '주문하기 <span aria-hidden="true">↗</span>'}</button></div><button class="button ghost small full" data-add-cart="${escape(product.id)}" ${product.stock === 0 ? "disabled" : ""}>장바구니 담기</button></article>`;
-    }).join("") : '<p class="empty">지금 구매할 수 있는 상품이 없어요.<br>다음 컬렉션을 기다려 주세요.</p>';
+      return `<article class="product-card"><a class="product-visual-link" href="#product/${product.id}" aria-label="${escape(product.name)} 상세 보기"><div class="product-image ${type} tone-${product.id % 4}" role="img" aria-label="${escape(product.name)}을 표현한 일러스트"><span class="product-badge">STOCKROOM EDITION</span>${productArt(product)}</div></a><div class="product-meta"><span class="product-category">${type === "mugs" ? "EVERYDAY OBJECTS" : type === "stickers" ? "LITTLE EXPRESSIONS" : "THE COLLECTION"}</span><span class="stock-tag ${product.stock === 0 ? "sold" : product.stock <= 5 ? "low" : ""}"><span class="live-dot"></span>${product.stock === 0 ? "품절" : `${escape(product.stock)}개 남음`}</span></div><h3><a href="#product/${product.id}">${escape(product.name)}</a></h3><div class="product-bottom"><p class="price">${escape(money(product.price))}</p><button class="buy-button" data-buy="${escape(product.id)}" ${product.stock === 0 ? "disabled" : ""}>${product.stock === 0 ? "품절" : '주문하기 <span aria-hidden="true">↗</span>'}</button></div><button class="button primary full" data-add-cart="${escape(product.id)}" ${product.stock === 0 ? "disabled" : ""}>장바구니 담기</button></article>`;
+    }).join("") : productQuery || state.filter === "available" ? '<div class="empty"><strong>조건에 맞는 상품이 없어요.</strong><p>검색어나 구매 가능 필터를 바꿔보세요.</p><button class="button" data-reset-products>전체 상품 보기</button></div>' : '<p class="empty">지금은 등록된 상품이 없어요.<br>다음 컬렉션을 기다려 주세요.</p>';
     renderCart();
   }
 
@@ -172,7 +173,8 @@
     const orders = location.hash === "#orders";
     const account = location.hash === "#account";
     const basket = location.hash === "#cart";
-    $("#shop-view").hidden = orders || account || basket; $("#orders-view").hidden = !orders; $("#account-view").hidden = !account; $("#cart-view").hidden = !basket;
+    const product = location.hash.startsWith("#product/");
+    $("#shop-view").hidden = orders || account || basket || product; $("#orders-view").hidden = !orders; $("#account-view").hidden = !account; $("#cart-view").hidden = !basket; $("#product-view").hidden = !product;
     for (const [id, active] of [["#shop-nav", !orders && !account && !basket], ["#orders-nav", orders], ["#account-nav", account], ["#cart-nav", basket]]) {
       if (active) $(id).setAttribute("aria-current", "page"); else $(id).removeAttribute("aria-current");
     }
@@ -180,7 +182,51 @@
     if (orders) loadOrders();
     if (account) { renderProfile(); loadSessions(); }
     if (basket) { renderCart(); if (state.user) loadCart(); }
+    if (product) loadProductDetail(); else { productDetailRequest++; selectedProduct = null; }
   }
+
+  async function loadProductDetail() {
+    const routeHash = location.hash, request = ++productDetailRequest;
+    const raw = routeHash.slice("#product/".length), id = Number(raw);
+    selectedProduct = null; $("#product-content").hidden = true; $("#product-error").hidden = true; $("#product-loading").hidden = false;
+    try {
+      if (!/^[1-9]\d*$/.test(raw) || !Number.isSafeInteger(id)) throw new Error("상품 주소를 확인해 주세요.");
+      const product = await api(`/products/${id}`);
+      if (request !== productDetailRequest || location.hash !== routeHash) return;
+      selectedProduct = product;
+      $("#product-title").textContent = product.name; $("#product-price").textContent = money(product.price);
+      $("#product-stock").textContent = product.stock > 0 ? `현재 ${product.stock}개 남아 있어요` : "현재 품절이에요";
+      const type = product.name.includes("머그") ? "mugs" : product.name.includes("스티커") ? "stickers" : "generic";
+      $("#product-art").innerHTML = `<div class="product-image ${type} tone-${product.id % 4}" role="img" aria-label="${escape(product.name)}을 표현한 일러스트">${productArt(product)}</div>`;
+      for (const field of ["description","specification"]) {
+        $("#product-"+field).textContent = product[field]; $("#product-"+field+"-section").hidden = !product[field];
+      }
+      $("#product-quantity").value = 1; $("#product-quantity").max = Math.max(1,Math.min(product.stock,2147483647));
+      $("#product-quantity").disabled = product.stock < 1; $("#product-action-status").textContent = "";
+      $("#product-content").hidden = false; updateProductSubtotal(); syncProductActions();
+    } catch (error) {
+      if (request !== productDetailRequest || location.hash !== routeHash) return;
+      $("#product-error-message").textContent = error.message; $("#product-error").hidden = false;
+    } finally { if (request === productDetailRequest && location.hash === routeHash) $("#product-loading").hidden = true; }
+  }
+  function updateProductSubtotal() {
+    const quantity = Number($("#product-quantity").value);
+    $("#product-subtotal").textContent = selectedProduct && Number.isInteger(quantity) && quantity > 0 ? money(BigInt(selectedProduct.price)*BigInt(quantity)) : "—";
+  }
+  function syncProductActions() {
+    $("#product-add").disabled = !selectedProduct || selectedProduct.stock < 1 || Boolean(state.user && (cartBusy || cartPending || !cartReady));
+    $("#product-buy").disabled = !selectedProduct || selectedProduct.stock < 1;
+  }
+  $("#product-retry").addEventListener("click",loadProductDetail);
+  $("#product-quantity").addEventListener("input",updateProductSubtotal);
+  $("#product-purchase").addEventListener("submit",async event => {
+    event.preventDefault(); if (!selectedProduct || !$("#product-quantity").checkValidity()) return;
+    const id = selectedProduct.id, quantity = Number($("#product-quantity").value);
+    await addToCart(id,quantity);
+  });
+  $("#product-buy").addEventListener("click",() => {
+    if (selectedProduct && $("#product-quantity").reportValidity()) purchase(selectedProduct.id,Number($("#product-quantity").value),selectedProduct);
+  });
 
   function pendingSlot(kind) { return `stockroom-${kind}-pending:${cartOwner}`; }
   function readPending(kind) {
@@ -216,7 +262,7 @@
     try {
       const result = await api("/cart", { method: "PUT", body: { revision: cartRevision, items: items.map(item => ({ productId: item.id, quantity: item.quantity })) } });
       if (epoch !== state.epoch) return;
-      cart = result.items; cartRevision = result.revision;
+      cart = result.items; cartRevision = result.revision; return true;
     } catch (error) {
       if (epoch !== state.epoch) return;
       handleError(error,"#cart-error");
@@ -233,17 +279,20 @@
     $("#cart-total").textContent = new Intl.NumberFormat("ko-KR").format(total) + "원";
     $("#cart-checkout").disabled = !state.user || (!cart.length && !cartPending) || cartBusy || (!cartReady && !cartPending);
     $("#cart-checkout").textContent = cartPending ? "같은 주문 결과 다시 확인 →" : "가격 확인하고 함께 주문 →";
-    $("#refresh-cart").disabled = !state.user || cartBusy;
+    $("#refresh-cart").disabled = !state.user || cartBusy; syncProductActions();
     document.querySelectorAll("[data-add-cart]").forEach(button => { button.disabled = Boolean(state.user && frozen) || state.products.find(item => item.id === Number(button.dataset.addCart))?.stock === 0; });
   }
-  async function addToCart(id) {
-    if (!state.user) return showAuth(() => addToCart(id));
+  async function addToCart(id,quantity = 1) {
+    if (!state.user) return showAuth(() => addToCart(id,quantity));
+    const epoch = state.epoch;
+    if (!cartReady && !cartBusy && !cartPending) await loadCart();
+    if (epoch !== state.epoch) return;
     if (cartPending || cartBusy || !cartReady) return notify("장바구니를 불러오거나 이전 주문의 결과를 먼저 확인하세요.");
-    const product = state.products.find(item => item.id === id); if (!product || product.stock < 1) return;
+    const product = selectedProduct?.id === id ? selectedProduct : state.products.find(item => item.id === id); if (!product || product.stock < 1) return;
     const items = cart.map(item => ({ ...item })), existing = items.find(item => item.id === id);
-    if (existing) existing.quantity = Math.min(existing.quantity + 1,2147483647);
-    else { if (items.length >= 20) return notify("상품은 최대 20종까지 담을 수 있어요."); items.push({ id, quantity: 1 }); }
-    await saveCart(items);
+    if (existing) existing.quantity = Math.min(existing.quantity + quantity,2147483647);
+    else { if (items.length >= 20) return notify("상품은 최대 20종까지 담을 수 있어요."); items.push({ id, quantity }); }
+    if (await saveCart(items) && epoch === state.epoch) { notify("장바구니에 담았어요."); if (selectedProduct?.id === id) $("#product-action-status").textContent = `${quantity}개를 장바구니에 담았어요.`; }
   }
   $("#refresh-cart").addEventListener("click",loadCart);
   $("#cart-items").addEventListener("change",event => {
@@ -413,14 +462,14 @@
     if (seconds > 0) authCooldownTimer = setTimeout(renderAuthCooldown, 250);
   }
 
-  function purchase(productId) {
-    if (!state.user) return showAuth(() => purchase(productId));
+  function purchase(productId,initialQuantity = 1,source = null) {
+    if (!state.user) return showAuth(() => purchase(productId,initialQuantity,source));
     const waiting = readPending("direct"), saved = waiting?.items?.[0];
-    const product = saved ? { ...saved, stock: saved.quantity } : state.products.find((item) => item.id === productId);
+    const product = saved ? { ...saved, stock: saved.quantity } : source || state.products.find((item) => item.id === productId);
     if (!product || product.stock < 1) return notify("품절된 상품이에요. 재고를 새로고침해 주세요.");
     state.selected = product; $("#purchase-title").textContent = product.name;
     $("#purchase-stock").textContent = `현재 ${product.stock}개 남아 있어요. · ${money(product.price)}`;
-    $("#quantity").value = saved?.quantity || 1; $("#quantity").max = Math.min(product.stock, 2147483647);
+    $("#quantity").value = saved?.quantity || initialQuantity; $("#quantity").max = Math.min(product.stock, 2147483647);
     for (const selector of ["#quantity","#quantity-minus","#quantity-plus"]) $(selector).disabled = Boolean(waiting);
     $("#purchase-error").textContent = readPending("direct") ? "이전 주문 결과를 먼저 확인해요. 같은 요청으로 다시 확인하면 중복 주문되지 않아요." : "";
     updateTotal(); $("#purchase-dialog").showModal();
@@ -491,6 +540,11 @@
     const button = event.target.closest("button"); if (!button || button.disabled) return;
     if (button.matches("[data-close]")) button.closest("dialog").close();
     else if (button.id === "login-button" || button.matches("[data-login]")) showAuth();
+    else if (button.matches("[data-reset-products]")) {
+      productQuery = ""; state.filter = "all"; $("#product-query").value = "";
+      document.querySelectorAll("[data-filter]").forEach(filter => { const active = filter.dataset.filter === "all"; filter.classList.toggle("active",active); filter.setAttribute("aria-pressed",String(active)); });
+      loadProducts();
+    }
     else if (button.matches("[data-buy]")) purchase(Number(button.dataset.buy));
     else if (button.matches("[data-add-cart]")) addToCart(Number(button.dataset.addCart));
     else if (button.matches("[data-cart-remove]") && !cartPending && !cartBusy) {saveCart(cart.filter(item=>item.id!==Number(button.dataset.cartRemove)));}

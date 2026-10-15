@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/storefront/config", "/products", "/actuator/health", "/actuator/health/liveness",
-                                "/actuator/health/readiness", "/auth/csrf", "/products/search").permitAll()
+                                "/actuator/health/readiness", "/auth/csrf", "/products/search", "/products/{id}").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
                         .requestMatchers("/admin/**", "/admin.html", "/catalog.html").hasRole("ADMIN")
                         .anyRequest().authenticated())

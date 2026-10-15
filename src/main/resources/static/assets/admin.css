@@ -57,3 +57,8 @@ button.admin-product[aria-pressed="true"] { border-color:#78944f; background:#f0
   .header .account-email { display:none }
   .header nav { gap:12px }
 }
+
+#edit-content textarea { display:block; width:100%; min-height:100px; resize:vertical; font:inherit; line-height:1.7; border:1px solid #a7ad9d; border-radius:6px; padding:12px; background:#fff; color:var(--ink); margin-bottom:16px; }
+.content-history-title { margin:28px 0 12px; font-size:17px; }
+#content-history { max-height:400px; overflow:auto; }
+#content-history p { white-space:pre-line; overflow-wrap:anywhere; }

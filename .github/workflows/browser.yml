@@ -44,19 +44,19 @@ jobs:
           echo "::add-mask::$root_password"
           printf 'MYSQL_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\n' "$app_password" "$root_password" >> "$GITHUB_ENV"
       - name: Start disposable application and database
-        run: docker compose up --build --wait --wait-timeout 240
+        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml up --build --wait --wait-timeout 240
       - name: Exercise desktop and mobile browser workflows
         working-directory: e2e
         run: npm test
       - name: Use short deadlines only in the disposable browser stack
-        run: docker compose -f compose.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
       - name: Verify automatic expiration in desktop and mobile browsers
         working-directory: e2e
         env:
           E2E_EXPIRATION: 'true'
         run: npm test
       - name: Use short authentication limits only in the disposable browser stack
-        run: docker compose -f compose.yaml -f .github/compose.auth-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f .github/compose.auth-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
       - name: Verify authentication limits and retry countdown in desktop and mobile browsers
         working-directory: e2e
         env:

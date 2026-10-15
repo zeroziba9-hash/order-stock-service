@@ -1,0 +1,7 @@
+# Only for disposable browser fixtures on loopback port 18083.
+# Keep the limiter enabled; the dedicated auth overlay replaces these values with real short quotas.
+services:
+  app:
+    environment:
+      APP_AUTH_LIMITS_LOGIN_ATTEMPTS: "500"
+      APP_AUTH_LIMITS_REGISTRATION_ATTEMPTS: "500"
