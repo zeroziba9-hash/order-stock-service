@@ -1,0 +1,24 @@
+-- Session storage follows Spring Session JDBC's MySQL schema; business tables are unchanged.
+-- Email identifiers accept the same 254-character limit as app_users.
+CREATE TABLE app_sessions (
+    PRIMARY_ID CHAR(36) NOT NULL,
+    SESSION_ID CHAR(36) NOT NULL,
+    CREATION_TIME BIGINT NOT NULL,
+    LAST_ACCESS_TIME BIGINT NOT NULL,
+    MAX_INACTIVE_INTERVAL INT NOT NULL,
+    EXPIRY_TIME BIGINT NOT NULL,
+    PRINCIPAL_NAME VARCHAR(254),
+    CONSTRAINT pk_app_sessions PRIMARY KEY (PRIMARY_ID),
+    CONSTRAINT uq_app_sessions_id UNIQUE (SESSION_ID),
+    INDEX ix_app_sessions_expiry (EXPIRY_TIME),
+    INDEX ix_app_sessions_principal (PRINCIPAL_NAME)
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE app_sessions_ATTRIBUTES (
+    SESSION_PRIMARY_ID CHAR(36) NOT NULL,
+    ATTRIBUTE_NAME VARCHAR(200) NOT NULL,
+    ATTRIBUTE_BYTES BLOB NOT NULL,
+    CONSTRAINT pk_app_session_attributes PRIMARY KEY (SESSION_PRIMARY_ID, ATTRIBUTE_NAME),
+    CONSTRAINT fk_app_session_attributes FOREIGN KEY (SESSION_PRIMARY_ID)
+        REFERENCES app_sessions (PRIMARY_ID) ON DELETE CASCADE
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;

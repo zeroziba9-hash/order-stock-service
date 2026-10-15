@@ -80,7 +80,8 @@ Docker 이미지를 단독 실행할 때는 기본 `prod`이며, 운영 접속 �
 [인증](auth.md), [주문](order-api.md), [결제](payments.md), [환불](refunds.md) 문서의 URL에서
 `http://localhost:8080`을 `http://localhost:18080`으로 바꿔 사용합니다.
 서로 다른 실행 환경의 세션을 섞지 않도록 새 PowerShell 세션에서 로그인하세요.
-데이터와 회원은 컨테이너 전용 DB에 저장합니다. 앱 재시작 시 다시 로그인해야 합니다.
+데이터·회원·로그인 세션은 컨테이너 전용 DB에 저장합니다. 유효한 쿠키로 앱 재시작 뒤에도 로그인을 유지합니다.
+V13 최초 적용과 백업 복원 뒤에는 다시 로그인합니다. [세션 정책](session-persistence.md)을 참고하세요.
 
 ## 로그·종료·재실행
 
@@ -121,7 +122,7 @@ docker compose exec db mysql --user=order_app --password order_stock
 4. `down` 후 같은 볼륨으로 컨테이너를 새로 만들고 회원·주문·재고·결제·환불 이력 보존 확인.
 
 CI의 비밀번호와 테스트 회원은 매번 임의로 생성하며 CI 종료 시 전용 DB 볼륨을 정리합니다.
-애플리케이션 통합 테스트 151개는 기존 [Backend CI](../.github/workflows/ci.yml)가 별도로 실행합니다.
+전체 백엔드 테스트는 [Backend CI](../.github/workflows/ci.yml)가 두 재고 차감 방식에서 별도로 실행합니다.
 Docker 빌드의 `bootJar` 단계 자체가 테스트 실행을 대신하지 않습니다.
 
 Windows의 Docker Desktop 4.94.0·WSL 2 환경에서 이미지 빌드와 위 HTTP 흐름·데이터 보존을 확인했습니다.

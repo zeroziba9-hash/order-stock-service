@@ -43,6 +43,11 @@ expect_rejection() {
 "${source_compose[@]}" up --no-build --wait --wait-timeout 240 app
 APP_PORT=18082 python3 "$repo_root/.github/scripts/compose-smoke.py" prepare --state-file "$temporary/state.json"
 archive=$("${db_tool[@]}" backup "$env_file" "$temporary/archives" "$source_project")
+# Verify the backup source really contains a live login; a recovery test with no session would prove nothing.
+# shellcheck disable=SC2016
+source_sessions=$(printf 'SELECT COUNT(*) FROM app_sessions WHERE PRINCIPAL_NAME IS NOT NULL;\n' |
+    "${source_compose[@]}" exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --batch --skip-column-names')
+[[ $source_sessions -gt 0 ]] || { echo 'No authenticated session in backup source.' >&2; exit 1; }
 [[ $(stat -c %a "$archive") == 700 && $(stat -c %a "$archive/database.sql.gz") == 600 ]]
 expect_rejection 'Stop app and proxy' "${db_tool[@]}" restore "$env_file" "$archive" "$source_project"
 
@@ -60,11 +65,15 @@ table_count=$(printf 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE
 [[ $table_count == 0 ]] || { echo 'Rejected restores changed the empty target.' >&2; exit 1; }
 
 "${db_tool[@]}" restore "$env_file" "$archive" "$target_project"
+# shellcheck disable=SC2016
+restored_sessions=$(printf 'SELECT (SELECT COUNT(*) FROM app_sessions)+(SELECT COUNT(*) FROM app_sessions_ATTRIBUTES);\n' |
+    "${target_compose[@]}" exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --batch --skip-column-names')
+[[ $restored_sessions == 0 ]] || { echo 'Restored session rows or attributes survived invalidation.' >&2; exit 1; }
 expect_rejection 'Target database must be empty' "${db_tool[@]}" restore "$env_file" "$archive" "$target_project"
 "${target_compose[@]}" up --no-build --wait --wait-timeout 240
 [[ $("${target_compose[@]}" exec -T app printenv SPRING_PROFILES_ACTIVE) == prod ]]
 "${target_compose[@]}" cp proxy:/data/caddy/pki/authorities/local/root.crt "$temporary/root.crt"
 SMOKE_BASE_URL=https://localhost:18443 SMOKE_CA_FILE="$temporary/root.crt" \
-    python3 "$repo_root/.github/scripts/compose-smoke.py" verify --state-file "$temporary/state.json"
+    python3 "$repo_root/.github/scripts/compose-smoke.py" verify --state-file "$temporary/state.json" --expect-session-invalidated
 printf '%s\n' 'PASS: backup restored into a different empty MySQL volume; Flyway, login, orders, request keys, stock and payment/refund history verified over HTTPS'
 printf '%s\n' 'PASS: running app, incomplete/corrupt archives and nonempty targets rejected; backup permissions restricted'

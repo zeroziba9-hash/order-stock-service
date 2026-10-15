@@ -56,7 +56,8 @@ Invoke-RestMethod "$base/auth/me" -WebSession $session
 
 로그인 성공은 `200 OK`, 잘못된 이메일·비밀번호는 `401 INVALID_CREDENTIALS`입니다.
 세션 쿠키는 HttpOnly와 SameSite=Lax를 사용합니다. 세션은 30분 동안 사용하지 않으면 만료됩니다.
-현재 세션은 서버 메모리에 저장되므로 서버 재시작 후에는 다시 로그인해야 합니다.
+세션은 MySQL에 저장되므로 유효한 쿠키로 앱 재시작 후에도 로그인을 유지합니다.
+처음 V13을 적용하거나 백업을 복원한 뒤에는 다시 로그인합니다. [저장·만료·복구 정책](session-persistence.md)을 참고하세요.
 회원·주문·요청 키·결제·환불 이력은 MySQL에 남습니다.
 
 ## 4. 본인 주문 생성·조회·취소
