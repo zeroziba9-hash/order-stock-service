@@ -733,10 +733,20 @@ footer>span {
   color:var(--muted)
 }
 
-#orders-view, #account-view {
+#orders-view, #account-view, #cart-view {
   min-height:65vh;
   padding-bottom:50px
 }
+
+.search-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:14px; margin:22px 0; }
+.search-toolbar>div { flex:1; min-width:150px; }
+.search-toolbar label { display:block; font-size:13px; margin-bottom:8px; }
+.search-toolbar input,.search-toolbar select { width:100%; min-height:44px; border:1px solid var(--line); border-radius:6px; padding:10px; background:var(--white); color:var(--ink); font:inherit; }
+.cart-row { display:flex; flex-wrap:wrap; justify-content:space-between; gap:20px; padding:24px 0; border-bottom:1px solid var(--line); }
+.cart-row input { width:95px; margin:0 10px; }
+.cart-row p { font-size:14px; color:var(--muted); }
+[data-add-cart] { margin-top:14px; }
+@media(max-width:600px) { .header nav { gap:13px; font-size:12px; flex-wrap:wrap; } .header nav a { gap:3px; } }
 
 .account-summary { overflow-wrap:anywhere; margin-bottom:28px; }
 .account-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }

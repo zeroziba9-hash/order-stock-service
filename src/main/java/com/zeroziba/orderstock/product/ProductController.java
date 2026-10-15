@@ -10,13 +10,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductSearch search;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, ProductSearch search) {
         this.productService = productService;
+        this.search=search;
     }
 
     @GetMapping
     public List<ProductResponse> list() {
         return productService.findAll();
+    }
+
+    @GetMapping("/search")
+    public ProductSearch.Page<ProductResponse> search(@org.springframework.web.bind.annotation.RequestParam(defaultValue="") String q,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean available,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="ID_ASC") ProductSearch.Sort sort,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="0") int page) {
+        return search.search(q,available,sort,page);
     }
 }

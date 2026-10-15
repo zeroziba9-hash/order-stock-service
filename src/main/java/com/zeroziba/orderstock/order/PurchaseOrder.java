@@ -59,6 +59,7 @@ public class PurchaseOrder {
     private LocalDateTime expiredAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    @jakarta.persistence.OrderBy("id ASC")
     private List<OrderItem> items = new ArrayList<>();
 
     protected PurchaseOrder() { }
@@ -86,6 +87,7 @@ public class PurchaseOrder {
     public LocalDateTime getExpiresAt() { return expiresAt; }
     public LocalDateTime getExpiredAt() { return expiredAt; }
     public List<OrderItem> getItems() { return List.copyOf(items); }
+    void addItem(Product product,int quantity){items.add(new OrderItem(this,product,quantity));}
 
     public boolean cancel() {
         if (status == Status.CANCELLED || status == Status.REFUNDED || status == Status.EXPIRED) {

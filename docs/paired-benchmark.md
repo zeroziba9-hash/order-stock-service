@@ -84,3 +84,7 @@ BASELINE을 등록·마이그레이션 때만 기록하도록 수정하고 8개 
 
 참고: [MySQL 잠금 조회](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html),
 [UPDATE](https://dev.mysql.com/doc/refman/8.4/en/update.html).
+
+후속 CI에서 별도의 nullable 주문 완료 인덱스와 상품 잠금 교착도 재현했습니다.
+V16의 완료 연결 분리와 동일 조건 세 DB 검증은 [운영 조회·여러 상품 주문 기록](store-operations-expansion.md)에 정리합니다.
+위의 과거 측정값은 당시 커밋의 결과이며 새 기능의 처리량 개선 수치로 사용하지 않습니다.

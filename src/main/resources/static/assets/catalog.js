@@ -3,6 +3,8 @@
   const $=s=>document.querySelector(s);
   const state={user:null,products:[],selected:null,revision:null,busy:false,blocked:false,pending:null};
   let historyRequest=0, historyLoading=false, historyNext=null;
+  let listPage=0,listRequest=0,listFilters={};
+  const historyDates=()=>{const values=new URLSearchParams();for(const key of ['from','to'])if($('#catalog-'+key).value)values.set(key,$('#catalog-'+key).value);return values.size?'&'+values:'';};
   const scope=()=>`stockroom-catalog-create:${state.user.userId}`;
   const status=text=>{$('#catalog-status').textContent=text;};
   async function api(path,method='GET',body,key) {
@@ -45,7 +47,8 @@
     $('#catalog-history-more').hidden=true;
     $('#catalog-history-status').textContent='변경 이력을 불러오고 있어요.'; sync();
     try {
-      const result=await api(`/admin/products/${product}/changes${cursor?`?beforeId=${cursor}`:''}`);
+      const suffix=historyDates();
+      const result=await api(`/admin/products/${product}/changes${cursor?`?beforeId=${cursor}${suffix}`:suffix?'?'+suffix.slice(1):''}`);
       if(request!==historyRequest||product!==state.selected) return;
       for(const change of result.changes) {
         const card=document.createElement('article'); card.className='catalog-change'; card.dataset.changeId=change.changeId;
@@ -69,15 +72,20 @@
       $('#catalog-history-more').hidden=!historyNext;
     } finally {if(request===historyRequest) {historyLoading=false; sync();}}
   }
-  async function load() {
-    state.products=await api('/admin/products'); const list=$('#catalog-products'); list.replaceChildren();
+  async function load(append=false) {
+    const request=++listRequest,page=append?listPage+1:0;
+    const result=await api('/admin/products/search?'+new URLSearchParams({...listFilters,page}));if(request!==listRequest)return;
+    state.products=append?[...state.products,...result.products]:result.products;listPage=page;
+    $('#catalog-products-more').hidden=!result.hasMore;
+    const list=$('#catalog-products'); list.replaceChildren();
     for(const item of state.products) {
       const button=document.createElement('button'); button.className='admin-product'; button.type='button'; button.dataset.id=item.id;
       const name=document.createElement('strong'); name.textContent=item.name;
       const info=document.createElement('small'); info.textContent=`${item.price.toLocaleString('ko-KR')}원 · ${item.selling?'판매 중':'판매 중지'}`;
       button.append(name,info); button.addEventListener('click',()=>select(item)); list.append(button);
     }
-    const item=state.products.find(p=>p.id===state.selected)||state.products[0]; if(item) select(item); sync();
+    const item=state.products.find(p=>p.id===state.selected)||state.products[0]; if(item) select(item);
+    else{state.selected=null;state.revision=null;$('#catalog-history').replaceChildren();$('#catalog-history-status').textContent='조회 조건에 맞는 상품이 없어요.';$('#catalog-history-more').hidden=true;$('#edit-caption').textContent='상품을 선택하세요.';} sync();
   }
   function confirm(text) {
     $('#catalog-confirm-message').textContent=text; const dialog=$('#catalog-confirm'); dialog.returnValue='no';
@@ -112,6 +120,13 @@
     finally {state.busy=false; sync();}
   });
   $('#catalog-refresh').addEventListener('click',()=>load().catch(error=>status(error.message)));
+  $('#catalog-product-search').addEventListener('submit',event=>{
+    event.preventDefault();if(state.busy||state.blocked)return;
+    listFilters={q:$('#catalog-query').value.trim()};if($('#catalog-selling').value!=='')listFilters.selling=$('#catalog-selling').value;
+    historyRequest++;historyNext=null;state.selected=null;load().catch(error=>status(error.message));
+  });
+  $('#catalog-products-more').addEventListener('click',()=>load(true).catch(error=>status(error.message)));
+  $('#catalog-dates').addEventListener('submit',event=>{event.preventDefault();loadHistory();});
   $('#catalog-history-refresh').addEventListener('click',()=>loadHistory());
   $('#catalog-history-more').addEventListener('click',()=>loadHistory(true));
   (async()=>{try {

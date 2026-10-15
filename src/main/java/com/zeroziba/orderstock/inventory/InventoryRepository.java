@@ -71,13 +71,10 @@ public class InventoryRepository {
     }
 
     public List<InventoryAdjustment> recent(Long productId, Long beforeId) {
-        if (productId == null) {
-            return beforeId == null
-                    ? jdbc.query("SELECT * FROM inventory_adjustments ORDER BY id DESC LIMIT 21", MAPPER)
-                    : jdbc.query("SELECT * FROM inventory_adjustments WHERE id < ? ORDER BY id DESC LIMIT 21", MAPPER, beforeId);
-        }
-        return beforeId == null
-                ? jdbc.query("SELECT * FROM inventory_adjustments WHERE product_id = ? ORDER BY id DESC LIMIT 21", MAPPER, productId)
-                : jdbc.query("SELECT * FROM inventory_adjustments WHERE product_id = ? AND id < ? ORDER BY id DESC LIMIT 21", MAPPER, productId, beforeId);
+        return recent(productId,beforeId,new com.zeroziba.orderstock.common.DateRange(null,null));
+    }
+    public List<InventoryAdjustment> recent(Long productId,Long beforeId,com.zeroziba.orderstock.common.DateRange range) {
+        return jdbc.query("SELECT * FROM inventory_adjustments WHERE (? IS NULL OR product_id=?) AND id<? AND (? IS NULL OR created_at>=?) AND (? IS NULL OR created_at<?) ORDER BY id DESC LIMIT 21",
+                MAPPER,productId,productId,beforeId==null?Long.MAX_VALUE:beforeId,range.from(),range.from(),range.until(),range.until());
     }
 }

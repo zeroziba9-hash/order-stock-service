@@ -48,6 +48,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(PessimisticLockingFailureException.class)
     public ResponseEntity<ApiError> handleLockConflict(PessimisticLockingFailureException exception) {
+        Throwable cause=exception;
+        for(int i=0;i<8 && cause.getCause()!=null;i++) cause=cause.getCause();
+        if(cause instanceof java.sql.SQLException sql) {
+            log.warn("lock_conflict causeType={} sqlState={} vendorCode={}",cause.getClass().getSimpleName(),sql.getSQLState(),sql.getErrorCode());
+        } else log.warn("lock_conflict causeType={}",cause.getClass().getSimpleName());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError("ORDER_CONFLICT", "다른 주문과 충돌했습니다. 잠시 후 다시 시도하세요."));
     }

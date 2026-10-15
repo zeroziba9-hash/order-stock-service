@@ -44,8 +44,19 @@ public class OrderController {
 
     @GetMapping
     public OrderListResponse findRecent(@AuthenticationPrincipal AuthenticatedUser user,
-            @RequestParam(required = false) Long beforeId) {
-        return orderService.findRecent(user.getId(), beforeId);
+            @RequestParam(required = false) Long beforeId,
+            @RequestParam(required = false) PurchaseOrder.Status status,
+            @RequestParam(required = false) java.time.LocalDate from,
+            @RequestParam(required = false) java.time.LocalDate to) {
+        return orderService.findRecent(user.getId(), beforeId,status,from,to);
+    }
+
+    @PostMapping("/cart")
+    public ResponseEntity<OrderResponse> cart(@Valid @RequestBody CartOrderRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user,@RequestHeader(name="Idempotency-Key",required=false) String key) {
+        var result=idempotentOrderService.createCart(user.getId(),key,request);
+        return ResponseEntity.status(result.replayed()?200:201).location(URI.create("/orders/"+result.order().orderId()))
+            .header("Idempotency-Replayed",Boolean.toString(result.replayed())).body(result.order());
     }
 
     @GetMapping("/{orderId}")

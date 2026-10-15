@@ -1,7 +1,8 @@
 # 주문 생성 요청의 중복 방지
 
 주문 버튼을 두 번 누르거나 응답을 받지 못해 재시도할 때, 같은 요청 키를 사용하면 주문을 한 개만 만듭니다.
-현재 단일 상품 주문의 내용은 `productId`와 `quantity`로 비교합니다.
+단일 상품 주문과 장바구니 주문은 회원별 키 공간을 공유합니다. 상품·수량을 상품 ID 순서로 정규화한 해시로 비교하며,
+과거 단일 상품 요청은 기존 상품·수량에서 비교 값을 계산합니다. [여러 상품 주문과 완료 연결](store-operations-expansion.md)을 참고하세요.
 
 ## 요청 예제
 
@@ -38,7 +39,8 @@ Invoke-RestMethod 'http://localhost:8080/products' | Format-Table
 | 기존 키 + 같은 상품·수량 | 200 | 기존 주문, `Idempotency-Replayed: true` |
 | 기존 키 + 다른 상품 또는 수량 | 409 | `IDEMPOTENCY_KEY_REUSED` |
 | 잘못된 키 형식 | 400 | `INVALID_IDEMPOTENCY_KEY` |
-| 키 생략 | 201 | 기존 방식으로 매번 새 주문 생성 |
+| 단일 상품 API의 키 생략 | 201 | 기존 방식으로 매번 새 주문 생성 |
+| 장바구니 API의 키 생략 | 400 | `INVALID_IDEMPOTENCY_KEY` |
 
 성공 응답에는 `Location: /orders/{orderId}`가 포함됩니다.
 키는 영문·숫자로 시작하는 1~64자의 영문·숫자·점·밑줄·콜론·하이픈만 허용합니다.

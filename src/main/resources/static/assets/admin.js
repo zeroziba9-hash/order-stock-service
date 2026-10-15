@@ -3,6 +3,8 @@
   const $ = selector => document.querySelector(selector);
   const state = {user:null, csrf:null, products:[], selected:null, next:null, saving:false, blocked:false, pending:null, historyEpoch:0, ledgerEpoch:0, ledgerNext:null};
   const number = value => Number(value).toLocaleString('ko-KR');
+  let productPage=0,productRequest=0,productFilters={};
+  const dates=()=>{const values=new URLSearchParams();for(const key of ['from','to'])if($('#inventory-'+key).value)values.set(key,$('#inventory-'+key).value);return values.size?'&'+values:'';};
   const storageKey = () => `stockroom-inventory:${state.user.userId}`;
   function message(text, error=false) { $('#admin-status').textContent=text; $('#admin-status').classList.toggle('error',error); }
   async function api(path, options={}) {
@@ -52,10 +54,17 @@
       ? `예상 재고 ${number(product.stock)} → ${number(product.stock+delta)}개 · 실제 반영 시 다시 확인해요.`
       : '증가는 양수, 감소는 음수로 입력하세요.';
   }
-  async function loadProducts() {
-    state.products=await api('/admin/products');
+  async function loadProducts(append=false) {
+    const request=++productRequest,page=append?productPage+1:0;
+    const result=await api('/admin/products/search?'+new URLSearchParams({...productFilters,page}));
+    if(request!==productRequest)return;
+    state.products=append?[...state.products,...result.products]:result.products; productPage=page;
+    if(state.pending && !state.products.some(item=>item.id===state.pending.productId))state.products.unshift(await api('/admin/products/'+state.pending.productId));
+    if(!state.products.some(item=>item.id===state.selected))state.selected=state.products[0]?.id||null;
+    $('#admin-products-more').hidden=!result.hasMore;
     if (!state.selected && state.products.length) state.selected=state.products[0].id;
     renderProducts();
+    if(!state.selected){$('#adjustment-history').replaceChildren();$('#ledger-history').replaceChildren();$('#ledger-balance').textContent='조회 조건에 맞는 상품이 없어요.';$('#history-more').hidden=true;$('#ledger-more').hidden=true;}
   }
   async function loadHistory(append=false) {
     if (!state.selected) return;
@@ -63,7 +72,7 @@
     const cursor=append && state.next?`&beforeId=${state.next}`:'';
     $('#history-more').disabled=true;
     try {
-      const data=await api(`/admin/inventory-adjustments?productId=${state.selected}${cursor}`);
+        const data=await api(`/admin/inventory-adjustments?productId=${state.selected}${cursor}${dates()}`);
       if (epoch!==state.historyEpoch) return;
       const table=$('#adjustment-history'); if (!append) table.replaceChildren();
       for (const entry of data.adjustments) {
@@ -92,7 +101,7 @@
       $('#ledger-balance').textContent='선택한 상품의 재고 변동을 불러오고 있어요.';
     }
     try {
-      const data=await api(`/admin/inventory-movements?productId=${state.selected}${append && state.ledgerNext?`&beforeId=${state.ledgerNext}`:''}`);
+      const data=await api(`/admin/inventory-movements?productId=${state.selected}${append && state.ledgerNext?`&beforeId=${state.ledgerNext}`:''}${dates()}`);
       if(epoch!==state.ledgerEpoch) return;
       const table=$('#ledger-history'); if(!append) table.replaceChildren();
       const names={BASELINE:'시작 재고',ORDER:'주문',CANCEL:'취소',REFUND:'환불',EXPIRE:'자동 만료',MANUAL:'수동 조정'};
@@ -114,6 +123,15 @@
   function savePending(intent) { sessionStorage.setItem(storageKey(),JSON.stringify(intent)); state.pending=intent; }
   function clearPending() { sessionStorage.removeItem(storageKey()); state.pending=null; }
   $('#stock-delta').addEventListener('input',preview);
+  $('#admin-product-search').addEventListener('submit',async event=>{
+    event.preventDefault();if(state.pending||state.saving)return message('진행 중인 조정 요청을 먼저 확인하세요.',true);
+    productFilters={q:$('#admin-query').value.trim()};if($('#admin-low').value!=='')productFilters.lowStock=$('#admin-low').value;
+    state.historyEpoch++;state.ledgerEpoch++;state.selected=null;state.next=null;state.ledgerNext=null;
+    $('#adjustment-history').replaceChildren();$('#ledger-history').replaceChildren();
+    try{await loadProducts();await Promise.all([loadHistory(),loadLedger()]);}catch(error){message(error.message,true);}
+  });
+  $('#admin-products-more').addEventListener('click',()=>loadProducts(true).catch(error=>message(error.message,true)));
+  $('#inventory-dates').addEventListener('submit',event=>{event.preventDefault();state.next=null;state.ledgerNext=null;Promise.all([loadHistory(),loadLedger()]).catch(error=>message(error.message,true));});
   $('#adjustment-form').addEventListener('submit',async event=>{
     event.preventDefault(); if(state.saving || state.blocked || !selected()) return;
     const intent=state.pending || {productId:state.selected,delta:Number($('#stock-delta').value),reason:$('#adjustment-reason').value.trim(),key:crypto.randomUUID()};

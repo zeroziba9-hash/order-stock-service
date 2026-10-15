@@ -31,7 +31,8 @@ public class InventoryController {
 
     @GetMapping("/inventory-adjustments")
     public InventoryService.History history(@AuthenticationPrincipal AuthenticatedUser admin,
-            @RequestParam(required = false) Long productId, @RequestParam(required = false) Long beforeId) {
-        return inventory.history(admin.getId(), productId, beforeId);
+            @RequestParam(required = false) Long productId, @RequestParam(required = false) Long beforeId,
+            @RequestParam(required=false) java.time.LocalDate from,@RequestParam(required=false) java.time.LocalDate to) {
+        return inventory.history(admin.getId(),productId,beforeId,from,to);
     }
 }

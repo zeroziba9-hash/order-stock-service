@@ -23,7 +23,8 @@ public class CatalogController {
     @PutMapping("/{id}") public CatalogService.Item edit(@AuthenticationPrincipal AuthenticatedUser admin,
             @PathVariable long id,@Valid @RequestBody CatalogService.Edit body) { return catalog.edit(admin.getId(),id,body); }
     @GetMapping("/{id}/changes") public CatalogChangeHistory.Page changes(@AuthenticationPrincipal AuthenticatedUser admin,
-            @PathVariable long id,@RequestParam(required=false) Long beforeId) {
-        return changes.list(admin.getId(),id,beforeId);
+            @PathVariable long id,@RequestParam(required=false) Long beforeId,
+            @RequestParam(required=false) java.time.LocalDate from,@RequestParam(required=false) java.time.LocalDate to) {
+        return changes.list(admin.getId(),id,beforeId,from,to);
     }
 }
