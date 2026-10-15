@@ -37,6 +37,7 @@ jobs:
           --health-retries=30
     env:
       APP_INVENTORY_ALLOCATION: ${{ matrix.allocation }}
+      JAVA_TOOL_OPTIONS: ${{ matrix.allocation == 'conditional' && '-Duser.timezone=Asia/Seoul' || '-Duser.timezone=UTC' }}
       # Disposable CI account, restricted to the test schema. No production secrets are used.
       SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/order_stock_test?serverTimezone=UTC&allowPublicKeyRetrieval=true&sslMode=DISABLED
       SPRING_DATASOURCE_USERNAME: order_test
@@ -55,6 +56,8 @@ jobs:
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
       - name: Test, verify API documentation and build executable JAR
         run: bash ./gradlew --no-daemon test asciidoctor bootJar
+      - name: Verify safe production preflight validation
+        run: python3 -m unittest discover -s scripts/tests -v
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

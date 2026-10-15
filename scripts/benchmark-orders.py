@@ -1,10 +1,12 @@
 """Paired, repeated HTTP order benchmarks on a fresh disposable local stack only."""
 import argparse
+from collections import Counter
 from datetime import datetime, timezone
 import importlib.util
 import json
 import os
 import platform
+import re
 from pathlib import Path
 import statistics
 import subprocess
@@ -16,6 +18,23 @@ ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('load_orders',ROOT/'scripts/load-orders.py')
 load=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(load)
+
+
+def require_responses(rows, expected, stage, context, output):
+    failures=[row for row in rows if row['status']!=expected]
+    if not failures: return
+    evidence={'stage':stage, **context, 'expectedStatus':expected,
+              'statusCounts':dict(Counter(str(row['status']) for row in rows)), 'failures':[]}
+    for row in failures[:20]:
+        code=row.get('body',{}).get('code') if isinstance(row.get('body'),dict) else None
+        trace=next((value for name,value in row.get('headers',{}).items() if name.lower()=='x-request-id'),None)
+        evidence['failures'].append({'status':row['status'],
+            'code':code if isinstance(code,str) and re.fullmatch(r'[A-Z][A-Z0-9_]{0,63}',code) else 'UNCLASSIFIED',
+            'requestId':trace if isinstance(trace,str) and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}',trace) else None})
+    output.parent.mkdir(parents=True,exist_ok=True)
+    output.with_name('benchmark-failure.json').write_text(json.dumps(evidence,indent=2)+'\n',encoding='utf-8')
+    print('BENCHMARK_UNEXPECTED_RESPONSE '+json.dumps(evidence),flush=True)
+    raise AssertionError('Unexpected response; refusing a performance claim')
 
 
 def main():
@@ -47,6 +66,9 @@ def main():
     assert load.database(args,'SELECT DATABASE();')=='order_stock'
     assert load.database(args,'SELECT COUNT(*) FROM app_users;')=='0','A fresh disposable DB is required; existing data is preserved'
     assert load.database(args,'SELECT COUNT(*) FROM purchase_orders;')=='0'
+    # A failed rerun must not leave an older successful measurement in the chosen output.
+    args.output.unlink(missing_ok=True)
+    args.output.with_name('benchmark-failure.json').unlink(missing_ok=True)
     compose=['docker','compose','-p',args.project,'--env-file',str(args.env_file.resolve()),'-f',str(ROOT/'compose.yaml'),'-f',str(ROOT/'benchmark/compose.benchmark.yaml')]
     rows=[]
     try:
@@ -81,9 +103,10 @@ def main():
                         def order(client,index):
                             return client.call('/orders',{'productId':ids[index%len(ids)],'quantity':1},uuid.uuid4().hex)
                         warm,_=load.batch(clients,args.warmup,order)
-                        assert all(row['status']==201 for row in warm),'Warmup failed'
+                        context={'repeat':repeat+1,'mode':mode,'workload':workload,'concurrency':concurrency}
+                        require_responses(warm,201,'warmup',context,args.output)
                         measured,summary=load.measure(args,clients,args.requests,order)
-                        assert all(row['status']==201 for row in measured),'Unexpected measured response; refusing a performance claim'
+                        require_responses(measured,201,'measured',context,args.output)
                         all_orders=warm+measured
                         assert len({row['body']['orderId'] for row in all_orders})==len(all_orders)
                         joined=','.join(map(str,ids))
@@ -94,7 +117,7 @@ def main():
                             expected=args.requests+args.warmup-sum(row['body']['items'][0]['productId']==product for row in all_orders)
                             assert h['consistent'] and h['currentStock']==expected
                         cancelled,_=load.batch(clients,len(all_orders),lambda client,index:client.call(f"/orders/{all_orders[index]['body']['orderId']}/cancel",{}))
-                        assert all(row['status']==200 for row in cancelled)
+                        require_responses(cancelled,200,'cancellation',context,args.output)
                         for product in ids:
                             h=operator.call(f'/admin/inventory-movements?productId={product}')[1]
                             assert h['consistent'] and h['currentStock']==args.requests+args.warmup

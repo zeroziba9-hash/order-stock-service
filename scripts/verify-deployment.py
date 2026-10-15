@@ -97,8 +97,11 @@ def main():
     require(isinstance(products, list) and all(isinstance(p, dict) and isinstance(p.get("id"), int)
             and isinstance(p.get("stock"), int) and p["stock"] >= 0
             and isinstance(p.get("price"), int) and p["price"] >= 0 for p in products), "Invalid catalog")
+    search = data("/products/search?sort=PRICE_ASC&page=0")
+    require(isinstance(search.get("products"),list) and len(search["products"])<=20
+            and search.get("page")==0 and isinstance(search.get("hasMore"),bool), "Invalid paged catalog")
     require(data("/storefront/config") == {"mockPayments": False, "mockRefunds": False}, "Mock writes must be disabled")
-    for path in ("/auth/me", "/orders"):
+    for path in ("/auth/me", "/auth/sessions", "/orders"):
         require(data(path, 401).get("code") == "AUTH_REQUIRED", "Authentication required: " + path)
 
     report = {"format": "order-stock-deployment-v1", "checkedAtUtc": datetime.now(timezone.utc).isoformat(),
