@@ -173,6 +173,41 @@ class ApiDocumentationTests {
     }
 
     @Test
+    void savedCartAndConfirmedCheckoutContracts() throws Exception {
+        String items="[{\"productId\":"+product.getId()+",\"quantity\":2}]";
+        mvc.perform(org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.put("/cart").session(session)
+                .header("X-CSRF-TOKEN",token).contentType(MediaType.APPLICATION_JSON).content("{\"revision\":0,\"items\":"+items+"}"))
+                .andExpect(status().isOk()).andDo(document("saved-cart-update",csrfHeader(),requestFields(
+                    fieldWithPath("revision").description("직전 조회 버전. 최초 0. 다른 기기 변경 시 409 CART_CHANGED"),
+                    fieldWithPath("items").description("전체 장바구니. 빈 배열로 비움. 최대 20종"),
+                    fieldWithPath("items[].productId").description("상품 ID"),fieldWithPath("items[].quantity").description("양의 정수 수량"))));
+        mvc.perform(read("/cart")).andExpect(status().isOk()).andDo(document("saved-cart",responseFields(
+                fieldWithPath("revision").description("계정 장바구니 수정 버전"),fieldWithPath("items").description("저장된 상품"),
+                fieldWithPath("items[].id").description("상품 ID"),fieldWithPath("items[].name").description("현재 상품명"),
+                fieldWithPath("items[].price").description("현재 단가"),fieldWithPath("items[].quantity").description("담은 수량"),
+                fieldWithPath("items[].stock").description("현재 재고. 예약 아님"),fieldWithPath("items[].selling").description("현재 판매 상태"))));
+        var quoted=mvc.perform(write("/orders/cart/quote").content("{\"items\":"+items+"}"))
+                .andExpect(status().isOk()).andDo(document("checkout-quote",csrfHeader(),requestFields(
+                    fieldWithPath("items").description("확인할 상품 1~20종"),fieldWithPath("items[].productId").description("상품 ID"),
+                    fieldWithPath("items[].quantity").description("양의 정수 수량")),responseFields(
+                    fieldWithPath("quoteId").type(JsonFieldType.STRING).optional().description("본인 확인 정보 ID. 주문 불가 시 null"),
+                    fieldWithPath("items").description("확인한 상품"),fieldWithPath("items[].productId").description("상품 ID"),
+                    fieldWithPath("items[].name").description("현재 이름"),fieldWithPath("items[].price").description("확인한 단가"),
+                    fieldWithPath("items[].quantity").description("수량"),fieldWithPath("items[].stock").description("현재 재고"),
+                    fieldWithPath("items[].selling").description("판매 여부"),fieldWithPath("items[].revision").description("상품 정보 버전"),
+                    fieldWithPath("totalAmount").description("정확한 원 단위 합계. JavaScript 정밀도를 보존하는 십진 문자열"),
+                    fieldWithPath("expiresAt").description("UTC 확인 만료 시각. 10분 유효"),fieldWithPath("canOrder").description("현재 모든 상품이 판매 중이며 수량이 충분하면 true")))).andReturn();
+        String quoteId=JsonPath.read(quoted.getResponse().getContentAsString(),"$.quoteId");
+        String body="{\"quoteId\":\""+quoteId+"\"}";
+        mvc.perform(write("/orders/cart/checkout").header("Idempotency-Key","confirmed-doc").content(body))
+                .andExpect(status().isCreated()).andDo(document("checkout-create",orderHeaders(),replayHeaders(),requestFields(
+                    fieldWithPath("quoteId").description("명시적으로 확인한 본인 quoteId. 가격·상품 버전·판매 상태·재고·기한을 다시 검사")),responseFields(orderFields(""))));
+        jdbc.update("DELETE FROM checkout_quotes WHERE id=?",quoteId);
+        mvc.perform(write("/orders/cart/checkout").header("Idempotency-Key","confirmed-doc").content(body))
+                .andExpect(status().isOk()).andDo(document("checkout-replay",replayHeaders(),responseFields(orderFields(""))));
+    }
+
+    @Test
     void productSearchCartAndFilteredOrdersContracts() throws Exception {
         mvc.perform(get("/products/search").param("q","문서").param("available","true").param("sort","PRICE_ASC").param("page","0"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.products.length()").value(1))

@@ -16,8 +16,9 @@ test('unpaid orders expire through the real scheduler and return stock', async (
   await expect(page.getByRole('button', { name: '로그아웃', exact: true })).toBeVisible();
   const product = (await (await page.request.get('/products')).json())[0];
   await page.locator(`[data-buy="${product.id}"]`).click();
-  const created = page.waitForResponse(r => new URL(r.url()).pathname === '/orders' && r.request().method() === 'POST');
+  const created = page.waitForResponse(r => new URL(r.url()).pathname === '/orders/cart/checkout' && r.request().method() === 'POST');
   await page.getByRole('button', { name: '주문 완료하기 →', exact: true }).click();
+  await page.locator('#confirm-dialog').getByRole('button',{name:'확인하고 진행',exact:true}).click();
   const order = await (await created).json();
   const card = page.locator('.order-card').filter({ hasText: `ORDER #${order.orderId}` });
   await card.getByRole('button', { name: '상세·이력 보기 ↗', exact: true }).click();

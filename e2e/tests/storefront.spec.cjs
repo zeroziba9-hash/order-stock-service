@@ -25,8 +25,10 @@ async function openPurchase(page, productId, quantity = 1) {
   await page.getByLabel('수량', { exact: true }).fill(String(quantity));
 }
 async function submitPurchase(page) {
-  const response = page.waitForResponse(r => new URL(r.url()).pathname === '/orders' && r.request().method() === 'POST');
+  const retry = await page.evaluate(() => Object.keys(sessionStorage).some(key => key.startsWith('stockroom-direct-pending:')));
+  const response = page.waitForResponse(r => new URL(r.url()).pathname === '/orders/cart/checkout' && r.request().method() === 'POST');
   await page.getByRole('button', { name: '주문 완료하기 →', exact: true }).click();
+  if (!retry) await confirm(page);
   const result = await response;
   expect([200, 201]).toContain(result.status());
   const order = await result.json();
@@ -132,7 +134,7 @@ test('lost order response retries the same key and creates one order', async ({ 
   await openPurchase(page, product.id);
   const keys = [];
   let dropped = false;
-  await page.route('**/orders', async route => {
+  await page.route('**/orders/cart/checkout', async route => {
     if (route.request().method() !== 'POST') return route.continue();
     keys.push(route.request().headers()['idempotency-key']);
     if (dropped) return route.continue();
@@ -142,6 +144,7 @@ test('lost order response retries the same key and creates one order', async ({ 
     await route.abort('failed');
   });
   await page.getByRole('button', { name: '주문 완료하기 →', exact: true }).click();
+  await confirm(page);
   await expect(page.locator('#purchase-error')).toContainText('응답을 받지 못했어요.');
   await expect(page.getByRole('button', { name: '주문 완료하기 →', exact: true })).toBeEnabled();
   const order = await submitPurchase(page);

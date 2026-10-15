@@ -26,7 +26,7 @@ class Client:
             urllib.request.ProxyHandler({}),
         )
 
-    def request(self, path, *, data=None, form=None, key=None, expected=200, csrf_token=None, session_cookie=None):
+    def request(self, path, *, data=None, form=None, key=None, expected=200, csrf_token=None, session_cookie=None, method=None):
         headers = {}
         body = None
         if data is not None or form is not None:
@@ -43,7 +43,7 @@ class Client:
         if session_cookie is not None:
             assert re.fullmatch(r"[0-9a-f-]{36}", session_cookie)
             headers["Cookie"] = "JSESSIONID=" + session_cookie
-        request = urllib.request.Request(BASE_URL + path, data=body, headers=headers)
+        request = urllib.request.Request(BASE_URL + path, data=body, headers=headers, method=method)
         try:
             response = self.opener.open(request, timeout=15)
         except urllib.error.HTTPError as error:
@@ -94,7 +94,10 @@ def prepare(state_path):
     assert client.request(path + "/cancel", data={}) == cancelled
     assert client.stock(product["id"]) == product["stock"]
 
-    second = client.request("/orders", data=payload, key=uuid.uuid4().hex, expected=201)
+    client.request("/cart", data={"revision":0,"items":[{"productId":product["id"],"quantity":2}]}, method="PUT")
+    quote = client.request("/orders/cart/quote", data={"items":[payload]})
+    confirmed_body, confirmed_key = {"quoteId":quote["quoteId"]},uuid.uuid4().hex
+    second = client.request("/orders/cart/checkout", data=confirmed_body, key=confirmed_key, expected=201)
     second_path = f"/orders/{second['orderId']}"
     payment_key = uuid.uuid4().hex
     payment = client.request(second_path + "/payments", data={"result": "SUCCESS"},
@@ -116,6 +119,8 @@ def prepare(state_path):
         "orders": [cancelled, refunded],
         "request": {"payload": payload, "key": key},
         "products": client.request("/products"),
+        "savedCart": client.request("/cart"),
+        "confirmedRequest": {"body":confirmed_body,"key":confirmed_key},
         "payment": payment,
         "refund": refund,
         "sessionId": client.session_id(),
@@ -138,6 +143,9 @@ def verify(state_path, expect_session_invalidated=False):
         assert client.request("/auth/me")["email"] == state["account"]["email"]
         print("PASS: original cookie authenticates after app/DB container recreation without login")
     assert client.request("/products") == state["products"]
+    assert client.request("/cart") == state["savedCart"]
+    confirmed = state["confirmedRequest"]
+    assert client.request("/orders/cart/checkout",data=confirmed["body"],key=confirmed["key"]) == state["orders"][1]
     for order in state["orders"]:
         assert client.request(f"/orders/{order['orderId']}") == order
     page = client.request("/orders")

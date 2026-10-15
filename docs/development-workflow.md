@@ -25,12 +25,13 @@
 | `feat/jdbc-sessions` | MySQL 세션 저장·재시작 유지·만료·로그아웃·복구 시 세션 무효화 | [PR #15](https://github.com/zeroziba9-hash/order-stock-service/pull/15) |
 | `feat/account-management` | 내 계정·비밀번호 변경·다른 접속 종료·인증 버전·이전 세션 호환 | [PR #16](https://github.com/zeroziba9-hash/order-stock-service/pull/16) |
 | `feat/store-operations-expansion` | CI 교착 수정·검색·운영 이력 조회·장바구니·공개 배포 사전 검사 | [PR #17](https://github.com/zeroziba9-hash/order-stock-service/pull/17) |
+| `feat/checkout-confirmation` | 가격 확인 주문·계정 장바구니·동시 수정 보호·앱/DB 중단 복구 | [PR #18](https://github.com/zeroziba9-hash/order-stock-service/pull/18) |
 
-현재 `feat/store-operations-expansion`에서 CI 교착 수정·검색·관리자 운영 조회·장바구니·공개 배포 준비를 검증합니다.
-PR #16 병합 후 최신 main에서 분기했으며, 서로 연결된 API·화면·마이그레이션을 한 기능 브랜치에서 통합 검증합니다.
+현재 `feat/checkout-confirmation`에서 가격 확인 주문·계정 장바구니·앱/DB 중단 복구 검증을 진행합니다.
+PR #17 병합 후 최신 main에서 분기했으며, 연결된 API·화면·V18 마이그레이션을 통합 검증합니다.
 PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
 
-위 PR #1~#16은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+위 PR #1~#17은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
 이후 기능도 최신 병합 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
 PR #8은 PR #6 기준으로 시작했으며, PR #7 병합 후 최신 main을 기능 브랜치에 병합해 충돌을 해결했습니다.
 

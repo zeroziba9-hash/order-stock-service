@@ -101,7 +101,7 @@ def main():
     require(isinstance(search.get("products"),list) and len(search["products"])<=20
             and search.get("page")==0 and isinstance(search.get("hasMore"),bool), "Invalid paged catalog")
     require(data("/storefront/config") == {"mockPayments": False, "mockRefunds": False}, "Mock writes must be disabled")
-    for path in ("/auth/me", "/auth/sessions", "/orders"):
+    for path in ("/auth/me", "/auth/sessions", "/orders", "/cart"):
         require(data(path, 401).get("code") == "AUTH_REQUIRED", "Authentication required: " + path)
 
     report = {"format": "order-stock-deployment-v1", "checkedAtUtc": datetime.now(timezone.utc).isoformat(),

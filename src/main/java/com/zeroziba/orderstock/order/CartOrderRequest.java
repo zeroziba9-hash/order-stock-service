@@ -17,7 +17,10 @@ public record CartOrderRequest(@NotEmpty @Size(max=20) List<@NotNull @Valid Crea
     static String fingerprint(List<CreateOrderRequest> normalized) {
         StringBuilder value=new StringBuilder();
         for(var item:normalized)value.append(item.productId()).append(':').append(item.quantity()).append(';');
-        try {return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.toString().getBytes(StandardCharsets.US_ASCII)));}
+        return hash(value.toString());
+    }
+    static String hash(String value) {
+        try {return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.US_ASCII)));}
         catch(java.security.NoSuchAlgorithmException failure){throw new IllegalStateException(failure);}
     }
     private static ApiException invalid(){return new ApiException(HttpStatus.BAD_REQUEST,"INVALID_REQUEST","중복 없는 상품 1~20개와 양의 정수 수량을 입력하세요.");}
