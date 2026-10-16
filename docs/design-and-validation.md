@@ -20,7 +20,7 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V21"] --> DB
+    Flyway["Flyway V1~V22"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
@@ -103,8 +103,8 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 389개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 98개 | 일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 상품 상세 10 + 이미지/주문 복구 18 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 415개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium·Firefox·WebKit E2E 324개 | 엔진별 데스크톱·모바일 108개(일반 100 + 자동 만료 2 + 인증 제한 6), 로컬 SMTP 복구·상품 빈 항목·긴 이름·품절 포함, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
@@ -117,7 +117,7 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 | 로그인 세션 복구 | 앱·DB 재생성 후 원래 쿠키·CSRF 유지, 로그아웃 후 재생성 거부, 백업 복원 시 과거 세션 무효화 | [저장·만료·복구 정책](session-persistence.md) |
 
 추가 검증 코드는 위 독립 PR에서 확인합니다. 자동 만료는 [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5)에 기록했습니다.
-브라우저 검증은 Chromium 데스크톱·모바일 에뮬레이션이며 실제 iOS·Android 기기나 모든 브라우저를 검증한 것은 아닙니다.
+브라우저 검증은 Chromium·Firefox·WebKit의 데스크톱·모바일 크기입니다. Firefox 모바일은 작은 viewport 검증이며 모바일 엔진을 에뮬레이션하지 않습니다. Windows WebKit은 WinCairo 빌드이고 CI는 Linux WebKit입니다. 실제 iOS Safari·Android 기기 검증은 별도입니다.
 응답 유실 검증은 서버 POST를 실제 처리한 뒤 브라우저의 응답 수신을 차단하고 같은 키 재시도를 확인합니다.
 
 ### 부하 측정에서 배운 점

@@ -326,6 +326,7 @@
   async function loadCart() {
     if (!state.user || cartBusy) return;
     const epoch = state.epoch, request = ++cartRequest;
+    cartReady = false; renderCart();
     try {
       let result = await api("/cart");
       if (epoch !== state.epoch || request !== cartRequest) return;
@@ -723,7 +724,7 @@
   async function init() {
     const epoch = state.epoch;
     renderOrders(); route();
-    await Promise.all([loadProducts(), (async () => { try { state.config = await api("/storefront/config"); } catch { /* Mock actions remain hidden if configuration is unavailable. */ } })(),
+    await Promise.all([(async () => { try { $("#forgot-password").hidden = !(await api("/auth/password-reset/config")).enabled; } catch { /* Unconfigured recovery remains hidden. */ } })(), loadProducts(), (async () => { try { state.config = await api("/storefront/config"); } catch { /* Mock actions remain hidden if configuration is unavailable. */ } })(),
       (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); renderProfile(); if (location.hash === "#orders") await loadOrders(); if (location.hash === "#account") await loadSessions(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } })()]);
   }
   init();

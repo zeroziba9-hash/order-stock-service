@@ -74,7 +74,7 @@ test('admin description edits render as safe text and stale edits preserve newer
     await page.goto('/catalog.html');await page.locator(`#catalog-products [data-id="${product.id}"]`).click();await expect(page.locator('#content-save')).toBeEnabled();
     const text='<img src=x onerror="alert(1)">\n등록한 설명 그대로';await page.getByLabel('상품 설명',{exact:true}).fill(text);await page.getByLabel('상품 규격',{exact:true}).fill('첫 줄\n둘째 줄');
     await page.getByRole('button',{name:'설명과 규격 저장 →',exact:true}).click();await page.locator('#catalog-confirm').getByRole('button',{name:'확인하고 저장',exact:true}).click();
-    await expect(page.locator('#content-status')).toContainText('저장했어요');expect(await page.locator('#content-history img').count()).toBe(0);
+    await expect(page.locator('#content-status')).toContainText('저장했어요');await expect(page.locator(`#catalog-products [data-id="${product.id}"] .content-readiness`)).toHaveText('이미지 없음');expect(await page.locator('#content-history img').count()).toBe(0);
     await page.goto('/#product/'+product.id);await expect(page.locator('#product-description')).toHaveText(text);expect(await page.locator('#product-description img').count()).toBe(0);
     await expect(page.locator('#product-specification')).toHaveText('첫 줄\n둘째 줄');
     await page.goto('/catalog.html');await page.locator(`#catalog-products [data-id="${product.id}"]`).click();await expect(page.locator('#content-save')).toBeEnabled();

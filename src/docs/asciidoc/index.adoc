@@ -375,6 +375,23 @@ operation::checkout-recovery[snippets='http-request,http-response,response-field
 
 operation::checkout-acknowledge[snippets='http-request,http-response']
 
+== 이메일 비밀번호 복구
+
+메일 요청은 비동기 접수이며 등록·미등록·계정 발송 한도 초과에 동일한 `202` 안내를 반환합니다.
+IP별 요청·확인 한도는 각각 기본 분당 10회이고 초과 시 `429`와 Retry-After를 반환합니다.
+계정당 60초 간격, 시간당 최대 5회입니다. 새 발송은 이전 링크를 무효화합니다.
+링크는 15분 동안 한 번만 사용할 수 있고 DB에는 SHA-256 해시만 저장합니다.
+변경 시 비밀번호·인증 버전·토큰 소비·모든 세션 삭제가 한 트랜잭션으로 처리됩니다.
+일반 비밀번호 변경도 이전 링크를 무효화합니다. 새 메일 요청이 꺼져도 발급된 유효 링크는 확인할 수 있습니다.
+SMTP 미설정은 요청 `503 RESET_UNAVAILABLE`, 큐 포화는 `503 RESET_BUSY`입니다.
+SMTP 접수 성공은 외부 수신함 도착 보장이 아닙니다. 상세 운영 조건은 docs/password-recovery.md를 참고하세요.
+
+operation::password-reset-config[snippets='http-request,http-response,response-fields']
+
+operation::password-reset-request[snippets='http-request,request-fields,http-response,response-fields']
+
+operation::password-reset-confirm[snippets='http-request,request-fields,http-response']
+
 == 오류 처리
 
 오류 본문은 `code`와 `message`입니다. 클라이언트는 HTTP 상태와 `code`로 분기합니다.

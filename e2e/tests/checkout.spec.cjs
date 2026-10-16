@@ -122,3 +122,15 @@ test('ambiguous conflict, CSRF and rate-limit responses retain the original chec
   }
   expect((await(await page.request.get('/orders')).json()).orders).toHaveLength(3);
 });
+
+
+test('delayed cart refresh blocks editing until the authoritative rows arrive',async({page})=>{
+  const {products}=await setup(page);await page.getByRole('link',{name:'컬렉션',exact:true}).click();
+  let release,received;const gate=new Promise(resolve=>release=resolve),captured=new Promise(resolve=>received=resolve);
+  await page.route('**/cart',async route=>{if(route.request().method()!=='GET')return route.continue();const response=await route.fetch();received();await gate;await route.fulfill({response});});
+  try{
+    await page.getByRole('link',{name:/^장바구니/}).click();await captured;await expect(page.locator('#cart-items')).toContainText('장바구니를 불러오는 중');await expect(page.locator('#cart-checkout')).toBeDisabled();
+    release();await expect(page.locator('.cart-row')).toHaveCount(2);const input=page.locator(`[data-cart-quantity="${products[0].id}"]`);await expect(input).toBeEnabled();
+    const saved=page.waitForResponse(response=>new URL(response.url()).pathname==='/cart'&&response.request().method()==='PUT');await input.fill('2');await input.blur();expect((await saved).status()).toBe(200);await expect(input).toHaveValue('2');expect((await(await page.request.get('/cart')).json()).items.find(item=>item.id===products[0].id).quantity).toBe(2);
+  }finally{release();await page.unrouteAll({behavior:'ignoreErrors'});}
+});

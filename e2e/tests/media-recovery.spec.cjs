@@ -23,12 +23,12 @@ test('admin uploads previews and deletes product images; public detail uses the 
     await page.goto('/catalog.html');await page.locator(`#catalog-products [data-id="${product.id}"]`).click();await expect(page.locator('#image-upload')).toBeEnabled();
     await page.locator('#image-file').setInputFiles({name:'sample.png',mimeType:'image/png',buffer:png});await expect(page.locator('#image-preview')).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-    await page.getByRole('button',{name:'이미지 저장',exact:true}).click();await page.locator('#catalog-confirm').getByRole('button',{name:'확인하고 저장',exact:true}).click();await expect(page.locator('#image-status')).toContainText('저장했어요');
+    await page.getByRole('button',{name:'이미지 저장',exact:true}).click();await page.locator('#catalog-confirm').getByRole('button',{name:'확인하고 저장',exact:true}).click();await expect(page.locator('#image-status')).toContainText('저장했어요');await expect(page.locator(`#catalog-products [data-id="${product.id}"] .content-readiness`)).not.toContainText('이미지 없음');
     await expect(page.locator('#image-current')).toBeVisible();await expect(page.locator('#image-history')).toContainText('이미지 등록');
     await page.goto('/#product/'+product.id);await expect(page.locator('#product-art img')).toBeVisible();await expect(page.locator('#product-image-caption')).toHaveText('등록된 상품 이미지예요.');
     expect(await page.locator('#product-art img').evaluate(image=>image.complete&&image.naturalWidth>0)).toBe(true);
     await page.goto('/catalog.html');await page.locator(`#catalog-products [data-id="${product.id}"]`).click();await expect(page.locator('#image-delete')).toBeEnabled();
-    await page.getByRole('button',{name:'등록 이미지 삭제',exact:true}).click();await page.locator('#catalog-confirm').getByRole('button',{name:'확인하고 저장',exact:true}).click();await expect(page.locator('#image-status')).toContainText('삭제했어요');
+    await page.getByRole('button',{name:'등록 이미지 삭제',exact:true}).click();await page.locator('#catalog-confirm').getByRole('button',{name:'확인하고 저장',exact:true}).click();await expect(page.locator('#image-status')).toContainText('삭제했어요');await expect(page.locator(`#catalog-products [data-id="${product.id}"] .content-readiness`)).toContainText('이미지 없음');
     await page.goto('/#product/'+product.id);await expect(page.locator('#product-image-caption')).toHaveText('상품을 표현한 일러스트예요.');await expect(page.locator('#product-art img')).toHaveCount(0);
   }finally{const current=await(await page.request.get(url)).json();if(current.imageUrl)expect((await send(page.request,url+'?revision='+current.revision,undefined,'delete')).status()).toBe(200);}
 });

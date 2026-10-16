@@ -76,7 +76,7 @@ docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{"\n"
 
 | Prometheus 지표 | 고정 라벨 / 의미 |
 |---|---|
-| `stockroom_auth_requests_total` | endpoint: login/register, outcome: success/failure/rate_limited/error |
+| `stockroom_auth_requests_total` | endpoint: login/register/password/reset_request/reset_confirm, outcome: success/failure/rate_limited/error |
 | `stockroom_auth_rejections_total` | endpoint, reason: request_rate/credential_failures/capacity |
 | `stockroom_auth_limit_entries` | 현재 프로세스의 제한 버킷 수 |
 | `stockroom_auth_limit_capacity` | 설정된 최대 용량. 제한 해제 시 0 |
@@ -95,3 +95,5 @@ Observability CI는 실제 로그인 실패 5회와 429 1회를 만든 뒤 Prome
 근거: [Spring Security 필터 순서](https://docs.spring.io/spring-security/reference/servlet/architecture.html),
 [Caddy 헤더 전달](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy),
 [OWASP 로그인 제한](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#login-throttling).
+
+비밀번호 복구 요청과 확인은 각각 독립된 IP 버킷에서 login-window당 10회를 허용합니다(기본 1분). 계정 존재·발송 한도는 동일한 202 안내이며, 별도 발송 정책은 [이메일 복구](password-recovery.md)에 정리했습니다. 복구 엔드포인트는 비밀번호 실패 버킷을 만들지 않습니다.

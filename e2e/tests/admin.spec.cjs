@@ -115,6 +115,7 @@ test('catalog registration, sale stop and full inventory movements',async({page}
   const csrf=await(await page.request.get('/auth/csrf')).json();
   expect((await page.request.post('/orders',{headers:{[csrf.headerName]:csrf.token},data:{productId:id,quantity:1}})).status()).toBe(409);
   await page.getByRole('link',{name:'재고 관리 ↗',exact:true}).click();
+  await expect(page.locator('#admin-workspace')).toBeVisible();await page.getByLabel('재고 상품명 검색',{exact:true}).fill(name);await page.getByRole('button',{name:'재고 찾기',exact:true}).click();
   await page.locator(`[data-product-id="${id}"]`).click();
   await expect(page.locator('#ledger-history')).toContainText('신상품 입고');
   await expect(page.locator('#ledger-balance')).toContainText('현재 3개 / 기록 합계 3개 · 일치');
@@ -195,11 +196,12 @@ test('catalog change snapshots, no-op save, safe text and cursor pagination',asy
 
 test('catalog history ignores old product response and recovers after a fetch failure',async({page})=>{
   await account(page,true); await page.goto('/catalog.html'); await expect(page.locator('#catalog-workspace')).toBeVisible();
-  const first=await catalogCreate(page,`첫 상품 ${randomUUID()}`);
+  const group=randomUUID();const first=await catalogCreate(page,`${group} 첫 상품`);
   const csrf=await(await page.request.get('/auth/csrf')).json();
   expect((await page.request.put(`/admin/products/${first}`,{headers:{[csrf.headerName]:csrf.token},
-    data:{name:'이전 상품의 변경',price:3000,selling:true,revision:0}})).status()).toBe(200);
-  const second=await catalogCreate(page,`다음 상품 ${randomUUID()}`);
+    data:{name:group+' 이전 상품의 변경',price:3000,selling:true,revision:0}})).status()).toBe(200);
+  const second=await catalogCreate(page,`${group} 다음 상품`);
+  await page.getByLabel('관리 상품명 검색',{exact:true}).fill(group);await page.getByRole('button',{name:'관리 상품 찾기',exact:true}).click();await expect(page.locator('#catalog-products button')).toHaveCount(2);
   let release,received;
   const gate=new Promise(resolve=>{release=resolve;}); const captured=new Promise(resolve=>{received=resolve;});
   const firstPath=url=>url.pathname===`/admin/products/${first}/changes`;

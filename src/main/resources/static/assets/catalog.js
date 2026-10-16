@@ -4,6 +4,9 @@
   const state={user:null,products:[],selected:null,revision:null,busy:false,blocked:false,pending:null};
   let imageRequest=0,imageRevision=null,imageNext=null,imagePreview=null,imageLoading=false;
   let historyRequest=0, historyLoading=false, historyNext=null;
+  let contentStatus=new Map();
+  const readiness=checked=>checked?([['image','이미지 없음'],['description','설명 없음'],['specification','규격 없음']].filter(([key])=>!checked[key]).map(([,label])=>label).join(' · ')||'콘텐츠 입력 완료'):'콘텐츠 상태 확인 실패';
+  function updateReadiness(id,fields){const checked=contentStatus.get(id);if(!checked)return;Object.assign(checked,fields);const label=$(`#catalog-products [data-id="${id}"] .content-readiness`);if(label)label.textContent=readiness(checked);}
   let listPage=0,listRequest=0,listFilters={};
   let contentRequest=0,contentRevision=null,contentNext=null,contentLoading=false;
   const historyDates=()=>{const values=new URLSearchParams();for(const key of ['from','to'])if($('#catalog-'+key).value)values.set(key,$('#catalog-'+key).value);return values.size?'&'+values:'';};
@@ -64,7 +67,7 @@
       const base=`/admin/products/${product}/image`;
       const [info,history]=await Promise.all([append?null:api(base),api(base+'/changes'+(append?`?beforeId=${imageNext}`:''))]);
       if(request!==imageRequest||product!==state.selected)return false;
-      if(info){imageRevision=info.revision;if(info.imageUrl){$('#image-current').src=base+'/file?revision='+info.revision;$('#image-current').hidden=false;$('#image-current').dataset.loaded='true';}}
+      if(info){updateReadiness(product,{image:Boolean(info.imageUrl)});imageRevision=info.revision;if(info.imageUrl){$('#image-current').src=base+'/file?revision='+info.revision;$('#image-current').hidden=false;$('#image-current').dataset.loaded='true';}}
       for(const change of history.changes){
         const entry=document.createElement('p');entry.className='field-help';
         entry.textContent=`수정 ${change.revision} · ${change.afterHash?(change.beforeHash?'이미지 교체':'이미지 등록'):'이미지 삭제'} · 관리자 #${change.actorId} · ${new Intl.DateTimeFormat('ko-KR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(change.createdAt))}`;
@@ -113,7 +116,7 @@
       const base=`/admin/products/${product}/content`;
       const [content,history]=await Promise.all([append?Promise.resolve(null):api(base),api(base+'/changes'+(append?`?beforeId=${contentNext}`:''))]);
       if(request!==contentRequest||product!==state.selected)return;
-      if(content){contentRevision=content.revision;$('#content-description').value=content.description;$('#content-specification').value=content.specification;}
+      if(content){updateReadiness(product,{description:Boolean(content.description.trim()),specification:Boolean(content.specification.trim())});contentRevision=content.revision;$('#content-description').value=content.description;$('#content-specification').value=content.specification;}
       for(const change of history.changes){
         const card=document.createElement('article');card.className='catalog-change';
         const heading=document.createElement('h4');heading.textContent=`설명 수정 ${change.before.revision} → ${change.after.revision} · 관리자 #${change.actorId}`;
@@ -174,18 +177,31 @@
       $('#catalog-history-more').hidden=!historyNext;
     } finally {if(request===historyRequest) {historyLoading=false; sync();}}
   }
-  async function load(append=false) {
-    const request=++listRequest,page=append?listPage+1:0;
-    const result=await api('/admin/products/search?'+new URLSearchParams({...listFilters,page}));if(request!==listRequest)return;
-    state.products=append?[...state.products,...result.products]:result.products;listPage=page;
-    $('#catalog-products-more').hidden=!result.hasMore;
+  function renderProducts(){
     const list=$('#catalog-products'); list.replaceChildren();
     for(const item of state.products) {
       const button=document.createElement('button'); button.className='admin-product'; button.type='button'; button.dataset.id=item.id;
       const name=document.createElement('strong'); name.textContent=item.name;
       const info=document.createElement('small'); info.textContent=`${item.price.toLocaleString('ko-KR')}원 · ${item.selling?'판매 중':'판매 중지'}`;
-      button.append(name,info); button.addEventListener('click',()=>select(item)); list.append(button);
+      const quality=document.createElement('small');quality.className='content-readiness';const checked=contentStatus.get(item.id);
+      quality.textContent=readiness(checked);
+      button.append(name,info,quality); button.addEventListener('click',()=>select(item)); list.append(button);
     }
+  }
+  async function load(append=false) {
+    const request=++listRequest,page=append?listPage+1:0;
+    const result=await api('/admin/products/search?'+new URLSearchParams({...listFilters,page}));if(request!==listRequest)return;
+    if(!append)contentStatus.clear();
+    if(result.products.length){try{const rows=await api('/admin/products/content-status?ids='+result.products.map(item=>item.id).join(','));if(request!==listRequest)return;for(const row of rows)contentStatus.set(row.id,row);}catch{if(request!==listRequest)return;}}
+    if(!append&&state.selected&&!result.products.some(item=>item.id===state.selected)){
+      const id=state.selected;
+      const [selected,quality]=await Promise.all([api('/admin/products/'+id),api('/admin/products/content-status?ids='+id)]);
+      if(request!==listRequest)return;
+      result.products.unshift(selected);if(quality[0])contentStatus.set(id,quality[0]);
+    }
+    state.products=append?[...new Map([...state.products,...result.products].map(item=>[item.id,item])).values()]:result.products;listPage=page;
+    $('#catalog-products-more').hidden=!result.hasMore;
+    renderProducts();
     const item=state.products.find(p=>p.id===state.selected)||state.products[0]; if(item) select(item);
     else{state.selected=null;state.revision=null;imageRequest++;imageRevision=null;imageNext=null;clearImagePreview();$('#image-current').hidden=true;$('#image-history').replaceChildren();$('#image-more').hidden=true;$('#image-status').textContent='상품을 선택하세요.';contentRequest++;contentRevision=null;$('#content-description').value='';$('#content-specification').value='';$('#content-history').replaceChildren();$('#content-status').textContent='상품을 선택하세요.';$('#catalog-history').replaceChildren();$('#catalog-history-status').textContent='조회 조건에 맞는 상품이 없어요.';$('#catalog-history-more').hidden=true;$('#edit-caption').textContent='상품을 선택하세요.';} sync();
   }
@@ -208,7 +224,9 @@
       if(error.status>=400 && error.status<500 && !state.blocked) {sessionStorage.removeItem(scope()); state.pending=null;}
       status(state.pending&&!state.blocked?'응답을 확인하지 못했어요. 같은 등록 요청으로 결과를 확인하세요.':error.message);
     } finally {state.busy=false; sync();}
-    if(done) {try {await load();} catch {status('상품 등록은 완료됐어요. 목록을 새로고침하세요.');}}
+    if(done) {state.busy=true;sync();try {
+      listFilters={};$('#catalog-query').value='';$('#catalog-selling').value='';await load();
+    } catch {state.selected=null;status('상품 등록은 완료됐어요. 목록을 새로고침해 해당 상품을 선택하세요.');}finally{state.busy=false;sync();}}
   });
   $('#edit-product').addEventListener('submit',async event=>{
     event.preventDefault(); if(state.busy||state.blocked||!state.selected) return;

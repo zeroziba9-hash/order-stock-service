@@ -109,4 +109,12 @@ class AuthRequestLimiterTests {
         assertThat(limiter.trackedEntries()).isZero();
         assertThat(registry.get("stockroom.auth.limit.capacity").gauge().value()).isZero();
     }
+    @Test void resetEndpointsHaveIndependentBoundedIpQuotasWithoutRawCredentials() {
+        var limiter=limiter(120,5,32);
+        for(var endpoint:java.util.List.of(Endpoint.RESET_REQUEST,Endpoint.RESET_CONFIRM)) {
+            for(int i=0;i<10;i++){var admission=limiter.begin(endpoint,"reset-ip",null);assertThat(admission.allowed()).isTrue();limiter.finish(admission,400);}
+            assertThat(limiter.begin(endpoint,"reset-ip",null).reason()).isEqualTo(Reason.REQUEST_RATE);
+        }
+        assertThat(limiter.trackedEntries()).isEqualTo(2);
+    }
 }

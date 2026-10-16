@@ -30,7 +30,7 @@
 | `feat/catalog-media-and-order-recovery` | 상품 이미지·버전/변경 이력·서버 주문 복구·이미지 포함 백업 검증·오류 안내 | [PR #20](https://github.com/zeroziba9-hash/order-stock-service/pull/20) |
 
 현재 `feat/catalog-media-and-order-recovery`에서 상품 이미지 관리·서버 주문 복구와 화면 오류 처리를 검증합니다.
-PR #19 병합 후 최신 main에서 분기했으며, 화면·API·V20~V21 마이그레이션과 이미지 포함 백업 복원을 통합 검증합니다.
+PR #19 병합 후 최신 main에서 분기했으며, 화면·API·V20~V22 마이그레이션과 이미지 포함 백업 복원·이메일 복구·세 엔진 화면 검증을 통합 검증합니다.
 PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
 
 위 PR #1~#19는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,

@@ -39,7 +39,9 @@
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 389개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 98개 통과(일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 상품 상세 10 + 이미지/주문 복구 18 + 자동 만료 2 + 인증 제한 6).
+[이메일 비밀번호 복구와 로컬 수신함](docs/password-recovery.md)은 SMTP 설정 시 사용할 수 있습니다. 관리 상품 목록은 이미지·설명·규격의 빈 항목을 표시합니다. 기존 데모 상품에 자료를 임의로 채우지 않습니다.
+
+**확인된 결과:** 백엔드 테스트 415개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium·Firefox·WebKit E2E 각각 108개, 총 324개 통과(브라우저별 일반 100 + 자동 만료 2 + 인증 제한 6). WebKit은 실제 iPhone Safari 검증과 구분합니다.
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 후속 차감 방식 비교는 워밍업과 36회 반복 측정에서 성공 주문 8,640건·원장 잔액·취소 후 복구를 확인했고, 개선 근거가 부족해 기본 행 잠금 방식을 유지했습니다.
 테스트 조건과 실제 측정값은 [설계와 검증 기록](docs/design-and-validation.md)에 정리했습니다.

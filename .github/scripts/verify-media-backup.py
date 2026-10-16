@@ -57,6 +57,9 @@ def main():
         assert len(state["recovery"])==2 and intent in state["recovery"] and completed in state["recovery"]
         state["media"]={"imageUrl":info["imageUrl"],"hash":image_hash,"checksums":image_history,"intents":state["recovery"]}
         state["products"]=client.request("/products")
+        # A real recovery must never resurrect a password-reset link consumed after the snapshot.
+        sql(f"INSERT INTO password_resets(user_id,token_hash,auth_version,issued_at,expires_at,window_started_at,request_count) SELECT id,SHA2(UUID(),256),auth_version,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6)+INTERVAL 15 MINUTE,UTC_TIMESTAMP(6),1 FROM app_users WHERE id={user}")
+        assert sql('SELECT COUNT(*) FROM password_resets')=='1'
         # The media login replaced the smoke cookie; preserve the actual current session for restore checks.
         state["sessionId"]=client.session_id();state["csrf"]=client.request("/auth/csrf")
         args.state_file.write_text(json.dumps(state),encoding="utf-8");args.state_file.chmod(0o600)
@@ -67,6 +70,7 @@ def main():
             assert response.status==200 and hashlib.sha256(response.read()).hexdigest()==media["hash"]
         assert sql("CHECKSUM TABLE product_images,product_image_changes EXTENDED")==media["checksums"]
         assert client.request("/orders/cart/recovery")==media["intents"]
+        assert sql('SELECT COUNT(*) FROM password_resets')=='0'
         print("PASS: exact normalized image bytes, image revisions/audit and unsubmitted checkout intent restored")
 
 if __name__=="__main__":main()

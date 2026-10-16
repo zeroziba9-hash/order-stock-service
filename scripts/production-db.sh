@@ -86,4 +86,9 @@ if [[ $session_tables == 1 ]]; then
     query 'DELETE FROM app_sessions;' > /dev/null
     [[ $(query 'SELECT COUNT(*) FROM app_sessions;') == 0 ]] || fail 'Restored sessions were not invalidated.'
 fi
+reset_tables=$(query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='password_resets';")
+if [[ $reset_tables == 1 ]]; then
+    query 'DELETE FROM password_resets;' > /dev/null
+    [[ $(query 'SELECT COUNT(*) FROM password_resets;') == 0 ]] || fail 'Restored password reset links were not invalidated.'
+fi
 printf 'RESTORE OK: %s / order_stock_prod. Start the matching app version and verify readiness.\n' "$project"

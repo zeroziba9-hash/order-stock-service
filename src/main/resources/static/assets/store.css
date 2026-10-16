@@ -1468,3 +1468,9 @@ select:focus-visible,textarea:focus-visible { outline:3px solid #6d8b3a; outline
   .collection-toolbar { padding:8px 0 10px; }
   #product-search { margin:12px 0 16px; }
 }
+.reset-main { max-width:520px; margin:45px auto 80px; padding:0 24px; min-height:65vh; }
+.reset-main h1 { font-size:30px; line-height:1.4; }
+.reset-main label { display:block; margin:20px 0 8px; font-size:14px; }
+.reset-main input { width:100%; min-height:46px; font:inherit; padding:12px; border:1px solid var(--line); border-radius:6px; }
+.reset-main .button { margin:24px 0 10px; }
+.reset-main .muted { line-height:1.8; }
