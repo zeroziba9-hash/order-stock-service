@@ -1449,3 +1449,28 @@ select:focus-visible,textarea:focus-visible { outline:3px solid #6d8b3a; outline
   .product-information dl>div { grid-template-columns:1fr; gap:4px; }
   .product-detail-actions { grid-template-columns:1fr; }
 }
+
+.product-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.product-image:has(.product-photo)::after { display: none; }
+.result-summary { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+.result-summary p { margin: 0; overflow-wrap: anywhere; }
+.checkout-recovery { margin: 24px 0; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: #eef1e7; }
+.recovery-card { padding: 16px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.recovery-card h3 { margin: 0 0 8px; font-size: 16px; }
+.recovery-card p { margin: 8px 0; }
+.recovery-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+@media (max-width:600px) {
+  .hero { padding:16px 0 18px; }
+  .hero-copy h1 { font-size:26px; }
+  .hero-description { display:none; }
+  .collection>.section-heading .eyebrow { display:none; }
+  .collection-toolbar { padding:8px 0 10px; }
+  #product-search { margin:12px 0 16px; }
+}
+.reset-main { max-width:520px; margin:45px auto 80px; padding:0 24px; min-height:65vh; }
+.reset-main h1 { font-size:30px; line-height:1.4; }
+.reset-main label { display:block; margin:20px 0 8px; font-size:14px; }
+.reset-main input { width:100%; min-height:46px; font:inherit; padding:12px; border:1px solid var(--line); border-radius:6px; }
+.reset-main .button { margin:24px 0 10px; }
+.reset-main .muted { line-height:1.8; }

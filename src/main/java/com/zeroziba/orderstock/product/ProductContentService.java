@@ -15,15 +15,16 @@ public class ProductContentService {
     public record Content(String description,String specification,long revision) { }
     public record Update(@NotNull @Size(max=2000) String description,@NotNull @Size(max=1000) String specification,
                          @NotNull @PositiveOrZero Long revision) { }
-    public record Detail(long id,String name,long price,int stock,String description,String specification) { }
+    public record Detail(long id,String name,long price,int stock,String description,String specification,String imageUrl) { }
     public record Change(long changeId,long actorId,Content before,Content after,Instant createdAt) { }
     public record History(List<Change> changes,Long nextBeforeId) { }
     private final ProductRepository products;
     private final JdbcTemplate jdbc;
     private final AdminAccess admins;
     private final Clock clock;
-    public ProductContentService(ProductRepository products,JdbcTemplate jdbc,AdminAccess admins,Clock clock) {
-        this.products=products;this.jdbc=jdbc;this.admins=admins;this.clock=clock;
+    private final ProductImageService images;
+    public ProductContentService(ProductRepository products,JdbcTemplate jdbc,AdminAccess admins,Clock clock,ProductImageService images) {
+        this.products=products;this.jdbc=jdbc;this.admins=admins;this.clock=clock;this.images=images;
     }
 
     @Transactional(readOnly=true)
@@ -31,7 +32,7 @@ public class ProductContentService {
         validateId(id);
         var product=products.findById(id).filter(Product::isSelling).orElseThrow(this::missing);
         var content=read(id);
-        return new Detail(id,product.getName(),product.getPrice(),product.getStock(),content.description(),content.specification());
+        return new Detail(id,product.getName(),product.getPrice(),product.getStock(),content.description(),content.specification(),images.publicUrl(id));
     }
 
     @Transactional(readOnly=true)

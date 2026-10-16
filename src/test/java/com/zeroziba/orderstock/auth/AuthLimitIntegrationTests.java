@@ -122,7 +122,7 @@ class AuthLimitIntegrationTests {
             assertThat(meter.getId().getTags().toString()).doesNotContain("@",client,"email");
             for (var tag : meter.getId().getTags()) {
                 assertThat(tag.getKey()).isIn("endpoint", "outcome", "reason");
-                if (tag.getKey().equals("endpoint")) assertThat(tag.getValue()).isIn("login", "register", "password");
+                if (tag.getKey().equals("endpoint")) assertThat(tag.getValue()).isIn("login", "register", "password", "reset_request", "reset_confirm");
                 if (tag.getKey().equals("outcome")) assertThat(tag.getValue()).isIn("success", "failure", "rate_limited", "error");
                 if (tag.getKey().equals("reason")) assertThat(tag.getValue()).isIn("request_rate", "credential_failures", "capacity");
             }

@@ -20,14 +20,14 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V19"] --> DB
+    Flyway["Flyway V1~V22"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
 같은 출처에서 정적 프론트와 API를 제공해 별도의 프론트 배포나 교차 출처 인증 설정 없이 세션 로그인을 사용합니다.
 핵심 테이블은 `products`, `app_users`, `purchase_orders`, `order_items`, `order_requests`, `order_request_completions`,
 `payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`,
-`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`, `saved_carts`, `saved_cart_items`, `checkout_quotes`, `checkout_quote_items`, `product_content`, `product_content_changes`입니다.
+`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`, `saved_carts`, `saved_cart_items`, `checkout_quotes`, `checkout_quote_items`, `product_content`, `product_content_changes`, `product_images`, `product_image_changes`입니다.
 주문 항목은 당시 상품명·가격을, 수동 조정은 실행자·사유·당시 상품명·변경 전후 수량을 보관합니다.
 
 ## 설계 선택
@@ -48,7 +48,7 @@ DB의 음수 재고·가격 제약도 둡니다. JVM 내부 잠금에 의존하�
 다른 내용으로 재사용하면 `409`를 반환합니다. 키 기록·주문·재고는 같은 트랜잭션에 참여합니다.
 키를 생략한 주문은 요청마다 새로 생성되므로 프론트는 응답이 불확실한 재시도에 같은 키를 사용합니다.
 
-키와 요청 정보는 회원별 sessionStorage에 저장하며 비밀번호나 인증 토큰은 저장하지 않습니다.
+키와 요청 정보는 회원별 sessionStorage에 먼저 저장하며, 새 확인 주문은 서버의 본인 quote에도 등록해 탭 종료 뒤 복구합니다. 비밀번호나 인증 토큰은 브라우저 저장소에 저장하지 않습니다.
 이 보장은 이 서비스의 DB 주문 생성 범위입니다. 외부 결제사의 승인까지 exactly-once로 보장한다는 의미는 아닙니다.
 
 ### 주문 상태로 취소·환불을 제어
@@ -103,8 +103,8 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 365개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 80개 | 일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 상품 상세 10 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 415개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium·Firefox·WebKit E2E 324개 | 엔진별 데스크톱·모바일 108개(일반 100 + 자동 만료 2 + 인증 제한 6), 로컬 SMTP 복구·상품 빈 항목·긴 이름·품절 포함, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
@@ -117,7 +117,7 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 | 로그인 세션 복구 | 앱·DB 재생성 후 원래 쿠키·CSRF 유지, 로그아웃 후 재생성 거부, 백업 복원 시 과거 세션 무효화 | [저장·만료·복구 정책](session-persistence.md) |
 
 추가 검증 코드는 위 독립 PR에서 확인합니다. 자동 만료는 [PR #5](https://github.com/zeroziba9-hash/order-stock-service/pull/5)에 기록했습니다.
-브라우저 검증은 Chromium 데스크톱·모바일 에뮬레이션이며 실제 iOS·Android 기기나 모든 브라우저를 검증한 것은 아닙니다.
+브라우저 검증은 Chromium·Firefox·WebKit의 데스크톱·모바일 크기입니다. Firefox 모바일은 작은 viewport 검증이며 모바일 엔진을 에뮬레이션하지 않습니다. Windows WebKit은 WinCairo 빌드이고 CI는 Linux WebKit입니다. 실제 iOS Safari·Android 기기 검증은 별도입니다.
 응답 유실 검증은 서버 POST를 실제 처리한 뒤 브라우저의 응답 수신을 차단하고 같은 키 재시도를 확인합니다.
 
 ### 부하 측정에서 배운 점
@@ -167,6 +167,8 @@ Java 17·MySQL 8.4, Docker가 보고한 CPU 16개·메모리 약 15.4 GiB 환경
 
 상품 상세와 설명 편집의 범위·정합성은 [상품 탐색과 상세 정보](storefront-product-details.md)에 정리했습니다.
 
+상품 이미지·서버 주문 복구의 저장·충돌·닫기 정책은 [이미지와 주문 복구](product-images-and-order-recovery.md)에 정리했습니다.
+
 ## 남은 작업
 
 실제 서버·도메인에서 공개 HTTPS와 서버 밖 백업을 확인합니다.
@@ -174,3 +176,5 @@ Java 17·MySQL 8.4, Docker가 보고한 CPU 16개·메모리 약 15.4 GiB 환경
 공개 환경의 모니터링 인증·알림·장기 저장과 만료 스케줄러 전체 건강 상태 점검은 후속 범위입니다.
 실제 결제 연동은 웹훅·승인 조회·결제사 멱등 보장·실패 보상 설계를 포함한 별도 범위입니다.
 변경은 [기능 브랜치·PR 규칙](development-workflow.md)에 따라 검토합니다.
+
+통합 테스트의 Spring 컨텍스트 캐시는 최대 8개로 제한합니다. 컨텍스트별 DB 풀을 유지한 채 캐시가 누적되어 MySQL 연결 한도를 소진하지 않게 오래된 컨텍스트를 닫으며, 개별 테스트의 풀 크기·동시 요청 수는 줄이지 않습니다. [Spring 컨텍스트 캐시 안내](https://docs.spring.io/spring-framework/reference/testing/testcontext-framework/ctx-management/caching.html)를 따릅니다.

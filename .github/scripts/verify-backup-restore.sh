@@ -16,6 +16,8 @@ db_tool=(bash "$repo_root/scripts/production-db.sh")
 for project in "$source_project" "$target_project"; do
     existing=$(docker ps --all --quiet --filter "label=com.docker.compose.project=$project")
     [[ -z $existing ]] || { echo 'Existing CI project found; no cleanup or mutation performed.' >&2; exit 1; }
+    existing_volumes=$(docker volume ls --quiet --filter "label=com.docker.compose.project=$project")
+    [[ -z $existing_volumes ]] || { echo 'Existing CI volume found; no cleanup or mutation performed.' >&2; exit 1; }
 done
 cleanup() {
     status=$?
@@ -42,6 +44,7 @@ expect_rejection() {
 "${source_compose[@]}" build --pull
 "${source_compose[@]}" up --no-build --wait --wait-timeout 240 app
 APP_PORT=18082 python3 "$repo_root/.github/scripts/compose-smoke.py" prepare --state-file "$temporary/state.json"
+APP_PORT=18082 python3 "$repo_root/.github/scripts/verify-media-backup.py" prepare --state-file "$temporary/state.json" --env-file "$env_file" --project "$source_project"
 archive=$("${db_tool[@]}" backup "$env_file" "$temporary/archives" "$source_project")
 # Verify the backup source really contains a live login; a recovery test with no session would prove nothing.
 # shellcheck disable=SC2016
@@ -75,5 +78,7 @@ expect_rejection 'Target database must be empty' "${db_tool[@]}" restore "$env_f
 "${target_compose[@]}" cp proxy:/data/caddy/pki/authorities/local/root.crt "$temporary/root.crt"
 SMOKE_BASE_URL=https://localhost:18443 SMOKE_CA_FILE="$temporary/root.crt" \
     python3 "$repo_root/.github/scripts/compose-smoke.py" verify --state-file "$temporary/state.json" --expect-session-invalidated
+SMOKE_BASE_URL=https://localhost:18443 SMOKE_CA_FILE="$temporary/root.crt" \
+    python3 "$repo_root/.github/scripts/verify-media-backup.py" verify --state-file "$temporary/state.json" --env-file "$env_file" --project "$target_project"
 printf '%s\n' 'PASS: backup restored into a different empty MySQL volume; Flyway, login, orders, request keys, stock and payment/refund history verified over HTTPS'
 printf '%s\n' 'PASS: running app, incomplete/corrupt archives and nonempty targets rejected; backup permissions restricted'

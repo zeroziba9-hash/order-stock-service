@@ -79,9 +79,12 @@ def main():
     body, headers = get(base + "/", 200, "Storefront HTML")
     require(headers.get_content_type() == "text/html" and "STOCKROOM" in body.decode("utf-8"), "Unexpected storefront HTML")
     for path, types in [("/assets/store.css", {"text/css"}),
+                        ("/assets/reset.js", {"text/javascript", "application/javascript"}),
                         ("/assets/store.js", {"text/javascript", "application/javascript"})]:
         body, headers = get(base + path, 200, "Asset " + path)
         require(body and headers.get_content_type() in types, "Unexpected asset content type: " + path)
+    body, headers = get(base + "/reset.html", 200, "Password recovery HTML")
+    require(headers.get_content_type() == "text/html" and b'no-referrer' in body, "Unexpected recovery page")
 
     def data(path, expected=200):
         body, headers = get(base + path, expected, path)
@@ -101,6 +104,8 @@ def main():
     require(isinstance(search.get("products"),list) and len(search["products"])<=20
             and search.get("page")==0 and isinstance(search.get("hasMore"),bool), "Invalid paged catalog")
     require(data("/storefront/config") == {"mockPayments": False, "mockRefunds": False}, "Mock writes must be disabled")
+    recovery = data("/auth/password-reset/config")
+    require(set(recovery) == {"enabled"} and isinstance(recovery["enabled"], bool), "Invalid recovery configuration")
     for path in ("/auth/me", "/auth/sessions", "/orders", "/cart"):
         require(data(path, 401).get("code") == "AUTH_REQUIRED", "Authentication required: " + path)
 

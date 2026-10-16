@@ -121,3 +121,7 @@ Spring Security의 로그인·로그아웃 필터, 세션 ID 교체, 기본 CSRF
 환경 변수·프로필·배포 방법은 [배포 안내](deployment.md)를 참고하세요.
 공식 문서: [세션 관리](https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html),
 [CSRF](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html).
+
+## 비밀번호를 잊은 경우
+
+SMTP가 설정된 서비스에서는 로그인 창의 복구 링크로 재설정 메일을 요청합니다. [메일 복구 정책과 로컬 수신함](password-recovery.md)을 참고하세요. 기존 비밀번호를 아는 경우의 일반 변경과 달리 메일 링크가 필요하며, 변경하면 모든 이전 접속을 종료합니다.

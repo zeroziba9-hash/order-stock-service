@@ -45,7 +45,7 @@ test('product search and price sorting use server results',async({page})=>{
 });
 test('multi-product cart order and status-date filters work together',async({page})=>{
   await login(page);const products=await(await page.request.get('/products')).json();await fillCart(page,products);
-  await page.locator(`[data-cart-quantity="${products[0].id}"]`).fill('2');await page.locator(`[data-cart-quantity="${products[0].id}"]`).blur();
+  await page.locator(`[data-cart-quantity="${products[0].id}"]`).fill('2');await page.locator(`[data-cart-quantity="${products[0].id}"]`).blur();await expect(page.locator('#cart-total')).toHaveText((products[0].price*2+products[1].price).toLocaleString('ko-KR')+'원');
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/orders/cart/checkout'&&r.request().method()==='POST');
   await page.locator('#cart-checkout').click();await confirm(page);const created=await response;expect(created.status()).toBe(201);
   const order=await created.json();expect(order.items).toHaveLength(2);expect(order.totalAmount).toBe(products[0].price*2+products[1].price);

@@ -33,14 +33,35 @@ def validate(path):
         if any(word in secret.lower() for word in ('password','example','changeme','replace')):raise ValueError('Replace sample credentials')
     return domain
 
+def validate_smtp(app, domain):
+    if (app.get('APP_PASSWORD_RESET_ENABLED') != 'true'
+            or app.get('APP_PASSWORD_RESET_BASE_URL') != 'https://' + domain
+            or not app.get('SPRING_MAIL_HOST', '').strip()
+            or not app.get('SPRING_MAIL_USERNAME', '').strip()
+            or not app.get('SPRING_MAIL_PASSWORD', '').strip()):
+        raise ValueError('SMTP requires a trusted HTTPS origin and private credentials')
+    sender=app.get('APP_PASSWORD_RESET_FROM','')
+    if (not re.fullmatch(r'[A-Za-z0-9.!#$%&\'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}', sender)
+            or sender.lower().endswith(('.test','.localhost','.invalid'))):
+        raise ValueError('SMTP requires a verified sender address')
+    if any(app.get(key) != 'true' for key in ('SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH',
+            'SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE','SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED')):
+        raise ValueError('SMTP requires authentication and mandatory STARTTLS')
+    try: port=int(app.get('SPRING_MAIL_PORT',''))
+    except ValueError:raise ValueError('SMTP requires a valid port')
+    if not 1<=port<=65535:raise ValueError('SMTP requires a valid port')
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--env-file',required=True,type=Path)
     parser.add_argument('--output',required=True,type=Path)
     parser.add_argument('--check-dns',action='store_true')
+    parser.add_argument('--smtp',action='store_true',help='Include and validate the optional authenticated STARTTLS overlay')
     args=parser.parse_args();domain=validate(args.env_file)
     root=Path(__file__).resolve().parents[1]
-    process=subprocess.run(['docker','compose','--env-file',str(args.env_file.resolve()),'-f',str(root/'deploy/compose.prod.yaml'),'config','--format','json'],capture_output=True,text=True)
+    command=['docker','compose','--env-file',str(args.env_file.resolve()),'-f',str(root/'deploy/compose.prod.yaml')]
+    if args.smtp:command+=['-f',str(root/'deploy/compose.smtp.yaml')]
+    process=subprocess.run(command+['config','--format','json'],capture_output=True,text=True)
     if process.returncode:raise ValueError('Production Compose configuration could not be rendered')
     services=json.loads(process.stdout)['services']; checks=[]
     for name in ('app','db'):
@@ -49,6 +70,9 @@ def main():
     app=services['app'].get('environment',{})
     if app.get('SPRING_PROFILES_ACTIVE')!='prod' or app.get('APP_MOCK_PAYMENTS_ENABLED','false')!='false' or app.get('APP_MOCK_REFUNDS_ENABLED','false')!='false':raise ValueError('Production profile and mock write protection are required')
     checks.append('productionProfileAndMockProtection')
+    if args.smtp:
+        validate_smtp(app,domain)
+        checks.append('trustedRecoveryOriginAndAuthenticatedStarttls')
     if sorted(int(port['published']) for port in services['proxy'].get('ports',[]))!=[80,443]:raise ValueError('Proxy must publish HTTP and HTTPS only')
     checks.append('proxyPorts80And443')
     if args.check_dns:

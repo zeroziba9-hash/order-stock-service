@@ -23,12 +23,12 @@ public class AuthRequestLimitFilter extends OncePerRequestFilter {
     }
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
         String path=request.getRequestURI().substring(request.getContextPath().length());
-        return !request.getMethod().equals("POST") || !(path.equals("/auth/login") || path.equals("/auth/register") || path.equals("/auth/password"));
+        return !request.getMethod().equals("POST") || !(path.equals("/auth/login") || path.equals("/auth/register") || path.equals("/auth/password") || path.equals("/auth/password-reset/request") || path.equals("/auth/password-reset/confirm"));
     }
     @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain)
             throws ServletException,IOException {
         String path=request.getRequestURI();
-        Endpoint endpoint=path.endsWith("/login") ? Endpoint.LOGIN : path.endsWith("/password") ? Endpoint.PASSWORD : Endpoint.REGISTER;
+        Endpoint endpoint=path.endsWith("/password-reset/request") ? Endpoint.RESET_REQUEST : path.endsWith("/password-reset/confirm") ? Endpoint.RESET_CONFIRM : path.endsWith("/login") ? Endpoint.LOGIN : path.endsWith("/password") ? Endpoint.PASSWORD : Endpoint.REGISTER;
         String email=endpoint==Endpoint.LOGIN ? request.getParameter("email") : null;
         if (endpoint==Endpoint.PASSWORD) {
             var auth=SecurityContextHolder.getContext().getAuthentication();

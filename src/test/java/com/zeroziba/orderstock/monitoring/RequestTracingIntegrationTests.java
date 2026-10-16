@@ -63,7 +63,8 @@ class RequestTracingIntegrationTests {
                 String id = response.headers().firstValue(RequestTracingFilter.HEADER).orElseThrow();
                 assertThat(id).matches("[0-9a-f-]{36}");
                 assertThat(ids.add(id)).isTrue();
-                var completed = logs.events.stream().filter(event -> event.getFormattedMessage().contains("request_completed requestId=" + id)).toList();
+                // The client can consume the body before the server filter logs in its finally block.
+                var completed = logs.awaitCompletion(id).stream().filter(event -> event.getFormattedMessage().contains("request_completed requestId=" + id)).toList();
                 assertThat(completed).hasSize(1);
                 assertThat(completed.get(0).getFormattedMessage()).contains("status=" + response.statusCode());
                 assertThat(completed.get(0).getMDCPropertyMap().get("requestId")).isEqualTo(id);
@@ -80,13 +81,14 @@ class RequestTracingIntegrationTests {
             assertThat(mapper.readTree(response.body()).get("code").asText()).isEqualTo("INTERNAL_ERROR");
             assertThat(response.body()).doesNotContain(SECRET, "IllegalStateException");
             String id = response.headers().firstValue(RequestTracingFilter.HEADER).orElseThrow();
-            assertThat(logs.events).hasSize(2).allSatisfy(event -> {
+            var completed=logs.awaitCompletion(id);
+            assertThat(completed).hasSize(2).allSatisfy(event -> {
                 assertThat(event.getMDCPropertyMap().get("requestId")).isEqualTo(id);
                 assertThat(event.getFormattedMessage()).doesNotContain(SECRET);
                 assertThat(event.getThrowableProxy()).isNull();
             });
-            assertThat(logs.events.get(0).getFormattedMessage()).contains("unexpected_failure", "IllegalStateException", "IllegalArgumentException", "FailureController.fail");
-            assertThat(logs.events.get(1).getFormattedMessage()).contains("status=500");
+            assertThat(completed.get(0).getFormattedMessage()).contains("unexpected_failure", "IllegalStateException", "IllegalArgumentException", "FailureController.fail");
+            assertThat(completed.get(1).getFormattedMessage()).contains("status=500");
         }
     }
 
@@ -97,7 +99,7 @@ class RequestTracingIntegrationTests {
                 var response = client.send(request("/assets/trace-" + expectation.getKey()).GET().build(), HttpResponse.BodyHandlers.ofString());
                 assertThat(response.statusCode()).isEqualTo(expectation.getValue());
                 String id = response.headers().firstValue(RequestTracingFilter.HEADER).orElseThrow();
-                assertThat(logs.events.stream().filter(event -> id.equals(event.getMDCPropertyMap().get("requestId"))).toList())
+                assertThat(logs.awaitCompletion(id))
                         .hasSize(expectation.getValue() >= 500 ? 2 : 1);
                 assertThat(response.body()).doesNotContain(SECRET);
                 if (expectation.getKey().equals("business")) {

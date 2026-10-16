@@ -14,12 +14,17 @@ concurrency:
 
 jobs:
   browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, firefox, webkit]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       COMPOSE_PROJECT_NAME: order-stock-browser-ci
       APP_PORT: '18083'
       E2E_DISPOSABLE: 'true'
+      E2E_ENGINE: ${{ matrix.engine }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -31,11 +36,11 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: e2e/package-lock.json
-      - name: Install locked test dependencies and Chromium
+      - name: Install locked test dependencies and selected browser
         working-directory: e2e
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps ${{ matrix.engine }}
       - name: Generate disposable DB credentials
         run: |
           app_password=$(openssl rand -hex 24)
@@ -44,19 +49,19 @@ jobs:
           echo "::add-mask::$root_password"
           printf 'MYSQL_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\n' "$app_password" "$root_password" >> "$GITHUB_ENV"
       - name: Start disposable application and database
-        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml up --build --wait --wait-timeout 240
+        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f compose.mail-test.yaml up --build --wait --wait-timeout 240
       - name: Exercise desktop and mobile browser workflows
         working-directory: e2e
         run: npm test
       - name: Use short deadlines only in the disposable browser stack
-        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f compose.mail-test.yaml -f .github/compose.expiration-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
       - name: Verify automatic expiration in desktop and mobile browsers
         working-directory: e2e
         env:
           E2E_EXPIRATION: 'true'
         run: npm test
       - name: Use short authentication limits only in the disposable browser stack
-        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f .github/compose.auth-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
+        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f compose.mail-test.yaml -f .github/compose.auth-test.yaml up --no-build --no-deps --wait --wait-timeout 120 app
       - name: Verify authentication limits and retry countdown in desktop and mobile browsers
         working-directory: e2e
         env:
@@ -66,7 +71,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: browser-report
+          name: browser-report-${{ matrix.engine }}
           path: |
             e2e/playwright-report/
             e2e/test-results/**/*.png

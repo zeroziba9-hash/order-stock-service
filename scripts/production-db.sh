@@ -44,7 +44,7 @@ if [[ $operation == backup ]]; then
     trap 'printf "Backup incomplete; do not restore: %s\n" "$archive" >&2' ERR
     # shellcheck disable=SC2016 # The DB container supplies the credentials at execution time.
     "${compose[@]}" exec -T db sh -c \
-        'MYSQL_PWD="$MYSQL_PASSWORD" exec mysqldump --protocol=TCP --host=127.0.0.1 --user="$MYSQL_USER" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --skip-add-drop-table --skip-add-locks "$MYSQL_DATABASE"' |
+        'MYSQL_PWD="$MYSQL_PASSWORD" exec mysqldump --protocol=TCP --host=127.0.0.1 --user="$MYSQL_USER" --single-transaction --quick --hex-blob --no-tablespaces --set-gtid-purged=OFF --skip-add-drop-table --skip-add-locks "$MYSQL_DATABASE"' |
         gzip > "$archive/database.sql.gz"
     gzip --test "$archive/database.sql.gz"
     printf 'format=order-stock-mysql-v1\ndatabase=order_stock_prod\nproject=%s\ncreated_utc=%s\ntable_count=%s\n' \
@@ -85,5 +85,10 @@ session_tables=$(query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TAB
 if [[ $session_tables == 1 ]]; then
     query 'DELETE FROM app_sessions;' > /dev/null
     [[ $(query 'SELECT COUNT(*) FROM app_sessions;') == 0 ]] || fail 'Restored sessions were not invalidated.'
+fi
+reset_tables=$(query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='password_resets';")
+if [[ $reset_tables == 1 ]]; then
+    query 'DELETE FROM password_resets;' > /dev/null
+    [[ $(query 'SELECT COUNT(*) FROM password_resets;') == 0 ]] || fail 'Restored password reset links were not invalidated.'
 fi
 printf 'RESTORE OK: %s / order_stock_prod. Start the matching app version and verify readiness.\n' "$project"

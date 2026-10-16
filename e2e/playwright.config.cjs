@@ -3,6 +3,8 @@ const { defineConfig } = require('@playwright/test');
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:18083';
 const target = new URL(baseURL);
 const phase = process.env.E2E_AUTH_LIMITS === 'true' ? 'auth' : process.env.E2E_EXPIRATION === 'true' ? 'expiration' : 'normal';
+const engine = process.env.E2E_ENGINE || 'chromium';
+if (!['chromium','firefox','webkit'].includes(engine)) throw new Error('Unsupported browser engine');
 if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
     || !['127.0.0.1', 'localhost'].includes(target.hostname) || target.port !== '18083'
     || target.username || target.password || target.pathname !== '/' || target.search || target.hash) {
@@ -11,7 +13,7 @@ if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: phase === 'auth' ? '**/auth-limits.spec.cjs' : phase === 'expiration' ? '**/expiration.spec.cjs' : ['**/storefront.spec.cjs','**/admin.spec.cjs','**/account.spec.cjs','**/expansion.spec.cjs','**/checkout.spec.cjs','**/product-detail.spec.cjs'],
+  testMatch: phase === 'auth' ? '**/auth-limits.spec.cjs' : phase === 'expiration' ? '**/expiration.spec.cjs' : ['**/storefront.spec.cjs','**/admin.spec.cjs','**/account.spec.cjs','**/expansion.spec.cjs','**/checkout.spec.cjs','**/product-detail.spec.cjs','**/media-recovery.spec.cjs','**/password-reset.spec.cjs'],
   outputDir: phase === 'normal' ? 'test-results' : `${phase}-results`,
   fullyParallel: false,
   workers: 1,
@@ -22,7 +24,7 @@ module.exports = defineConfig({
   reporter: [['list'], ['html', { open: 'never', outputFolder: phase === 'normal' ? 'playwright-report' : `playwright-${phase}-report` }]],
   use: {
     baseURL,
-    browserName: 'chromium',
+    browserName: engine,
     locale: 'ko-KR',
     timezoneId: 'Asia/Seoul',
     screenshot: 'only-on-failure',
@@ -31,7 +33,7 @@ module.exports = defineConfig({
     video: 'off',
   },
   projects: [
-    { name: 'desktop-chromium', use: { viewport: { width: 1280, height: 900 } } },
-    { name: 'mobile-chromium', use: { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true } },
+    { name: `desktop-${engine}`, use: { viewport: { width: 1280, height: 900 } } },
+    { name: `mobile-${engine}`, use: { viewport: { width: 375, height: 812 }, ...(engine==='firefox'?{}:{isMobile:true,hasTouch:true}) } },
   ],
 });

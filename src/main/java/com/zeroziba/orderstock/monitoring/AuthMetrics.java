@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AuthMetrics {
-    public enum Endpoint { LOGIN, REGISTER, PASSWORD }
+    public enum Endpoint { LOGIN, REGISTER, PASSWORD, RESET_REQUEST, RESET_CONFIRM }
     public enum Outcome { SUCCESS, FAILURE, RATE_LIMITED, ERROR }
     public enum Reason { REQUEST_RATE, CREDENTIAL_FAILURES, CAPACITY }
     private final Map<String, Counter> requests = new HashMap<>();

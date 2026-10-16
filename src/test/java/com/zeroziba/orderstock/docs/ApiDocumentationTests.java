@@ -95,7 +95,7 @@ class ApiDocumentationTests {
                 fieldWithPath("[].id").description("상품 ID"),
                 fieldWithPath("[].name").description("현재 상품명"),
                 fieldWithPath("[].price").description("원 단위 정수 가격"),
-                fieldWithPath("[].stock").description("주문 가능한 현재 재고")), responseHeaders(
+                fieldWithPath("[].stock").description("주문 가능한 현재 재고"),fieldWithPath("[].imageUrl").type(JsonFieldType.STRING).optional().description("등록 이미지 URL. 없으면 null")), responseHeaders(
                 headerWithName(RequestTracingFilter.HEADER).description("서버가 매 요청 새로 발급하는 추적 ID. 같은 ID로 서버 로그 조회"))));
         mvc.perform(get("/storefront/config")).andExpect(status().isOk()).andDo(document("storefront-config", responseFields(
                 fieldWithPath("mockPayments").description("모의 결제 쓰기 허용 여부. prod에서는 false"),
@@ -218,7 +218,7 @@ class ApiDocumentationTests {
                 parameterWithName("page").description("0부터 시작, 페이지당 20개, 최대 10000")),responseFields(
                 fieldWithPath("products").description("판매 중 상품, 최대 20개"),fieldWithPath("products[].id").description("상품 ID"),
                 fieldWithPath("products[].name").description("상품명"),fieldWithPath("products[].price").description("현재 가격"),
-                fieldWithPath("products[].stock").description("현재 재고"),fieldWithPath("page").description("조회한 페이지"),fieldWithPath("hasMore").description("다음 페이지 존재"))));
+                fieldWithPath("products[].stock").description("현재 재고"),fieldWithPath("products[].imageUrl").type(JsonFieldType.STRING).optional().description("상품 이미지 URL. 없으면 null"),fieldWithPath("page").description("조회한 페이지"),fieldWithPath("hasMore").description("다음 페이지 존재"))));
         var second=products.saveAndFlush(new Product("문서 테스트 노트",2000,10));
         mvc.perform(write("/orders/cart").header("Idempotency-Key","docs-cart").content("{\"items\":[{\"productId\":"+product.getId()+",\"quantity\":1},{\"productId\":"+second.getId()+",\"quantity\":2}]}"))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.items.length()").value(2)).andExpect(jsonPath("$.totalAmount").value(19000))
@@ -507,7 +507,7 @@ class ApiDocumentationTests {
                 .andDo(document("product-detail",pathParameters(parameterWithName("id").description("판매 중인 상품 ID")),responseFields(
                     fieldWithPath("id").description("상품 ID"),fieldWithPath("name").description("현재 이름"),fieldWithPath("price").description("현재 원 단위 단가"),
                     fieldWithPath("stock").description("현재 재고. 예약 아님"),fieldWithPath("description").description("등록된 설명. 없으면 빈 문자열"),
-                    fieldWithPath("specification").description("등록된 규격. 없으면 빈 문자열"))));
+                    fieldWithPath("specification").description("등록된 규격. 없으면 빈 문자열"),fieldWithPath("imageUrl").type(JsonFieldType.STRING).optional().description("등록 이미지 URL. 없으면 null"))));
         mvc.perform(read("/admin/products/{id}/content/changes",product.getId())).andExpect(status().isOk())
                 .andDo(document("product-content-history",responseFields(
                     fieldWithPath("changes").description("최근 설명 변경 최대 20건"),fieldWithPath("changes[].changeId").description("변경 ID"),
@@ -517,6 +517,32 @@ class ApiDocumentationTests {
                     fieldWithPath("changes[].after.revision").description("변경 후 버전"),fieldWithPath("changes[].createdAt").description("UTC 변경 시각"),
                     fieldWithPath("nextBeforeId").type(JsonFieldType.NUMBER).optional().description("다음 beforeId. 마지막 null"))));
     }
+
+    @Test
+    void productImageContracts() throws Exception {
+        jdbc.update("UPDATE app_users SET user_role='ADMIN' WHERE id=?",userId);
+        session=login("reader@example.test",TestAccounts.PASSWORD,null);token=csrfToken(session);
+        var bytes=new java.io.ByteArrayOutputStream();javax.imageio.ImageIO.write(new java.awt.image.BufferedImage(2,2,java.awt.image.BufferedImage.TYPE_INT_RGB),"png",bytes);
+        mvc.perform(org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.multipart("/admin/products/{id}/image",product.getId())
+                .file(new org.springframework.mock.web.MockMultipartFile("file","sample.png","image/png",bytes.toByteArray())).part(new org.springframework.mock.web.MockPart("revision","0".getBytes(java.nio.charset.StandardCharsets.UTF_8))).session(session).header("X-CSRF-TOKEN",token))
+            .andExpect(status().isOk()).andDo(document("product-image-upload",csrfHeader(),pathParameters(parameterWithName("id").description("상품 ID")),
+                org.springframework.restdocs.request.RequestDocumentation.requestParts(org.springframework.restdocs.request.RequestDocumentation.partWithName("file").description("JPEG·PNG 원본, 최대 3MB"),org.springframework.restdocs.request.RequestDocumentation.partWithName("revision").description("직전 이미지 버전. 최초 0")),responseFields(imageFields())));
+        mvc.perform(read("/admin/products/{id}/image",product.getId())).andExpect(status().isOk()).andDo(document("product-image-info",responseFields(imageFields())));
+        mvc.perform(org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete("/admin/products/{id}/image",product.getId()).queryParam("revision","1").session(session).header("X-CSRF-TOKEN",token))
+            .andExpect(status().isOk()).andDo(document("product-image-delete",csrfHeader(),queryParameters(parameterWithName("revision").description("직전 이미지 수정 버전")),responseFields(imageFields())));
+    }
+    private FieldDescriptor[] imageFields(){return new FieldDescriptor[]{fieldWithPath("revision").description("이미지 수정 버전. 삭제 후에도 증가"),fieldWithPath("imageUrl").type(JsonFieldType.STRING).optional().description("공개 이미지 URL. 등록 이미지가 없으면 null"),fieldWithPath("width").type(JsonFieldType.NUMBER).optional().description("저장 이미지 너비"),fieldWithPath("height").type(JsonFieldType.NUMBER).optional().description("저장 이미지 높이")};}
+    @Test
+    void checkoutRecoveryContracts() throws Exception {
+        var quoted=mvc.perform(write("/orders/cart/quote").content("{\"items\":[{\"productId\":"+product.getId()+",\"quantity\":1}]}" )).andExpect(status().isOk()).andReturn();
+        String id=JsonPath.read(quoted.getResponse().getContentAsString(),"$.quoteId");
+        mvc.perform(org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.put("/orders/cart/quote/{id}/intent",id).session(session).header("X-CSRF-TOKEN",token).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"key\":\"recovery-doc\",\"kind\":\"direct\",\"cartRevision\":null}"))
+            .andExpect(status().isOk()).andDo(document("checkout-intent",csrfHeader(),requestFields(fieldWithPath("key").description("회원별 멱등 키. 최초 등록한 키를 유지"),fieldWithPath("kind").description("cart / direct"),fieldWithPath("cartRevision").type(JsonFieldType.NUMBER).optional().description("cart이면 확인 당시 장바구니 버전 필수. direct는 null")),responseFields(recoveryFields(""))));
+        mvc.perform(read("/orders/cart/recovery")).andExpect(status().isOk()).andDo(document("checkout-recovery",responseFields(recoveryFields("[]"))));
+        mvc.perform(write("/orders/cart/quote/{id}/acknowledge",id)).andExpect(status().isNoContent()).andDo(document("checkout-acknowledge",csrfHeader()));
+    }
+    private FieldDescriptor[] recoveryFields(String p){if(!p.isEmpty())p+=".";return new FieldDescriptor[]{fieldWithPath(p+"quoteId").description("주문 확인 ID"),fieldWithPath(p+"key").description("복구에 사용할 원래 요청 키"),fieldWithPath(p+"kind").description("cart / direct"),fieldWithPath(p+"cartRevision").type(JsonFieldType.NUMBER).optional().description("확인 당시 장바구니 버전"),fieldWithPath(p+"expiresAt").description("UTC 확인 기한"),fieldWithPath(p+"orderId").type(JsonFieldType.NUMBER).optional().description("완료된 주문 ID. 미완료면 null"),fieldWithPath(p+"items").description("확인한 주문 구성"),fieldWithPath(p+"items[].id").description("상품 ID"),fieldWithPath(p+"items[].name").description("현재 상품명"),fieldWithPath(p+"items[].price").description("확인 당시 단가"),fieldWithPath(p+"items[].quantity").description("확인한 수량")};}
 
     private MockHttpServletRequestBuilder write(String path, Object... ids) {
         return post(path, ids).session(session).header("X-CSRF-TOKEN", token).contentType(MediaType.APPLICATION_JSON);

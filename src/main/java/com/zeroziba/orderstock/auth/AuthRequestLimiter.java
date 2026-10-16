@@ -60,13 +60,13 @@ public class AuthRequestLimiter {
         if (!settings.enabled()) return new Admission(null,null,0);
         long now=ticker.getAsLong(); cleanup(now);
         long window=(endpoint!=Endpoint.REGISTER ? settings.loginWindow() : settings.registrationWindow()).toNanos();
-        int limit=endpoint!=Endpoint.REGISTER ? settings.loginAttempts() : settings.registrationAttempts();
+        int limit=endpoint==Endpoint.RESET_REQUEST||endpoint==Endpoint.RESET_CONFIRM ? 10 : endpoint!=Endpoint.REGISTER ? settings.loginAttempts() : settings.registrationAttempts();
         Bucket request=bucket(endpoint+":"+fingerprint(client),now,window);
         if (request==null) return rejected(Reason.CAPACITY,1);
         request.renew(now);
         if (request.count>=limit) return rejected(Reason.REQUEST_RATE,request.retryAfter(now));
         request.count++;
-        if (endpoint==Endpoint.REGISTER) return new Admission(null,null,0);
+        if (endpoint==Endpoint.REGISTER||endpoint==Endpoint.RESET_REQUEST||endpoint==Endpoint.RESET_CONFIRM) return new Admission(null,null,0);
         // Oversize usernames share a bounded key. Never retain the raw email/IP/password.
         String normalized=email==null ? "" : AppUserDetailsService.normalizeEmail(email);
         if (normalized.length()>254) normalized="<oversize>";
