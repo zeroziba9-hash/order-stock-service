@@ -19,10 +19,10 @@ async function setup(page,admin=false){
     if(process.env.E2E_ENV_FILE)args.push('--env-file',process.env.E2E_ENV_FILE);
     if(spawnSync(process.env.E2E_PYTHON||'python3',args,{encoding:'utf8',timeout:30000}).status!==0)throw new Error('Admin fixture failed');
   }
-  await signIn(page.request,account);await page.goto('/');await expect(page.locator('[data-add-cart]').first()).toBeEnabled();
+  await signIn(page.request,account);await page.goto('/');await expect(page.locator('#logout-button')).toBeVisible();await expect(page.locator('[data-add-cart]').first()).toBeEnabled();
   const products=await(await page.request.get('/products')).json();
   for(const product of products)await page.locator(`[data-add-cart="${product.id}"]`).click();
-  await page.getByRole('link',{name:/^장바구니/}).click();await expect(page.locator('.cart-row')).toHaveCount(2);
+  await page.getByRole('link',{name:/^장바구니/}).click();await expect(page.locator('#cart-view')).toBeVisible();await expect(page.locator('.cart-row')).toHaveCount(2);await expect(page.locator('[data-cart-quantity]').first()).toBeEnabled();
   return {account,products};
 }
 async function edit(page,product,price,selling=true){
