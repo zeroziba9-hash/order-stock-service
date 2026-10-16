@@ -27,6 +27,7 @@
 | `feat/store-operations-expansion` | CI 교착 수정·검색·운영 이력 조회·장바구니·공개 배포 사전 검사 | [PR #17](https://github.com/zeroziba9-hash/order-stock-service/pull/17) |
 | `feat/checkout-confirmation` | 가격 확인 주문·계정 장바구니·동시 수정 보호·앱/DB 중단 복구 | [PR #18](https://github.com/zeroziba9-hash/order-stock-service/pull/18) |
 | `feat/storefront-product-details` | 상품 탐색 배치·가독성·상세 화면·설명 편집과 이력 | [PR #19](https://github.com/zeroziba9-hash/order-stock-service/pull/19) |
+| `feat/catalog-media-and-order-recovery` | 상품 이미지·버전/변경 이력·서버 주문 복구·이미지 포함 백업 검증·오류 안내 | [PR #20](https://github.com/zeroziba9-hash/order-stock-service/pull/20) |
 
 현재 `feat/catalog-media-and-order-recovery`에서 상품 이미지 관리·서버 주문 복구와 화면 오류 처리를 검증합니다.
 PR #19 병합 후 최신 main에서 분기했으며, 화면·API·V20~V21 마이그레이션과 이미지 포함 백업 복원을 통합 검증합니다.
