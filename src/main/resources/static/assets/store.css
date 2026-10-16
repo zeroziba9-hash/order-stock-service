@@ -1460,3 +1460,11 @@ select:focus-visible,textarea:focus-visible { outline:3px solid #6d8b3a; outline
 .recovery-card p { margin: 8px 0; }
 .recovery-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+@media (max-width:600px) {
+  .hero { padding:16px 0 18px; }
+  .hero-copy h1 { font-size:26px; }
+  .hero-description { display:none; }
+  .collection>.section-heading .eyebrow { display:none; }
+  .collection-toolbar { padding:8px 0 10px; }
+  #product-search { margin:12px 0 16px; }
+}
