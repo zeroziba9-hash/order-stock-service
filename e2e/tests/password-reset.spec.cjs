@@ -36,7 +36,7 @@ test('known and unknown emails receive the same receipt; cooldown does not repla
 
 test('malformed and reloaded reset links ask to reopen email without persisting the secret',async({page})=>{
   await page.goto('/reset.html#token=broken');await expect(page.locator('#reset-error')).toContainText('메일의 재설정 링크를 다시');await expect(page.locator('#reset-confirm-submit')).toBeDisabled();expect(new URL(page.url()).hash).toBe('');
-  await page.goto('/reset.html#token='+'x'.repeat(43));await expect(page.locator('#reset-confirm-submit')).toBeEnabled();await page.reload();await expect(page.locator('#reset-error')).toContainText('메일의 재설정 링크를 다시');await expect(page.locator('#reset-confirm-submit')).toBeDisabled();
+  await page.goto('/reset.html#token='+'x'.repeat(43));await expect(page.locator('#reset-confirm')).toBeVisible();await expect(page).toHaveURL(/\/reset\.html$/);await expect(page.locator('#reset-confirm-submit')).toBeEnabled();await page.reload();await expect(page.locator('#reset-error')).toContainText('메일의 재설정 링크를 다시');await expect(page.locator('#reset-confirm-submit')).toBeDisabled();
 });
 
 test('admin sees empty content and long sold-out demo products stay inside the viewport',async({page})=>{
