@@ -12,7 +12,7 @@
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
-  <header class="header">
+  <header class="header store-header">
     <a class="brand" href="#shop" aria-label="Stockroom 홈"><span class="brand-icon" aria-hidden="true">s<span>r</span></span>STOCKROOM<span class="brand-dot">®</span></a>
     <nav aria-label="주 메뉴"><a href="#shop" id="shop-nav" aria-current="page">컬렉션</a><a href="#cart" id="cart-nav">장바구니 <span id="cart-count" class="count" hidden></span></a><a href="#orders" id="orders-nav">내 주문 <span id="order-count" class="count" hidden></span></a><a href="#account" id="account-nav">내 계정</a><a href="/admin.html" id="admin-nav" hidden>재고 관리</a></nav>
     <div class="account" id="account"><button class="button small" id="login-button">로그인 <span aria-hidden="true">↗</span></button></div>
@@ -29,7 +29,21 @@
         <form id="product-search" class="search-toolbar"><div><label for="product-query">상품명 검색</label><input id="product-query" maxlength="100" type="search" placeholder="찾는 상품을 입력하세요"></div><div><label for="product-sort">정렬</label><select id="product-sort"><option value="ID_ASC">등록 순</option><option value="PRICE_ASC">낮은 가격 순</option><option value="PRICE_DESC">높은 가격 순</option></select></div><button class="button" type="submit">상품 찾기</button></form>
         <div id="products" class="product-grid" aria-live="polite"><p class="empty">상품을 불러오고 있어요.</p></div><button id="products-more" class="button load-more" type="button" hidden>상품 더 보기 ↓</button>
       </section>
-      <aside class="note-strip"><span class="note-symbol" aria-hidden="true">✳</span><div><strong>마음에 드는 순간, 필요한 만큼.</strong><p>한정 수량 상품입니다. 주문 완료 시 재고가 확보되며, 미결제 주문은 취소할 수 있어요.</p></div><span class="note-number" aria-hidden="true">01 — 02</span></aside>
+      <aside class="note-strip"><span class="note-symbol" aria-hidden="true">✳</span><div><strong>마음에 드는 순간, 필요한 만큼.</strong><p>한정 수량 상품입니다. 주문 완료 시 재고가 확보되며, 미결제 주문은 취소할 수 있어요.</p></div></aside>
+    </section>
+    <section id="product-view" hidden aria-labelledby="product-title">
+      <a class="product-back" href="#collection">← 컬렉션으로 돌아가기</a>
+      <div id="product-loading" role="status">상품을 불러오고 있어요.</div>
+      <div id="product-content" hidden>
+        <div class="product-detail-grid"><div><div id="product-art"></div><p class="illustration-caption">상품을 표현한 일러스트예요.</p></div>
+          <div class="product-detail-copy"><p class="eyebrow">THE COLLECTION</p><h1 id="product-title" tabindex="-1"></h1><p class="product-detail-price" id="product-price"></p><p id="product-stock" class="detail-stock"></p>
+            <form id="product-purchase"><label for="product-quantity">담을 수량</label><input id="product-quantity" type="number" min="1" max="2147483647" step="1" value="1" required><p class="detail-subtotal">예상 금액 <strong id="product-subtotal"></strong></p>
+            <div class="product-detail-actions"><button id="product-add" class="button primary full" type="submit">장바구니 담기</button><button id="product-buy" class="button full" type="button">바로 주문하기 ↗</button><a class="text-link" href="#cart">장바구니 보기 →</a></div></form>
+            <p class="field-help">최신 가격을 확인한 뒤 주문해요. 재고는 주문 완료 시 확보돼요.</p><p id="product-action-status" role="status" class="field-help"></p>
+          </div></div>
+        <div class="product-information"><section id="product-description-section" hidden><h2>상품 이야기</h2><p id="product-description"></p></section><section id="product-specification-section" hidden><h2>상품 정보</h2><p id="product-specification"></p></section>
+          <section><h2>주문 안내</h2><dl><div><dt>재고 확보</dt><dd>장바구니에 담는 것만으로 재고가 확보되지는 않아요. 주문이 완료되면 수량이 반영돼요.</dd></div><div><dt>가격 확인</dt><dd>주문 전 최신 가격과 수량을 확인해요. 상품 정보가 바뀌면 다시 확인할 수 있어요.</dd></div><div><dt>취소와 기한</dt><dd>미결제 주문은 내 주문에서 취소할 수 있어요. 결제 기한이 지나면 자동 만료되고 재고가 반환돼요.</dd></div></dl></section></div>
+      </div><div id="product-error" class="empty" role="alert" hidden><p id="product-error-message"></p><button id="product-retry" class="button" type="button">상품 다시 불러오기</button></div>
     </section>
     <section id="orders-view" hidden aria-labelledby="orders-title"><div class="page-intro"><p class="eyebrow">YOUR LITTLE COLLECTION</p><h1 id="orders-title">내 주문<span class="period">.</span></h1><p>담아 둔 취향과 주문의 모든 순간을 확인하세요.</p></div><div class="section-heading"><h2>주문 내역</h2><button class="button ghost small" id="refresh-orders">↻ 새로고침</button></div><form id="order-search" class="search-toolbar"><div><label for="order-status">주문 상태</label><select id="order-status"><option value="">전체 상태</option><option value="CREATED">결제 대기</option><option value="PAID">결제 완료</option><option value="CANCELLED">취소 완료</option><option value="REFUNDED">환불 완료</option><option value="EXPIRED">주문 만료</option></select></div><div><label for="order-from">주문 시작일</label><input id="order-from" type="date"></div><div><label for="order-to">주문 종료일</label><input id="order-to" type="date"></div><button class="button" type="submit">주문 찾기</button></form><p class="field-help">날짜는 한국 시간 기준이며 종료일을 포함해요.</p><div id="orders" aria-live="polite"></div><button class="button load-more" id="load-more" hidden>이전 주문 더 보기 ↓</button></section>
     <section id="cart-view" hidden aria-labelledby="cart-title"><div class="page-intro"><p class="eyebrow">YOUR PICKS</p><h1 id="cart-title">장바구니<span class="period">.</span></h1><p>함께 주문할 상품을 모아보세요.</p></div><button id="refresh-cart" class="button ghost small" type="button">장바구니 새로고침</button><div id="cart-items" aria-live="polite"></div><p class="field-help">장바구니는 계정에 저장돼 다른 기기에서도 이어서 사용할 수 있어요. 최대 20종이며, 최신 가격을 확인한 뒤 주문해요. 담아 둔 상품의 재고는 확보되지 않아요.</p><p id="cart-pending" class="pending-help" hidden>이전 주문의 응답을 확인하지 못했어요. 같은 내용과 요청 키로 결과를 확인할 때까지 변경할 수 없어요.</p><div class="total-row"><span>예상 합계</span><strong id="cart-total">0원</strong></div><p id="cart-error" class="form-error" role="alert"></p><button id="cart-checkout" type="button" class="button primary full">함께 주문하기 →</button></section>

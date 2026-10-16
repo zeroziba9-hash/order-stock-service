@@ -167,6 +167,17 @@ operation::checkout-quote[snippets='http-request,request-fields,http-response,re
 operation::checkout-create[snippets='http-request,request-fields,http-response,response-fields']
 operation::checkout-replay[snippets='http-request,http-response']
 
+=== 상품 상세와 설명 관리
+
+`GET /products/{id}`는 익명으로 판매 중인 상품의 현재 정보와 등록된 설명·규격을 조회합니다. 품절은 조회할 수 있으며 판매 중지·없는 상품은 404입니다.
+관리자의 `GET /admin/products/{id}/content`는 현재 설명·규격·설명 버전을 반환합니다. `PUT`에는 세 필드를 모두 보내며 빈 문자열로 지울 수 있습니다.
+오래된 설명 버전은 `409 CONTENT_CHANGED`로 거부합니다. 설명 저장과 변경 이력은 함께 커밋·롤백합니다. 변경 없는 저장은 새 버전이나 이력을 만들지 않습니다.
+`GET /admin/products/{id}/content/changes`는 최대 20건과 다음 `beforeId`를 반환합니다. 이름·가격·판매 상태의 수정 버전과 독립적입니다.
+
+operation::product-detail[snippets='http-request,path-parameters,http-response,response-fields']
+operation::product-content-update[snippets='http-request,request-fields,http-response,response-fields']
+operation::product-content-history[snippets='http-request,http-response,response-fields']
+
 회원가입은 항상 USER입니다. 관리자는 웹 API로 지정하지 않으며, 운영자가 DB 접근 권한으로 기존 회원의 역할을 변경합니다.
 역할 부여 후 다시 로그인해야 새 권한이 세션에 반영됩니다. 권한 회수 후에는 기존 관리자 세션도 이 API에서 거부합니다.
 

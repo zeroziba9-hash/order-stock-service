@@ -20,14 +20,14 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V18"] --> DB
+    Flyway["Flyway V1~V19"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
 같은 출처에서 정적 프론트와 API를 제공해 별도의 프론트 배포나 교차 출처 인증 설정 없이 세션 로그인을 사용합니다.
 핵심 테이블은 `products`, `app_users`, `purchase_orders`, `order_items`, `order_requests`, `order_request_completions`,
 `payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`,
-`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`, `saved_carts`, `saved_cart_items`, `checkout_quotes`, `checkout_quote_items`입니다.
+`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`, `saved_carts`, `saved_cart_items`, `checkout_quotes`, `checkout_quote_items`, `product_content`, `product_content_changes`입니다.
 주문 항목은 당시 상품명·가격을, 수동 조정은 실행자·사유·당시 상품명·변경 전후 수량을 보관합니다.
 
 ## 설계 선택
@@ -103,8 +103,8 @@ V12 이전 수정은 소급 생성하지 않고, 이력은 현재 관리자 권�
 
 | 검증 | 실제 확인 범위 | 근거 |
 |---|---|---|
-| 백엔드 352개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
-| Chromium E2E 70개 | 일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
+| 백엔드 365개 × 두 방식 | MySQL 동시 주문·멱등·상태 경쟁·롤백·인증·운영 보호·자동 만료·상품 수정 충돌·전체 원장·관리자 조정·문서 계약/마스킹·커밋 지표·요청 추적·세션 저장·계정 변경/접속 해제 | [Backend CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) |
+| Chromium E2E 80개 | 일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 상품 상세 10 + 자동 만료 2 + 인증 제한 6, 실제 UI·API·DB, 응답 유실·권한 회수·세션 만료·네트워크 오류 | [브라우저 CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/browser.yml) |
 | HTTP 동시성 1·8·32 | 각 단계 100회, 주문 수·남은 재고·반복 취소 확인 | [PR #2](https://github.com/zeroziba9-hash/order-stock-service/pull/2) |
 | 차감 방식 반복 비교 | 집중·분산, 동시성 1·8·32, 별도 워밍업과 3회 반복, 성공 주문·원장 확인 | [재현 방법·측정 결과](paired-benchmark.md) |
 | 컨테이너·HTTPS | 재기동 데이터 보존, TLS·세션·prod 모의 쓰기 차단 | [Docker CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml) |
@@ -164,6 +164,8 @@ Java 17·MySQL 8.4, Docker가 보고한 CPU 16개·메모리 약 15.4 GiB 환경
 | 같은 상품과 여러 상품의 동시 주문 비교 | 성공 주문·원장 잔액 확인 후 처리량과 지연 비교 | [워밍업·반복 측정](paired-benchmark.md) |
 
 계정별 장바구니·확인한 가격으로 주문하는 흐름은 [가격 확인 주문](checkout-and-cart.md)에, 실제 앱/DB 중단·복구와 제한된 반복 검증은 [복구 검증](recovery-verification.md)에 정리했습니다.
+
+상품 상세와 설명 편집의 범위·정합성은 [상품 탐색과 상세 정보](storefront-product-details.md)에 정리했습니다.
 
 ## 남은 작업
 

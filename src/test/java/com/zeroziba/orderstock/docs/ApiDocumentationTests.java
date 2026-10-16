@@ -492,6 +492,32 @@ class ApiDocumentationTests {
         return get(path, ids).session(session);
     }
 
+    @Test
+    void publicProductDetailAndContentEditingContracts() throws Exception {
+        jdbc.update("UPDATE app_users SET user_role='ADMIN' WHERE id=?",userId);
+        session=login("reader@example.test",TestAccounts.PASSWORD,null);token=csrfToken(session);
+        mvc.perform(org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.put("/admin/products/{id}/content",product.getId())
+                .session(session).header("X-CSRF-TOKEN",token).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"description\":\"문서용 상품 설명\\n두 번째 문단\",\"specification\":\"문서용 규격\",\"revision\":0}"))
+                .andExpect(status().isOk()).andDo(document("product-content-update",csrfHeader(),pathParameters(parameterWithName("id").description("상품 ID")),
+                    requestFields(fieldWithPath("description").description("상품 설명. 최대 2000자, 빈 문자열 허용"),
+                        fieldWithPath("specification").description("규격. 최대 1000자, 빈 문자열 허용"),fieldWithPath("revision").description("직전 설명 버전. 최초 0")),
+                    responseFields(fieldWithPath("description").description("저장된 설명"),fieldWithPath("specification").description("저장된 규격"),fieldWithPath("revision").description("설명 수정 버전. 이름·가격 버전과 별도"))));
+        mvc.perform(get("/products/{id}",product.getId())).andExpect(status().isOk())
+                .andDo(document("product-detail",pathParameters(parameterWithName("id").description("판매 중인 상품 ID")),responseFields(
+                    fieldWithPath("id").description("상품 ID"),fieldWithPath("name").description("현재 이름"),fieldWithPath("price").description("현재 원 단위 단가"),
+                    fieldWithPath("stock").description("현재 재고. 예약 아님"),fieldWithPath("description").description("등록된 설명. 없으면 빈 문자열"),
+                    fieldWithPath("specification").description("등록된 규격. 없으면 빈 문자열"))));
+        mvc.perform(read("/admin/products/{id}/content/changes",product.getId())).andExpect(status().isOk())
+                .andDo(document("product-content-history",responseFields(
+                    fieldWithPath("changes").description("최근 설명 변경 최대 20건"),fieldWithPath("changes[].changeId").description("변경 ID"),
+                    fieldWithPath("changes[].actorId").description("수정 관리자 ID"),fieldWithPath("changes[].before.description").description("변경 전 설명"),
+                    fieldWithPath("changes[].before.specification").description("변경 전 규격"),fieldWithPath("changes[].before.revision").description("변경 전 버전"),
+                    fieldWithPath("changes[].after.description").description("변경 후 설명"),fieldWithPath("changes[].after.specification").description("변경 후 규격"),
+                    fieldWithPath("changes[].after.revision").description("변경 후 버전"),fieldWithPath("changes[].createdAt").description("UTC 변경 시각"),
+                    fieldWithPath("nextBeforeId").type(JsonFieldType.NUMBER).optional().description("다음 beforeId. 마지막 null"))));
+    }
+
     private MockHttpServletRequestBuilder write(String path, Object... ids) {
         return post(path, ids).session(session).header("X-CSRF-TOKEN", token).contentType(MediaType.APPLICATION_JSON);
     }

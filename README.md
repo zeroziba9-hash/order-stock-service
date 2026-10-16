@@ -27,6 +27,7 @@
 | API와 문서 불일치 | 실제 보안 필터·MySQL 테스트에서 REST Docs 생성 | 필드 계약 검증, 토큰 마스킹 검사, HTML 생성 CI |
 | 관리자 수동 재고 변경 | 역할 확인, 상품 잠금, 사유·전후 수량 이력, 필수 요청 키 | 동시 주문·재조정·응답 유실·권한 회수·이력 저장 실패 검증 |
 | 상품 운영·재고 전체 이동 | 등록 멱등 키, 수정 버전, 판매 중지, 주문·복구·수동 조정 원장 | 오래된 수정 차단, 원장 실패 전체 롤백, 전체 잔액 대조 |
+| 상품 상세·설명 수정 | 공개 상세 주소, 별도 설명 버전, 전후 내용·관리자 이력 | 직접 접속·늦은 응답 차단·수정 충돌·이력 실패 전체 롤백·HTML 안전 표시 |
 | 상품 수정 추적 | 이름·가격·판매 상태의 전후 값·관리자 ID·UTC 시각 | 상품·이력 동시 롤백, 동시 수정, no-op·커서·권한·브라우저 복구 |
 | 차감 방식 성능 비교 | 기본 행 잠금과 실험용 조건부 UPDATE, 워밍업·교대·3회 반복 | 충분한 재고의 성공 주문만 측정, 상품별 원장·취소 복구 확인 |
 | 처리 결과와 실행 상태 관측 | 커밋 후 주문 지표, 내부 관리 포트, Prometheus·Grafana | 롤백·동시 요청·실제 만료와 18개 패널 쿼리 CI |
@@ -36,7 +37,7 @@
 Java 17 · Spring Boot 4.0.8 · Spring Security · Spring Data JPA · MySQL 8.4 · Flyway ·
 HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Grafana · GitHub Actions를 사용합니다.
 
-**확인된 결과:** 백엔드 테스트 352개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 70개 통과(일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 자동 만료 2 + 인증 제한 6).
+**확인된 결과:** 백엔드 테스트 365개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium E2E 80개 통과(일반 14 + 관리자 18 + 계정 6 + 검색/장바구니/운영 조회 8 + 가격 확인/계정 장바구니 16 + 상품 상세 10 + 자동 만료 2 + 인증 제한 6).
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 후속 차감 방식 비교는 워밍업과 36회 반복 측정에서 성공 주문 8,640건·원장 잔액·취소 후 복구를 확인했고, 개선 근거가 부족해 기본 행 잠금 방식을 유지했습니다.
 테스트 조건과 실제 측정값은 [설계와 검증 기록](docs/design-and-validation.md)에 정리했습니다.
@@ -59,6 +60,7 @@ docker compose up --build --wait --wait-timeout 240
 - [테스트 기반 API 가이드 생성·다운로드](docs/api-documentation.md)
 - [요청 추적 ID·민감정보를 제외한 장애 로그](docs/request-tracing.md)
 - [MySQL 세션 저장·재시작·만료·복구 정책](docs/session-persistence.md)
+- [상품 탐색·상세·설명과 규격 관리](docs/storefront-product-details.md)
 - [최신 가격 확인·계정별 장바구니](docs/checkout-and-cart.md)
 - [앱·DB 중단과 주문 복구 검증](docs/recovery-verification.md)
 - [내 계정·비밀번호 변경·다른 접속 종료](docs/account-management.md)
