@@ -34,4 +34,6 @@
 V19는 `product_content`, `product_content_changes`를 추가합니다. 과거 설명을 추측해 채우거나 이전 변경 이력을 만들지 않습니다.
 기존 상품·주문·재고·계정·저장 장바구니·가격 확인 데이터는 변경하지 않습니다.
 
+등록 이미지·미리보기·삭제·이미지 오류 fallback은 [상품 이미지 관리](product-images-and-order-recovery.md)에 정리했습니다. 등록 이미지가 있으면 기본 일러스트 대신 표시합니다.
+
 실제 응답 필드는 [API 가이드](api-documentation.md), 데스크톱·모바일 흐름은 [브라우저 검증](browser-tests.md)에서 확인합니다.

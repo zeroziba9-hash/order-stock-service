@@ -97,6 +97,7 @@ def prepare(state_path):
     client.request("/cart", data={"revision":0,"items":[{"productId":product["id"],"quantity":2}]}, method="PUT")
     quote = client.request("/orders/cart/quote", data={"items":[payload]})
     confirmed_body, confirmed_key = {"quoteId":quote["quoteId"]},uuid.uuid4().hex
+    client.request(f"/orders/cart/quote/{quote['quoteId']}/intent",data={"key":confirmed_key,"kind":"cart","cartRevision":1},method="PUT")
     second = client.request("/orders/cart/checkout", data=confirmed_body, key=confirmed_key, expected=201)
     second_path = f"/orders/{second['orderId']}"
     payment_key = uuid.uuid4().hex
@@ -121,6 +122,7 @@ def prepare(state_path):
         "products": client.request("/products"),
         "savedCart": client.request("/cart"),
         "confirmedRequest": {"body":confirmed_body,"key":confirmed_key},
+        "recovery": client.request("/orders/cart/recovery"),
         "payment": payment,
         "refund": refund,
         "sessionId": client.session_id(),
@@ -144,6 +146,7 @@ def verify(state_path, expect_session_invalidated=False):
         print("PASS: original cookie authenticates after app/DB container recreation without login")
     assert client.request("/products") == state["products"]
     assert client.request("/cart") == state["savedCart"]
+    assert client.request("/orders/cart/recovery") == state["recovery"]
     confirmed = state["confirmedRequest"]
     assert client.request("/orders/cart/checkout",data=confirmed["body"],key=confirmed["key"]) == state["orders"][1]
     for order in state["orders"]:

@@ -8,7 +8,7 @@ public final class TestDatabase {
         if (!"order_stock_test".equals(jdbc.queryForObject("SELECT DATABASE()",String.class)))
             throw new IllegalStateException("Dedicated test database required");
         jdbc.update("DELETE FROM app_sessions");
-        for (var table:List.of("product_content_changes","product_content","checkout_quotes","saved_carts","catalog_changes","inventory_movements","catalog_creation_requests","inventory_adjustment_requests","inventory_adjustments"))
+        for (var table:List.of("product_image_changes","product_images","product_content_changes","product_content","checkout_quotes","saved_carts","catalog_changes","inventory_movements","catalog_creation_requests","inventory_adjustment_requests","inventory_adjustments"))
             jdbc.update("DELETE FROM "+table);
     }
 }

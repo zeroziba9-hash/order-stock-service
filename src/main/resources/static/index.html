@@ -18,6 +18,7 @@
     <div class="account" id="account"><button class="button small" id="login-button">로그인 <span aria-hidden="true">↗</span></button></div>
   </header>
   <main id="main">
+    <aside id="checkout-recovery" class="checkout-recovery" aria-labelledby="recovery-title" hidden><div class="section-heading"><div><p class="eyebrow">CHECK YOUR REQUEST</p><h2 id="recovery-title">이어서 확인할 주문</h2></div><button id="refresh-recovery" class="button ghost small" type="button">요청 새로고침</button></div><p class="field-help">응답을 확인하지 못한 주문을 다른 탭이나 기기에서도 확인하세요. 확인 기한 후 24시간 이내의 요청을 최대 100건 표시해요.</p><p id="recovery-status" class="form-error" role="status"></p><div id="recovery-items"></div></aside>
     <section id="shop-view">
       <div class="hero">
         <div class="hero-copy"><p class="eyebrow"><span class="live-dot"></span> SMALL THINGS, GOOD DAYS</p><h1>작은 취향이 모여,<br>나만의 일상이 되니까<span class="period">.</span></h1><p class="hero-description">매일 손이 가는 물건, 오래 두고 싶은 디자인.<br>한정 수량으로 만나는 스톡룸의 작은 컬렉션.</p><a class="text-link" href="#collection">컬렉션 둘러보기 <span aria-hidden="true">↘</span></a></div>
@@ -27,6 +28,7 @@
         <div class="section-heading"><div><p class="eyebrow">CURATED COLLECTION</p><h2 id="collection-title">오늘의 컬렉션 <span id="product-count"></span></h2></div><button class="button ghost small" id="refresh-products"><span aria-hidden="true">↻</span> 재고 새로고침</button></div>
         <div class="collection-toolbar"><div class="filters" role="group" aria-label="상품 필터"><button class="filter active" data-filter="all" aria-pressed="true">전체 상품</button><button class="filter" data-filter="available" aria-pressed="false">구매 가능한 상품</button></div><span class="toolbar-note"><span class="live-dot"></span> 주문 시 재고가 반영돼요</span></div>
         <form id="product-search" class="search-toolbar"><div><label for="product-query">상품명 검색</label><input id="product-query" maxlength="100" type="search" placeholder="찾는 상품을 입력하세요"></div><div><label for="product-sort">정렬</label><select id="product-sort"><option value="ID_ASC">등록 순</option><option value="PRICE_ASC">낮은 가격 순</option><option value="PRICE_DESC">높은 가격 순</option></select></div><button class="button" type="submit">상품 찾기</button></form>
+        <div class="result-summary"><p id="product-results" role="status"></p><button id="reset-products" class="text-link" data-reset-products type="button" hidden>조건 초기화</button></div>
         <div id="products" class="product-grid" aria-live="polite"><p class="empty">상품을 불러오고 있어요.</p></div><button id="products-more" class="button load-more" type="button" hidden>상품 더 보기 ↓</button>
       </section>
       <aside class="note-strip"><span class="note-symbol" aria-hidden="true">✳</span><div><strong>마음에 드는 순간, 필요한 만큼.</strong><p>한정 수량 상품입니다. 주문 완료 시 재고가 확보되며, 미결제 주문은 취소할 수 있어요.</p></div></aside>
@@ -35,7 +37,7 @@
       <a class="product-back" href="#collection">← 컬렉션으로 돌아가기</a>
       <div id="product-loading" role="status">상품을 불러오고 있어요.</div>
       <div id="product-content" hidden>
-        <div class="product-detail-grid"><div><div id="product-art"></div><p class="illustration-caption">상품을 표현한 일러스트예요.</p></div>
+        <div class="product-detail-grid"><div><div id="product-art"></div><p id="product-image-caption" class="illustration-caption">상품을 표현한 일러스트예요.</p></div>
           <div class="product-detail-copy"><p class="eyebrow">THE COLLECTION</p><h1 id="product-title" tabindex="-1"></h1><p class="product-detail-price" id="product-price"></p><p id="product-stock" class="detail-stock"></p>
             <form id="product-purchase"><label for="product-quantity">담을 수량</label><input id="product-quantity" type="number" min="1" max="2147483647" step="1" value="1" required><p class="detail-subtotal">예상 금액 <strong id="product-subtotal"></strong></p>
             <div class="product-detail-actions"><button id="product-add" class="button primary full" type="submit">장바구니 담기</button><button id="product-buy" class="button full" type="button">바로 주문하기 ↗</button><a class="text-link" href="#cart">장바구니 보기 →</a></div></form>

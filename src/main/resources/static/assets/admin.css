@@ -62,3 +62,8 @@ button.admin-product[aria-pressed="true"] { border-color:#78944f; background:#f0
 .content-history-title { margin:28px 0 12px; font-size:17px; }
 #content-history { max-height:400px; overflow:auto; }
 #content-history p { white-space:pre-line; overflow-wrap:anywhere; }
+
+.admin-product-image { display: block; width: min(100%, 360px); height: 260px; object-fit: contain; background: #fff; border: 1px solid var(--line); margin: 16px 0; }
+.admin-product-image[hidden] { display: none; }
+.image-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 24px; }
+#image-file { max-width: 100%; width: 100%; min-width: 0; }

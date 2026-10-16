@@ -341,6 +341,40 @@ operation::order-refunded[snippets='http-request,http-response']
 
 operation::refund-history[snippets='http-request,path-parameters,http-response,response-fields']
 
+== 상품 이미지
+
+관리자 등록·교체는 `multipart/form-data`의 `file`과 `revision`을 받습니다.
+JPEG·PNG 3MB 이하, 각 변 8000px 이하, 1600만 화소 이하만 허용합니다.
+메타데이터를 제거하고 긴 변 1600px 이하의 JPEG로 저장하며 투명 영역은 흰색이 됩니다.
+가격·설명 버전과 별도의 이미지 버전을 비교하고 충돌하면 `409 IMAGE_CHANGED`를 반환합니다.
+공개 `GET /products/{id}/image?revision=N`은 판매 중인 상품의 해당 최신 버전만 반환합니다.
+삭제 또는 오래된 버전은 `404 IMAGE_NOT_FOUND`이며, 성공 응답은 `image/jpeg`, ETag, `Cache-Control: no-cache`입니다.
+관리자 이미지 파일은 `GET /admin/products/{id}/image/file?revision=N`으로 확인합니다.
+이력은 `GET /admin/products/{id}/image/changes?beforeId=N`에서 최근 20건과 다음 커서를 반환합니다.
+
+operation::product-image-upload[snippets='http-request,path-parameters,request-parts,http-response,response-fields']
+
+operation::product-image-info[snippets='http-request,http-response,response-fields']
+
+operation::product-image-delete[snippets='http-request,query-parameters,http-response,response-fields']
+
+== 주문 요청 복구
+
+가격을 확인한 뒤 전송 전에 본인 quote에 요청 키를 등록합니다. 재등록하면 최초 키·종류·장바구니 버전을 반환합니다.
+등록된 키와 다른 checkout은 `409 CHECKOUT_KEY_CHANGED`입니다. 기존 API의 미등록 quote도 계속 사용할 수 있습니다.
+복구 목록은 확인 기한 후 24시간 이내의 미확인 요청을 최신 기한부터 최대 100건 반환합니다.
+`orderId`가 있으면 이미 주문됐고, 없으면 같은 quote·key로 checkout을 재전송하여 결과를 확인합니다.
+목록 조회가 재고를 확보하거나 주문을 실행하지 않습니다. 기한·가격·판매·재고 검증은 checkout에 적용됩니다.
+acknowledge는 완료된 주문을 취소하지 않습니다. 미사용 quote는 잠금 아래 닫혀 후속 checkout이 `409 CHECKOUT_CLOSED`가 됩니다.
+주문 완료와 닫기가 동시에 실행되면 quote 잠금 순서에 따라 하나의 결과로 확정됩니다.
+quote 정리 후에도 완료된 주문은 기존 멱등 키로 재조회할 수 있습니다.
+
+operation::checkout-intent[snippets='http-request,request-fields,http-response,response-fields']
+
+operation::checkout-recovery[snippets='http-request,http-response,response-fields']
+
+operation::checkout-acknowledge[snippets='http-request,http-response']
+
 == 오류 처리
 
 오류 본문은 `code`와 `message`입니다. 클라이언트는 HTTP 상태와 `code`로 분기합니다.

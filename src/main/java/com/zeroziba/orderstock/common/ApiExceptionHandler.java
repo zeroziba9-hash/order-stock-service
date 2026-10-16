@@ -25,6 +25,11 @@ public class ApiExceptionHandler {
 
     public record ApiError(String code, String message) { }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> uploadTooLarge() {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ApiError("IMAGE_TOO_LARGE","이미지는 3MB 이하로 선택하세요."));
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleBusinessError(ApiException exception) {
         if (exception.getCode().equals("INSUFFICIENT_STOCK")) { metrics.insufficientStockResponse(); }

@@ -28,11 +28,11 @@
 | `feat/checkout-confirmation` | 가격 확인 주문·계정 장바구니·동시 수정 보호·앱/DB 중단 복구 | [PR #18](https://github.com/zeroziba9-hash/order-stock-service/pull/18) |
 | `feat/storefront-product-details` | 상품 탐색 배치·가독성·상세 화면·설명 편집과 이력 | [PR #19](https://github.com/zeroziba9-hash/order-stock-service/pull/19) |
 
-현재 `feat/storefront-product-details`에서 상품 목록 배치·가독성·상세 화면·관리자 설명 편집을 검증합니다.
-PR #18 병합 후 최신 main에서 분기했으며, 연결된 화면·API·V19 마이그레이션을 통합 검증합니다.
+현재 `feat/catalog-media-and-order-recovery`에서 상품 이미지 관리·서버 주문 복구와 화면 오류 처리를 검증합니다.
+PR #19 병합 후 최신 main에서 분기했으며, 화면·API·V20~V21 마이그레이션과 이미지 포함 백업 복원을 통합 검증합니다.
 PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
 
-위 PR #1~#18은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+위 PR #1~#19는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
 이후 기능도 최신 병합 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
 PR #8은 PR #6 기준으로 시작했으며, PR #7 병합 후 최신 main을 기능 브랜치에 병합해 충돌을 해결했습니다.
 

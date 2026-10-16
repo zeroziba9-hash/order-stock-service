@@ -69,10 +69,12 @@ public class CheckoutService {
             metrics.afterCommit(OrderMetrics.Outcome.REPLAYED);
             return new IdempotentOrderService.CreationResult(orders.findById(userId,stored.orderId()),true);
         }
-        var quotes=jdbc.query("SELECT expires_at,order_id FROM checkout_quotes WHERE id=? AND user_id=? FOR UPDATE",
-                (row,index)->new Object[]{row.getObject("expires_at",LocalDateTime.class),row.getObject("order_id",Long.class)},body.quoteId(),userId);
+        var quotes=jdbc.query("SELECT expires_at,order_id,request_key,acknowledged FROM checkout_quotes WHERE id=? AND user_id=? FOR UPDATE",
+                (row,index)->new Object[]{row.getObject("expires_at",LocalDateTime.class),row.getObject("order_id",Long.class),row.getString("request_key"),row.getBoolean("acknowledged")},body.quoteId(),userId);
         if(quotes.isEmpty())throw error(HttpStatus.NOT_FOUND,"QUOTE_NOT_FOUND","주문 확인 정보를 찾을 수 없어요. 다시 확인하세요.");
         if(quotes.get(0)[1]!=null)throw error(HttpStatus.CONFLICT,"QUOTE_ALREADY_USED","이미 주문한 확인 정보예요. 내 주문에서 확인하세요.");
+        if((boolean)quotes.get(0)[3])throw error(HttpStatus.CONFLICT,"CHECKOUT_CLOSED","종료한 주문 요청이에요. 최신 가격을 다시 확인하세요.");
+        if(quotes.get(0)[2]!=null&&!key.equals(quotes.get(0)[2]))throw error(HttpStatus.CONFLICT,"CHECKOUT_KEY_CHANGED","저장된 요청 키로 결과를 확인하세요.");
         var expires=(LocalDateTime)quotes.get(0)[0];
         if(!expires.toInstant(ZoneOffset.UTC).isAfter(clock.instant()))throw error(HttpStatus.CONFLICT,"QUOTE_EXPIRED","확인 시간이 지났어요. 최신 가격을 다시 확인하세요.");
         var expected=jdbc.query("SELECT product_id,quantity,unit_price,catalog_revision FROM checkout_quote_items WHERE quote_id=? ORDER BY product_id",
