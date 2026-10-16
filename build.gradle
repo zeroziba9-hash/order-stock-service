@@ -50,6 +50,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// Each cached integration context owns a DB pool; bound idle contexts, not test concurrency.
+	systemProperty 'spring.test.context.cache.maxSize', '8'
 	outputs.dir layout.buildDirectory.dir('generated-snippets')
 	// A filtered/failed run must never leave snippets from an older successful run.
 	doFirst {

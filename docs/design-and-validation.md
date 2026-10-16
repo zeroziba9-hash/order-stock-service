@@ -176,3 +176,5 @@ Java 17·MySQL 8.4, Docker가 보고한 CPU 16개·메모리 약 15.4 GiB 환경
 공개 환경의 모니터링 인증·알림·장기 저장과 만료 스케줄러 전체 건강 상태 점검은 후속 범위입니다.
 실제 결제 연동은 웹훅·승인 조회·결제사 멱등 보장·실패 보상 설계를 포함한 별도 범위입니다.
 변경은 [기능 브랜치·PR 규칙](development-workflow.md)에 따라 검토합니다.
+
+통합 테스트의 Spring 컨텍스트 캐시는 최대 8개로 제한합니다. 컨텍스트별 DB 풀을 유지한 채 캐시가 누적되어 MySQL 연결 한도를 소진하지 않게 오래된 컨텍스트를 닫으며, 개별 테스트의 풀 크기·동시 요청 수는 줄이지 않습니다. [Spring 컨텍스트 캐시 안내](https://docs.spring.io/spring-framework/reference/testing/testcontext-framework/ctx-management/caching.html)를 따릅니다.
