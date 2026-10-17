@@ -40,13 +40,13 @@
     open(dialog, initial) {
       if (dialog.open) return;
       const opener = activation?.isConnected ? activation : document.activeElement === document.body ? lastFocus : document.activeElement;
-      const openedRoute = location.hash;
       dialog.addEventListener("close", () => requestAnimationFrame(() => {
         // A nested confirmation can close while its parent dialog stays open.
         const activeDialog = document.querySelector("dialog[open]");
         if (activeDialog && !activeDialog.contains(opener)) return;
         const current = document.activeElement;
-        if (location.hash !== openedRoute && current !== document.body && !dialog.contains(current) && canFocus(current)) return;
+        // A close animation must not steal focus from a field the user has already started editing.
+        if (current !== opener && current !== document.body && !dialog.contains(current) && canFocus(current)) return;
         if (canFocus(opener)) opener.focus({ preventScroll: true });
         else if (!activeDialog && (!canFocus(document.activeElement) || document.activeElement === document.body)) {
           const target = [...document.querySelectorAll("main h1, main h2")].find(canFocus) || document.querySelector("main");

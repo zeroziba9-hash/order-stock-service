@@ -9,6 +9,7 @@
   const state = { user: null, products: [], orders: [], next: null, filter: "all", register: false, selected: null, config: {}, epoch: 0, ordersLoading: false };
   const pendingKeys = new Map();
   let tossEnabled=false,tossReady=true,tossStates=new Map();
+  let authReady=false;
   let recovery = [], recoveryRequest = 0, recoveryBusy = false;
   document.addEventListener("error",event => {
     const photo = event.target;
@@ -249,8 +250,8 @@
     $("#product-subtotal").textContent = selectedProduct && Number.isInteger(quantity) && quantity > 0 ? money(BigInt(selectedProduct.price)*BigInt(quantity)) : "—";
   }
   function syncProductActions() {
-    $("#product-add").disabled = !selectedProduct || selectedProduct.stock < 1 || Boolean(state.user && (cartBusy || cartPending || !cartReady));
-    $("#product-buy").disabled = !selectedProduct || selectedProduct.stock < 1;
+    $("#product-add").disabled = !authReady || !selectedProduct || selectedProduct.stock < 1 || Boolean(state.user && (cartBusy || cartPending || !cartReady));
+    $("#product-buy").disabled = !authReady || !selectedProduct || selectedProduct.stock < 1;
   }
   $("#product-retry").addEventListener("click",loadProductDetail);
   $("#product-quantity").addEventListener("input",updateProductSubtotal);
@@ -381,9 +382,11 @@
     $("#cart-checkout").disabled = !state.user || (!cart.length && !cartPending) || cartBusy || (!cartReady && !cartPending);
     $("#cart-checkout").textContent = cartPending ? "같은 주문 결과 다시 확인 →" : "가격 확인하고 함께 주문 →";
     $("#refresh-cart").disabled = !state.user || cartBusy; syncProductActions(); renderRecovery();
-    document.querySelectorAll("[data-add-cart]").forEach(button => { button.disabled = Boolean(state.user && frozen) || state.products.find(item => item.id === Number(button.dataset.addCart))?.stock === 0; });
+    document.querySelectorAll("[data-add-cart]").forEach(button => { button.disabled = !authReady || Boolean(state.user && frozen) || state.products.find(item => item.id === Number(button.dataset.addCart))?.stock === 0; });
+    document.querySelectorAll("[data-buy]").forEach(button => { button.disabled = !authReady || state.products.find(item => item.id === Number(button.dataset.buy))?.stock === 0; });
   }
   async function addToCart(id,quantity = 1) {
+    if (!authReady) return;
     if (!state.user) return showAuth(() => addToCart(id,quantity));
     const epoch = state.epoch;
     if (!cartReady && !cartBusy && !cartPending) await loadCart();
@@ -571,6 +574,7 @@
   }
 
   function purchase(productId,initialQuantity = 1,source = null) {
+    if (!authReady) return;
     if (!state.user) return showAuth(() => purchase(productId,initialQuantity,source));
     const waiting = readPending("direct"), saved = waiting?.items?.[0];
     const product = saved ? { ...saved, stock: saved.quantity } : source || state.products.find((item) => item.id === productId);
@@ -695,7 +699,7 @@
         await api("/auth/register", { method: "POST", body: account });
         state.register = false; renderAuth(); notify("회원가입이 완료됐어요. 입력한 정보로 로그인해 주세요."); return;
       }
-      state.user = await api("/auth/login", { method: "POST", form: account }); state.epoch++;
+      state.user = await api("/auth/login", { method: "POST", form: account }); authReady=true;state.epoch++;
       dialog.close(); $("#auth-form").reset(); renderAccount(); renderProfile(); await loadOrders(); if (location.hash === "#account") await loadSessions(); notify("스톡룸에 오신 걸 환영해요.");
       const callback = afterLogin; afterLogin = null; callback?.();
     } catch (error) {
@@ -753,7 +757,7 @@
     const epoch = state.epoch;
     renderOrders(); route();
     await Promise.all([(async()=>{try{tossEnabled=(await api("/payments/toss/config")).enabled;}catch{/* Unconfigured payment UI stays hidden. */}})(), (async () => { try { $("#forgot-password").hidden = !(await api("/auth/password-reset/config")).enabled; } catch { /* Unconfigured recovery remains hidden. */ } })(), loadProducts(), (async () => { try { state.config = await api("/storefront/config"); } catch { /* Mock actions remain hidden if configuration is unavailable. */ } })(),
-      (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); renderProfile(); if (location.hash === "#orders") await loadOrders(); if (location.hash === "#account") await loadSessions(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } })()]);
+      (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); renderProfile(); if (location.hash === "#orders") await loadOrders(); if (location.hash === "#account") await loadSessions(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } finally { authReady=true;renderCart(); } })()]);
   }
   init();
 })();

@@ -13,7 +13,7 @@ if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: phase === 'toss' ? '**/toss.spec.cjs' : phase === 'auth' ? '**/auth-limits.spec.cjs' : phase === 'expiration' ? '**/expiration.spec.cjs' : ['**/accessibility.spec.cjs','**/storefront.spec.cjs','**/admin.spec.cjs','**/account.spec.cjs','**/expansion.spec.cjs','**/checkout.spec.cjs','**/product-detail.spec.cjs','**/media-recovery.spec.cjs','**/password-reset.spec.cjs'],
+  testMatch: phase === 'toss' ? '**/toss.spec.cjs' : phase === 'auth' ? '**/auth-limits.spec.cjs' : phase === 'expiration' ? '**/expiration.spec.cjs' : ['**/readiness.spec.cjs','**/accessibility.spec.cjs','**/storefront.spec.cjs','**/admin.spec.cjs','**/account.spec.cjs','**/expansion.spec.cjs','**/checkout.spec.cjs','**/product-detail.spec.cjs','**/media-recovery.spec.cjs','**/password-reset.spec.cjs'],
   outputDir: phase === 'normal' ? 'test-results' : `${phase}-results`,
   fullyParallel: false,
   workers: 1,
