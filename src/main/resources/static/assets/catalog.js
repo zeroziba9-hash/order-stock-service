@@ -207,7 +207,7 @@
   }
   function confirm(text) {
     $('#catalog-confirm-message').textContent=text; const dialog=$('#catalog-confirm'); dialog.returnValue='no';
-    return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='yes'),{once:true}); dialog.showModal();});
+    return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='yes'),{once:true}); StockroomFocus.open(dialog);});
   }
   $('#create-product').addEventListener('submit',async event=>{
     event.preventDefault(); if(state.busy||state.blocked) return;

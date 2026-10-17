@@ -41,7 +41,7 @@ HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Gr
 
 [이메일 비밀번호 복구와 로컬 수신함](docs/password-recovery.md)은 SMTP 설정 시 사용할 수 있습니다. 관리 상품 목록은 이미지·설명·규격의 빈 항목을 표시합니다. 기존 데모 상품에 자료를 임의로 채우지 않습니다.
 
-**확인된 결과:** 백엔드 테스트 415개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium·Firefox·WebKit E2E 각각 108개, 총 324개 통과(브라우저별 일반 100 + 자동 만료 2 + 인증 제한 6). WebKit은 실제 iPhone Safari 검증과 구분합니다.
+**확인된 결과(2026-10-16):** 백엔드 테스트 415개를 두 차감 방식에서 각각 통과, 데스크톱·모바일 Chromium·Firefox·WebKit E2E 각각 108개, 총 324개 통과(브라우저별 일반 100 + 자동 만료 2 + 인증 제한 6). WebKit은 실제 iPhone Safari 검증과 구분합니다.
 별도 HTTP 부하 검증에서 동시성 1·8·32 모두 재고 10개에 주문 10건만 생성했습니다.
 후속 차감 방식 비교는 워밍업과 36회 반복 측정에서 성공 주문 8,640건·원장 잔액·취소 후 복구를 확인했고, 개선 근거가 부족해 기본 행 잠금 방식을 유지했습니다.
 테스트 조건과 실제 측정값은 [설계와 검증 기록](docs/design-and-validation.md)에 정리했습니다.
@@ -52,6 +52,9 @@ HTML/CSS/JavaScript · Docker Compose · Caddy · Micrometer · Prometheus · Gr
 [상품 이미지와 주문 요청 복구](docs/product-images-and-order-recovery.md)에서 관리 방법과 응답 유실 후 확인 정책을 설명합니다.
 
 ## 실행과 읽을 문서
+
+Windows에서는 [서버 실행 도구](docs/local-launcher.md)로 기존 Compose 서버를 시작·상태 확인·중지할 수 있습니다.
+[변경 기록](CHANGELOG.md)과 [릴리스 확인 절차](docs/release-checklist.md)에서 후보 검증과 외부 검증의 남은 항목을 확인하세요.
 
 [Docker 실행](docs/docker.md)에 따라 `.env`를 준비한 뒤 저장소 루트에서 실행합니다.
 

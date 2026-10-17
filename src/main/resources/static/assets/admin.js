@@ -90,7 +90,7 @@
   function confirmAdjustment(intent) {
     const dialog=$('#inventory-confirm');
     $('#inventory-confirm-message').textContent=`${selected().name}의 재고를 ${intent.delta>0?'+':''}${number(intent.delta)}개 조정합니다. 사유: ${intent.reason}`;
-    return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='yes'),{once:true}); dialog.returnValue='no'; dialog.showModal();});
+    return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='yes'),{once:true}); dialog.returnValue='no'; StockroomFocus.open(dialog);});
   }
   async function loadLedger(append=false) {
     if(!state.selected) return;

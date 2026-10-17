@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "project": "order-stock-service",
+  "envFile": ".env",
+  "composeFiles": ["compose.yaml"]
+}
