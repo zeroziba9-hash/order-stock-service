@@ -156,7 +156,8 @@ public class TossTransactions {
             store.jdbc().update("UPDATE toss_payments SET outbound_disabled=TRUE WHERE id=?",row.id());
         } else if (current.status().equals("CONFIRMING")) store.jdbc().update("UPDATE toss_payments SET status='UNKNOWN' WHERE id=?",row.id());
         var updated=require(row.id());
-        if (outcome==TossApiClient.Outcome.APPROVED && updated.status().equals("PAID"))
+        if ((outcome==TossApiClient.Outcome.APPROVED && updated.status().equals("PAID"))
+                || (outcome==TossApiClient.Outcome.CANCELED && updated.status().equals("CANCELED")))
             store.jdbc().update("UPDATE toss_payments SET outbound_disabled=FALSE WHERE id=?",row.id());
         int attempts=outcome==TossApiClient.Outcome.APPROVED && updated.status().equals("PAID")?0:Math.min(20,updated.attempts()+1);
         LocalDateTime next=Set.of("FAILED","CANCELED").contains(updated.status())?null:now().plusSeconds(updated.status().equals("PAID")?300:Math.min(300,5L<<Math.min(attempts,6)));

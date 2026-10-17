@@ -189,6 +189,12 @@ class TossIntegrationTests {
         checkout();jdbc.update("UPDATE toss_payments SET status='UNKNOWN',outbound_disabled=TRUE WHERE id=?",merchant);due();
         assertThat(service.reconcile(owner,merchant).pending()).isTrue();assertThat(confirms.get()).isZero();assertThat(stock()).isEqualTo(8);
     }
+    @Test void restoredSnapshotCanObserveCompletedRefundWithoutAnApprovalKey() {
+        checkout();jdbc.update("UPDATE toss_payments SET status='UNKNOWN',outbound_disabled=TRUE WHERE id=?",merchant);remote.set("CANCELED");due();
+        var result=service.reconcile(owner,merchant);assertThat(result.status()).isEqualTo("CANCELED");assertThat(result.reviewRequired()).isFalse();
+        assertThat(stock()).isEqualTo(10);assertThat(count("payment_attempts")).isEqualTo(1);assertThat(count("refund_attempts")).isEqualTo(1);
+        assertThat(confirms.get()).isZero();assertThat(cancels.get()).isZero();
+    }
     @Test void protectedPendingOrderDoesNotStarveTheExpirationBatch() {
         checkout();transactions.confirm(owner,merchant,paymentKey,30000);
         long ordinary=orders.create(owner,new CreateOrderRequest(product,2)).orderId();
