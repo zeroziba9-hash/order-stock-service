@@ -81,6 +81,14 @@ test('account, cart and admin screens pass accessibility checks without changing
   await page.goto('/catalog.html');
   await expect(page.locator('#catalog-products button').first()).toBeVisible();
   await expect(page.locator('#edit-submit')).toBeEnabled();
+  await expect(page.locator('#content-status')).toContainText('설명 수정 버전');
+  const history = page.getByRole('region', {name:'상품 설명 변경 이력', exact:true});
+  await history.focus();
+  await expect(history).toBeFocused();
+  if (await history.evaluate(element=>element.scrollHeight > element.clientHeight)) {
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(()=>history.evaluate(element=>element.scrollTop)).toBeGreaterThan(0);
+  }
   await audit(page);
   await page.locator('#edit-price').fill(String(Number(await page.locator('#edit-price').inputValue()) + 1));
   await page.locator('#edit-submit').click();

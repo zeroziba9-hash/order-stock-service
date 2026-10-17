@@ -92,7 +92,9 @@ try {
         Write-Output ('Project: ' + $settings.project)
         Write-Output $rows
         Write-Output ('URL: ' + $origin + '/#shop')
-        if (Test-Ready $origin) { Write-Output 'Readiness: UP'; exit 0 }
+        $appId = (Invoke-Docker ($compose + @('ps', '-q', 'app'))).Text.Trim()
+        $running = $appId -and (Invoke-Docker -DockerArguments @('inspect', $appId, '--format', '{{.State.Running}}')).Text.Trim() -eq 'true'
+        if ($running -and (Test-Ready $origin)) { Write-Output 'Readiness: UP'; exit 0 }
         Write-Output 'Readiness: unavailable'; exit 1
     }
     $exists = Invoke-Docker -DockerArguments @('volume', 'inspect', $volume, '--format', '{{.Name}}') -AllowFailure

@@ -1,11 +1,13 @@
 """Exercise Windows launcher lifecycle using a fresh disposable Compose database only."""
 import argparse
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
 from pathlib import Path
 import secrets
 import subprocess
 import tempfile
+import threading
 import uuid
 
 
@@ -75,6 +77,27 @@ def main():
             if docker(['volume', 'inspect', volume], check=False).returncode != 0:
                 raise RuntimeError('Stop removed the database volume')
             launcher('status', success=False)
+            class UnrelatedServer(BaseHTTPRequestHandler):
+                def do_GET(self):
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(b'{"status":"UP"}')
+
+                def log_message(self, *_):
+                    pass
+
+            # Another process answering UP at the same address must not impersonate this project.
+            unrelated = HTTPServer(('127.0.0.1', 18086), UnrelatedServer)
+            thread = threading.Thread(target=unrelated.serve_forever, daemon=True)
+            thread.start()
+            try:
+                launcher('status', success=False)
+            finally:
+                unrelated.shutdown()
+                unrelated.server_close()
+                thread.join()
+            checks.append('unrelatedHealthyServerCannotImpersonateStoppedProject')
             launcher('start')
             if sql('CHECKSUM TABLE products,launcher_probe EXTENDED;') != before:
                 raise RuntimeError('Restart did not preserve data')
