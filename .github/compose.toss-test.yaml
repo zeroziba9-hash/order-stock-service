@@ -1,0 +1,22 @@
+# Only for disposable loopback browser fixtures, never for a persistent demo or production.
+services:
+  pgstub:
+    image: python:3.13-alpine
+    command: ["python", "/fixture/toss-pg.py"]
+    volumes:
+      - ./.github/fixtures/toss-pg.py:/fixture/toss-pg.py:ro
+    ports:
+      - "127.0.0.1:18028:8090"
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: local,pg-stub
+      APP_TOSS_ENABLED: "true"
+      APP_TOSS_CLIENT_KEY: test_ck_browser_fixture
+      APP_TOSS_SECRET_KEY: test_sk_browser_fixture
+      APP_TOSS_ORIGIN: http://127.0.0.1:18083
+      APP_TOSS_STUB_ENABLED: "true"
+      APP_TOSS_STUB_URL: http://pgstub:8090
+      APP_TOSS_RECOVERY_DELAY: "1000"
+    depends_on:
+      pgstub:
+        condition: service_started

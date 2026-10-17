@@ -15,6 +15,7 @@ import java.time.temporal.ChronoUnit;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import com.zeroziba.orderstock.payment.toss.TossPaymentGuard;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -28,8 +29,11 @@ public class OrderService {
     private final StockAllocator allocator;
     private final InventoryLedger ledger;
 
+    private final TossPaymentGuard toss;
+
     public OrderService(ProductRepository productRepository, OrderRepository orderRepository,
-            Clock clock, OrderExpirationProperties expiration, OrderMetrics metrics, StockAllocator allocator, InventoryLedger ledger) {
+            Clock clock, OrderExpirationProperties expiration, OrderMetrics metrics, StockAllocator allocator, InventoryLedger ledger, TossPaymentGuard toss) {
+        this.toss=toss;
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.clock = clock;
@@ -121,10 +125,12 @@ public class OrderService {
         }
         PurchaseOrder order = orderRepository.findByIdForUpdate(orderId, userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "주문을 찾을 수 없습니다."));
+        toss.requireCancelable(orderId);
         if (!order.cancel()) {
             // 이미 취소된 주문은 최초 취소 시각과 결과를 그대로 반환한다.
             return OrderResponse.from(order);
         }
+        toss.closeUnused(orderId, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
         for (OrderItem item : order.getItems().stream()
                 .sorted(Comparator.comparing(OrderItem::getProductId)).toList()) {
             Product product = productRepository.findByIdForUpdate(item.getProductId())

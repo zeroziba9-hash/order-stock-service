@@ -3,6 +3,8 @@
 (() => {
   let lastFocus;
   let activation;
+  let interaction=0;
+  for(const type of ["pointerdown","keydown","input"])document.addEventListener(type,()=>{interaction++;},true);
   document.addEventListener("focusin", event => {
     if (event.target !== document.body) lastFocus = event.target;
     activation = null;
@@ -40,19 +42,24 @@
     open(dialog, initial) {
       if (dialog.open) return;
       const opener = activation?.isConnected ? activation : document.activeElement === document.body ? lastFocus : document.activeElement;
-      const openedRoute = location.hash;
-      dialog.addEventListener("close", () => requestAnimationFrame(() => {
+      const openedRoute=location.hash;
+      dialog.addEventListener("close", () => {
+        const closedAt=interaction;
+        requestAnimationFrame(() => {
         // A nested confirmation can close while its parent dialog stays open.
         const activeDialog = document.querySelector("dialog[open]");
         if (activeDialog && !activeDialog.contains(opener)) return;
         const current = document.activeElement;
-        if (location.hash !== openedRoute && current !== document.body && !dialog.contains(current) && canFocus(current)) return;
+        // Native WebKit restoration may pick a different field. Preserve a later user action,
+        // while still restoring the opener when the browser alone moved focus.
+        if ((interaction!==closedAt || location.hash!==openedRoute) && current !== document.body && !dialog.contains(current) && canFocus(current)) return;
         if (canFocus(opener)) opener.focus({ preventScroll: true });
         else if (!activeDialog && (!canFocus(document.activeElement) || document.activeElement === document.body)) {
           const target = [...document.querySelectorAll("main h1, main h2")].find(canFocus) || document.querySelector("main");
           if (target) { target.tabIndex = -1; target.focus({ preventScroll: true }); }
         }
-      }), { once: true });
+        });
+      }, { once: true });
       dialog.showModal();
       if (initial && canFocus(dialog.querySelector(initial))) dialog.querySelector(initial).focus();
     },

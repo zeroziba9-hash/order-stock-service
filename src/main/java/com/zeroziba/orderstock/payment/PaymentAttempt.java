@@ -34,6 +34,11 @@ public class PaymentAttempt {
         this.createdAt = createdAt.truncatedTo(ChronoUnit.MICROS);
     }
 
+    public static PaymentAttempt approved(long orderId, String key, long amount, LocalDateTime at) {
+        var payment = new PaymentAttempt(); payment.orderId=orderId; payment.requestKey=key;
+        payment.amount=amount; payment.status=Status.SUCCEEDED; payment.createdAt=at.truncatedTo(ChronoUnit.MICROS); return payment;
+    }
+
     public Long getId() { return id; }
     public long getOrderId() { return orderId; }
     public long getAmount() { return amount; }

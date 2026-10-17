@@ -8,6 +8,8 @@
   const statuses = { CREATED: "결제 대기", PAID: "결제 완료", CANCELLED: "취소 완료", REFUNDED: "환불 완료", EXPIRED: "주문 만료" };
   const state = { user: null, products: [], orders: [], next: null, filter: "all", register: false, selected: null, config: {}, epoch: 0, ordersLoading: false };
   const pendingKeys = new Map();
+  let tossEnabled=false,tossReady=true,tossStates=new Map();
+  let authReady=false;
   let recovery = [], recoveryRequest = 0, recoveryBusy = false;
   document.addEventListener("error",event => {
     const photo = event.target;
@@ -98,6 +100,7 @@
   function renderAccount() {
     const owner = state.user?.userId || null;
     if (cartOwner !== owner) {
+      tossStates=new Map();tossReady=true;
       cartOwner = owner; cart = []; cartPending = null; cartBusy = false; cartReady = false; cartRevision = 0; cartRequest++;
       if (owner) {
         cartPending = readPending("cart");
@@ -159,7 +162,7 @@
     if (!state.user) list.innerHTML = '<div class="empty"><strong>나만의 컬렉션을 확인하세요.</strong>로그인하면 다른 기기에서 주문한 내역도 볼 수 있어요.<br><button class="button primary" data-login>로그인하기 →</button></div>';
     else if (!state.orders.length && Object.keys(orderFilters).length) list.innerHTML = '<div class="empty"><strong>조건에 맞는 주문이 없어요.</strong><p>날짜나 주문 상태를 바꿔보세요.</p><button class="button" data-reset-orders>전체 주문 보기</button></div>';
     else if (!state.orders.length) list.innerHTML = '<div class="empty"><strong>아직 담아 둔 취향이 없네요.</strong>첫 번째 컬렉션을 둘러보고 마음에 드는 상품을 골라보세요.<br><a class="button primary" href="#shop">상품 둘러보기 ↗</a></div>';
-    else list.innerHTML = state.orders.map((order) => `<article class="order-card"><div class="order-top"><div><span class="order-number">ORDER #${escape(order.orderId)}</span><time class="order-date" datetime="${escape(order.createdAt)}">${escape(date(order.createdAt))}</time></div>${badge(order)}</div><div class="order-items">${order.items.map((item) => `${escape(item.productName)} <small>· ${escape(item.quantity)}개</small>`).join("<br>")}</div><div class="order-bottom"><strong class="price">${escape(money(order.totalAmount))}</strong><div class="order-actions"><button class="button ghost small" data-detail="${escape(order.orderId)}">상세·이력 보기 ↗</button>${order.status === "CREATED" ? `<button class="button small" data-cancel="${escape(order.orderId)}">주문 취소</button>` : ""}</div></div></article>`).join("");
+    else list.innerHTML = state.orders.map((order) => `<article class="order-card"><div class="order-top"><div><span class="order-number">ORDER #${escape(order.orderId)}</span><time class="order-date" datetime="${escape(order.createdAt)}">${escape(date(order.createdAt))}</time></div>${badge(order)}</div><div class="order-items">${order.items.map((item) => `${escape(item.productName)} <small>· ${escape(item.quantity)}개</small>`).join("<br>")}</div><div class="order-bottom"><strong class="price">${escape(money(order.totalAmount))}</strong><div class="order-actions"><button class="button ghost small" data-detail="${escape(order.orderId)}">상세·이력 보기 ↗</button>${order.status === "CREATED" ? `<button class="button small" data-cancel="${escape(order.orderId)}" ${!tossReady || tossStates.get(order.orderId)?.pending ? "disabled" : ""}>주문 취소</button>` : ""}</div></div></article>`).join("");
     $("#load-more").hidden = !state.user || !state.next;
     renderAccount();
   }
@@ -173,6 +176,11 @@
       if (append && state.next) parameters.set("beforeId",state.next);
       const page = await api(`/orders${parameters.size ? `?${parameters}` : ""}`);
       if (epoch !== state.epoch || requestId !== ordersRequest) return;
+      tossReady=false;renderOrders();
+      const ids=page.orders.map(order=>order.orderId);
+      const gateway=ids.length?await api(`/payments/toss/states?ids=${ids.join(",")}`):[];
+      if (epoch !== state.epoch || requestId !== ordersRequest) return;
+      if(!append)tossStates=new Map();for(const payment of gateway)tossStates.set(payment.orderId,payment);tossReady=true;
       state.orders = append ? [...state.orders, ...page.orders] : page.orders;
       state.next = page.nextBeforeId; renderOrders();
     } catch (error) {
@@ -242,8 +250,8 @@
     $("#product-subtotal").textContent = selectedProduct && Number.isInteger(quantity) && quantity > 0 ? money(BigInt(selectedProduct.price)*BigInt(quantity)) : "—";
   }
   function syncProductActions() {
-    $("#product-add").disabled = !selectedProduct || selectedProduct.stock < 1 || Boolean(state.user && (cartBusy || cartPending || !cartReady));
-    $("#product-buy").disabled = !selectedProduct || selectedProduct.stock < 1;
+    $("#product-add").disabled = !authReady || !selectedProduct || selectedProduct.stock < 1 || Boolean(state.user && (cartBusy || cartPending || !cartReady));
+    $("#product-buy").disabled = !authReady || !selectedProduct || selectedProduct.stock < 1;
   }
   $("#product-retry").addEventListener("click",loadProductDetail);
   $("#product-quantity").addEventListener("input",updateProductSubtotal);
@@ -374,9 +382,11 @@
     $("#cart-checkout").disabled = !state.user || (!cart.length && !cartPending) || cartBusy || (!cartReady && !cartPending);
     $("#cart-checkout").textContent = cartPending ? "같은 주문 결과 다시 확인 →" : "가격 확인하고 함께 주문 →";
     $("#refresh-cart").disabled = !state.user || cartBusy; syncProductActions(); renderRecovery();
-    document.querySelectorAll("[data-add-cart]").forEach(button => { button.disabled = Boolean(state.user && frozen) || state.products.find(item => item.id === Number(button.dataset.addCart))?.stock === 0; });
+    document.querySelectorAll("[data-add-cart]").forEach(button => { button.disabled = !authReady || Boolean(state.user && frozen) || state.products.find(item => item.id === Number(button.dataset.addCart))?.stock === 0; });
+    document.querySelectorAll("[data-buy]").forEach(button => { button.disabled = !authReady || state.products.find(item => item.id === Number(button.dataset.buy))?.stock === 0; });
   }
   async function addToCart(id,quantity = 1) {
+    if (!authReady) return;
     if (!state.user) return showAuth(() => addToCart(id,quantity));
     const epoch = state.epoch;
     if (!cartReady && !cartBusy && !cartPending) await loadCart();
@@ -564,6 +574,7 @@
   }
 
   function purchase(productId,initialQuantity = 1,source = null) {
+    if (!authReady) return;
     if (!state.user) return showAuth(() => purchase(productId,initialQuantity,source));
     const waiting = readPending("direct"), saved = waiting?.items?.[0];
     const product = saved ? { ...saved, stock: saved.quantity } : source || state.products.find((item) => item.id === productId);
@@ -596,11 +607,11 @@
     $("#order-detail").innerHTML = '<p class="history-empty">주문을 불러오고 있어요.</p>';
     if (!$("#detail-dialog").open) StockroomFocus.open($("#detail-dialog"));
     try {
-      const [order, payments, refunds] = await Promise.all([api(`/orders/${orderId}`), api(`/orders/${orderId}/payments`), api(`/orders/${orderId}/refunds`)]);
+      const [order, payments, refunds, toss] = await Promise.all([api(`/orders/${orderId}`), api(`/orders/${orderId}/payments`), api(`/orders/${orderId}/refunds`), api(`/orders/${orderId}/toss`)]);
       if (epoch !== state.epoch || requestId !== detailRequest || !$("#detail-dialog").open) return;
-      const mockPay = state.config.mockPayments && order.status === "CREATED" && Date.now() < Date.parse(order.expiresAt);
-      const mockRefund = state.config.mockRefunds && order.status === "PAID";
-      $("#order-detail").innerHTML = `<div class="detail-summary">${badge(order)}<time datetime="${escape(order.createdAt)}">${escape(date(order.createdAt))}</time></div>${order.items.map((item) => `<div class="detail-item"><span>${escape(item.productName)}<br>${escape(money(item.unitPrice))} × ${escape(item.quantity)}</span><strong>${escape(money(item.unitPrice * item.quantity))}</strong></div>`).join("")}<div class="total-row"><span>총 주문 금액</span><strong>${escape(money(order.totalAmount))}</strong></div>${deadlineNotice(order)}${order.cancelledAt ? `<p class="field-help">${order.status === "REFUNDED" ? "환불 완료" : order.status === "EXPIRED" ? "주문 만료" : "취소 완료"} · ${escape(date(order.cancelledAt))}</p>` : ""}${history("결제 이력", payments)}${history("환불 이력", refunds)}${mockPay || mockRefund ? '<p class="demo-note">로컬 체험용 모의 결제·환불이에요. 실제 금액은 청구되지 않아요.</p>' : ""}<div class="detail-actions">${order.status === "CREATED" ? `<button class="button small" data-cancel="${orderId}">주문 취소</button>` : ""}${mockPay ? `<button class="button primary small" data-mock="payments" data-id="${orderId}">모의 결제</button>` : ""}${mockRefund ? `<button class="button primary small" data-mock="refunds" data-id="${orderId}">모의 전액 환불</button>` : ""}</div>`;
+      const mockPay = !tossEnabled && ["NONE","FAILED","CANCELED"].includes(toss.status) && state.config.mockPayments && order.status === "CREATED" && Date.now() < Date.parse(order.expiresAt);
+      const mockRefund = ["NONE","FAILED"].includes(toss.status) && state.config.mockRefunds && order.status === "PAID";
+      $("#order-detail").innerHTML = `<div class="detail-summary">${badge(order)}<time datetime="${escape(order.createdAt)}">${escape(date(order.createdAt))}</time></div>${order.items.map((item) => `<div class="detail-item"><span>${escape(item.productName)}<br>${escape(money(item.unitPrice))} × ${escape(item.quantity)}</span><strong>${escape(money(item.unitPrice * item.quantity))}</strong></div>`).join("")}<div class="total-row"><span>총 주문 금액</span><strong>${escape(money(order.totalAmount))}</strong></div>${deadlineNotice(order)}${order.cancelledAt ? `<p class="field-help">${order.status === "REFUNDED" ? "환불 완료" : order.status === "EXPIRED" ? "주문 만료" : "취소 완료"} · ${escape(date(order.cancelledAt))}</p>` : ""}${toss.status!=="NONE"?`<section class="gateway-status" aria-label="카드 테스트 결제 상태"><p role="status"><strong>${escape(StockroomToss.label(toss))}</strong></p>${toss.pending?'<p class="field-help">결과를 확인할 때까지 취소와 자동 만료가 보류돼요. 새 결제를 시작하지 말고 결과를 다시 확인하세요.</p>':""}${toss.reviewRequired?'<p class="field-help">결제 정보 확인이 필요해요. 자동 재승인 없이 결제사의 결과를 조회해요.</p>':""}</section>`:""}${tossEnabled?`<p class="demo-note">실제 금액이 청구되지 않는 카드 테스트 결제예요.</p><div class="detail-actions">${order.status==="CREATED"&&!toss.pending&&Date.now()<Date.parse(order.expiresAt)?`<button class="button primary small" data-toss-pay="${orderId}">테스트 카드 결제</button>`:""}${toss.status==="PAID"&&!toss.reviewRequired?`<button class="button primary small" data-toss-refund="${escape(toss.checkoutId)}" data-order="${orderId}">테스트 전액 환불</button>`:""}${toss.pending||toss.status==="PAID"?`<button class="button small" data-toss-check="${escape(toss.checkoutId)}" data-order="${orderId}">결제 결과 다시 확인</button>`:""}</div>`:""}${history("결제 이력", payments)}${history("환불 이력", refunds)}${mockPay || mockRefund ? '<p class="demo-note">로컬 체험용 모의 결제·환불이에요. 실제 금액은 청구되지 않아요.</p>' : ""}<div class="detail-actions">${order.status === "CREATED" && !toss.pending ? `<button class="button small" data-cancel="${orderId}">주문 취소</button>` : ""}${mockPay ? `<button class="button primary small" data-mock="payments" data-id="${orderId}">모의 결제</button>` : ""}${mockRefund ? `<button class="button primary small" data-mock="refunds" data-id="${orderId}">모의 전액 환불</button>` : ""}</div>`;
     } catch (error) { if (epoch === state.epoch && requestId === detailRequest) handleError(error, "#detail-error"); }
   }
 
@@ -637,6 +648,19 @@
     finally { controls.forEach((control) => { control.disabled = false; }); }
   }
 
+  async function tossAction(button) {
+    if(button.dataset.tossRefund && !await confirmAction("카드 테스트 결제를 전액 환불할까요? 결과가 확정되면 재고가 복구돼요."))return;
+    const epoch=state.epoch;button.disabled=true;$("#detail-error").textContent="";
+    try {
+      if(button.dataset.tossPay)await StockroomToss.pay(Number(button.dataset.tossPay));
+      else await StockroomToss.api(`/payments/toss/${button.dataset.tossRefund||button.dataset.tossCheck}/${button.dataset.tossRefund?"refund":"reconcile"}`,{method:"POST",body:{}});
+      if(epoch!==state.epoch)return;
+      await Promise.all([loadProducts(),loadOrders()]);
+      if($("#detail-dialog").open)await detail(Number(button.dataset.order||button.dataset.tossPay));
+    }catch(error){if(epoch===state.epoch)handleError(error,"#detail-error");}
+    finally{button.disabled=false;}
+  }
+
   document.addEventListener("click", (event) => {
     const button = event.target.closest("button"); if (!button || button.disabled) return;
     if (button.matches("[data-close]")) button.closest("dialog").close();
@@ -651,6 +675,7 @@
     else if (button.matches("[data-add-cart]")) addToCart(Number(button.dataset.addCart));
     else if (button.matches("[data-cart-remove]") && !cartPending && !cartBusy) {saveCart(cart.filter(item=>item.id!==Number(button.dataset.cartRemove)));}
     else if (button.matches("[data-detail]")) detail(Number(button.dataset.detail));
+    else if(button.matches("[data-toss-pay], [data-toss-refund], [data-toss-check]")) tossAction(button);
     else if (button.matches("[data-cancel]")) changeOrder(button, "cancel", Number(button.dataset.cancel));
     else if (button.matches("[data-mock]")) changeOrder(button, button.dataset.mock, Number(button.dataset.id));
     else if (button.matches("[data-filter]")) {
@@ -674,7 +699,7 @@
         await api("/auth/register", { method: "POST", body: account });
         state.register = false; renderAuth(); notify("회원가입이 완료됐어요. 입력한 정보로 로그인해 주세요."); return;
       }
-      state.user = await api("/auth/login", { method: "POST", form: account }); state.epoch++;
+      state.user = await api("/auth/login", { method: "POST", form: account }); authReady=true;state.epoch++;
       dialog.close(); $("#auth-form").reset(); renderAccount(); renderProfile(); await loadOrders(); if (location.hash === "#account") await loadSessions(); notify("스톡룸에 오신 걸 환영해요.");
       const callback = afterLogin; afterLogin = null; callback?.();
     } catch (error) {
@@ -731,8 +756,8 @@
   async function init() {
     const epoch = state.epoch;
     renderOrders(); route();
-    await Promise.all([(async () => { try { $("#forgot-password").hidden = !(await api("/auth/password-reset/config")).enabled; } catch { /* Unconfigured recovery remains hidden. */ } })(), loadProducts(), (async () => { try { state.config = await api("/storefront/config"); } catch { /* Mock actions remain hidden if configuration is unavailable. */ } })(),
-      (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); renderProfile(); if (location.hash === "#orders") await loadOrders(); if (location.hash === "#account") await loadSessions(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } })()]);
+    await Promise.all([(async()=>{try{tossEnabled=(await api("/payments/toss/config")).enabled;}catch{/* Unconfigured payment UI stays hidden. */}})(), (async () => { try { $("#forgot-password").hidden = !(await api("/auth/password-reset/config")).enabled; } catch { /* Unconfigured recovery remains hidden. */ } })(), loadProducts(), (async () => { try { state.config = await api("/storefront/config"); } catch { /* Mock actions remain hidden if configuration is unavailable. */ } })(),
+      (async () => { try { const user = await api("/auth/me"); if (epoch !== state.epoch) return; state.user = user; state.epoch++; renderAccount(); renderProfile(); if (location.hash === "#orders") await loadOrders(); if (location.hash === "#account") await loadSessions(); } catch (error) { if (epoch === state.epoch && error.status !== 401) notify(error.message); } finally { authReady=true;renderCart(); } })()]);
   }
   init();
 })();

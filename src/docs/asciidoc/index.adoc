@@ -13,6 +13,9 @@
 
 == 읽기 전에
 
+* 토스 카드 테스트 결제는 기본 비활성화이며 운영에서 활성화할 수 없습니다.
+  새 PG API의 수동 계약·설정·복구 정책은 https://github.com/zeroziba9-hash/order-stock-service/blob/main/docs/toss-test-payments.md[카드 테스트 결제 안내]를 참고하세요.
+  아래 REST Docs 예제의 모의 결제와 별도 경로이며, 실제 토스 테스트 키를 사용한 외부 검증은 아직 수행하지 않았습니다.
 * 예제의 호스트는 로컬 Docker의 `http://localhost:18080`입니다. Java 직접 실행은 기본 8080입니다.
 * 모든 금액은 원 단위 정수, 시각은 UTC ISO-8601(`Z` 접미사)입니다. ID·시각·상품은 테스트마다 달라집니다.
 * `*.example.test` 계정은 테스트 전용입니다. 비밀번호·CSRF 토큰은 `<redacted>` / `<csrf-token>`으로 치환하고 `Set-Cookie`는 제거합니다.

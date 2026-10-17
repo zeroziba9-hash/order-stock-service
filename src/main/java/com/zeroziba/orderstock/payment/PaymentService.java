@@ -12,6 +12,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import com.zeroziba.orderstock.payment.toss.TossPaymentGuard;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -23,8 +24,11 @@ public class PaymentService {
     private final MockOperationsPolicy policy;
     private final Clock clock;
 
+    private final TossPaymentGuard toss;
+
     public PaymentService(OrderRepository orderRepository, PaymentRepository paymentRepository, MockOperationsPolicy policy,
-            Clock clock) {
+            Clock clock, TossPaymentGuard toss) {
+        this.toss=toss;
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.policy = policy;
@@ -55,6 +59,7 @@ public class PaymentService {
             return new PaymentResult(PaymentResponse.from(payment), true);
         }
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        toss.requireMockAllowed(orderId);
         order.requirePayable(now);
         PaymentAttempt payment = new PaymentAttempt(orderId, key, order.getTotalAmount(), request.result(), now);
         if (payment.getStatus() == PaymentAttempt.Status.SUCCEEDED) {

@@ -58,6 +58,8 @@ backups/
 /e2e/expiration-results/
 /e2e/playwright-auth-report/
 /e2e/auth-results/
+/e2e/playwright-toss-report/
+/e2e/toss-results/
 /.upgrade-baseline/
 
 ### Python verification script caches ###

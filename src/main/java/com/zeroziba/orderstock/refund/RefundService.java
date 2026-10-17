@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import com.zeroziba.orderstock.payment.toss.TossPaymentGuard;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -27,8 +28,11 @@ public class RefundService {
     private final MockOperationsPolicy policy;
     private final InventoryLedger ledger;
 
+    private final TossPaymentGuard toss;
+
     public RefundService(OrderRepository orders, PaymentRepository payments, ProductRepository products,
-            RefundRepository refunds, MockOperationsPolicy policy, InventoryLedger ledger) {
+            RefundRepository refunds, MockOperationsPolicy policy, InventoryLedger ledger, TossPaymentGuard toss) {
+        this.toss=toss;
         this.orders = orders;
         this.payments = payments;
         this.products = products;
@@ -58,6 +62,7 @@ public class RefundService {
             }
             return new RefundResult(RefundResponse.from(refund), true);
         }
+        toss.requireMockAllowed(orderId);
         order.requireRefundable();
         var payment = payments.findByOrderIdAndStatus(orderId, PaymentAttempt.Status.SUCCEEDED)
                 .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "PAYMENT_STATE_CONFLICT", "주문의 성공 결제 이력을 확인할 수 없습니다."));

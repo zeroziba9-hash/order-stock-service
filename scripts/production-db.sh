@@ -91,4 +91,10 @@ if [[ $reset_tables == 1 ]]; then
     query 'DELETE FROM password_resets;' > /dev/null
     [[ $(query 'SELECT COUNT(*) FROM password_resets;') == 0 ]] || fail 'Restored password reset links were not invalidated.'
 fi
+# A restored external-payment snapshot must query the provider before any further mutation.
+toss_tables=$(query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='toss_payments';")
+if [[ $toss_tables == 1 ]]; then
+    query "UPDATE toss_payments SET outbound_disabled=TRUE, claim_id=NULL, next_check_at=CASE WHEN status IN ('READY','CONFIRMING','UNKNOWN','PAID','CANCELING') THEN UTC_TIMESTAMP(6) ELSE NULL END, status=CASE WHEN status='READY' THEN 'UNKNOWN' ELSE status END;" > /dev/null
+    [[ $(query 'SELECT COUNT(*) FROM toss_payments WHERE outbound_disabled=FALSE;') == 0 ]] || fail 'Restored payment writes were not suspended.'
+fi
 printf 'RESTORE OK: %s / order_stock_prod. Start the matching app version and verify readiness.\n' "$project"

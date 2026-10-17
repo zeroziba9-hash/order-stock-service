@@ -56,6 +56,24 @@ def main():
         state["recovery"]=client.request("/orders/cart/recovery")
         assert len(state["recovery"])==2 and intent in state["recovery"] and completed in state["recovery"]
         state["media"]={"imageUrl":info["imageUrl"],"hash":image_hash,"checksums":image_history,"intents":state["recovery"]}
+        # A separate fixture account keeps the smoke account's order page contract unchanged.
+        pg=smoke.Client();pg_account={"email":"pg-restore-"+uuid.uuid4().hex+"@example.test","password":uuid.uuid4().hex}
+        pg.request('/auth/register',data=pg_account,expected=201);pg.login(pg_account)
+        fixtures=[]
+        for status in ('READY','CONFIRMING','PAID'):
+            order=pg.request('/orders',data={"productId":product['id'],"quantity":1},key=uuid.uuid4().hex,expected=201)
+            payment='NULL'
+            if status=='PAID':
+                paid=pg.request(f"/orders/{order['orderId']}/payments",data={"result":"SUCCESS"},key=uuid.uuid4().hex,expected=201)
+                payment=str(int(paid['paymentId']))
+            identity='srp_'+uuid.uuid4().hex;key="NULL" if status=='READY' else "'pk_"+identity+"'"
+            sql(f"INSERT INTO toss_payments(id,order_id,request_key,amount,customer_key,status,payment_key,confirm_key,refund_key,payment_id,created_at,confirm_started_at,claim_id,next_check_at) VALUES ('{identity}',{int(order['orderId'])},'{uuid.uuid4()}',{int(order['totalAmount'])},'{uuid.uuid4()}','{status}',{key},'{uuid.uuid4()}','{uuid.uuid4()}',{payment},UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),'{uuid.uuid4()}',UTC_TIMESTAMP(6)+INTERVAL 1 HOUR)")
+            fixtures.append(identity)
+        state['tossFixtures']=fixtures
+        # Cart/recovery views include current inventory, so capture the final source snapshot.
+        state['savedCart']=client.request('/cart')
+        state['recovery']=client.request('/orders/cart/recovery')
+        state['media']['intents']=state['recovery']
         state["products"]=client.request("/products")
         # A real recovery must never resurrect a password-reset link consumed after the snapshot.
         sql(f"INSERT INTO password_resets(user_id,token_hash,auth_version,issued_at,expires_at,window_started_at,request_count) SELECT id,SHA2(UUID(),256),auth_version,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6)+INTERVAL 15 MINUTE,UTC_TIMESTAMP(6),1 FROM app_users WHERE id={user}")
@@ -71,6 +89,11 @@ def main():
         assert sql("CHECKSUM TABLE product_images,product_image_changes EXTENDED")==media["checksums"]
         assert client.request("/orders/cart/recovery")==media["intents"]
         assert sql('SELECT COUNT(*) FROM password_resets')=='0'
+        assert sql('SELECT COUNT(*) FROM toss_payments')=='3'
+        for identity,status in zip(state['tossFixtures'],('UNKNOWN','CONFIRMING','PAID')):
+            flags=sql(f"SELECT CONCAT(status,':',outbound_disabled,':',claim_id IS NULL,':',next_check_at IS NOT NULL) FROM toss_payments WHERE id='{identity}'")
+            assert flags==status+':1:1:1',f'Unexpected restored PG status/flags: {flags}'
         print("PASS: exact normalized image bytes, image revisions/audit and unsubmitted checkout intent restored")
+        print("PASS: restored READY, in-flight and PAID provider rows are fenced and query-only")
 
 if __name__=="__main__":main()
