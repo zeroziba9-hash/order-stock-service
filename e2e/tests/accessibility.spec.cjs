@@ -31,6 +31,11 @@ test('guest pages, authentication dialog and recovery have accessible names and 
   await audit(page);
   await page.keyboard.press('Escape');
   await expect(page.locator('#login-button')).toBeFocused();
+  // Account rendering can replace the button that opened the dialog.
+  await page.locator('#login-button').click();
+  await page.evaluate(()=>document.querySelector('#login-button').remove());
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#shop-view h1')).toBeFocused();
   await page.goto('/reset.html');
   await expect(page.locator('#reset-request-submit')).toBeEnabled();
   await audit(page);

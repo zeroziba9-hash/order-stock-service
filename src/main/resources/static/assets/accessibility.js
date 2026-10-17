@@ -42,7 +42,7 @@
         if (current !== document.body && current !== dialog && !dialog.contains(current) && canFocus(current)) return;
         if (canFocus(opener)) opener.focus({ preventScroll: true });
         else if (!activeDialog && (!canFocus(document.activeElement) || document.activeElement === document.body)) {
-          const target = document.querySelector("main section:not([hidden]) h1, main h1, main");
+          const target = [...document.querySelectorAll("main h1, main h2")].find(canFocus) || document.querySelector("main");
           if (target) { target.tabIndex = -1; target.focus({ preventScroll: true }); }
         }
       }), { once: true });
