@@ -37,6 +37,7 @@
       await window.TossPayments(checkout.clientKey).payment({customerKey:checkout.customerKey}).requestPayment({
         method:"CARD",amount:{currency:"KRW",value:checkout.payment.amount},orderId:checkout.payment.checkoutId,
         orderName:checkout.orderName,successUrl:checkout.successUrl,failUrl:checkout.failUrl,
+        windowTarget:"self",
       });
     } catch { throw new Error("결제창이 닫혔거나 인증을 마치지 못했어요. 내 주문에서 결과를 확인한 뒤 다시 시도하세요."); }
   }
