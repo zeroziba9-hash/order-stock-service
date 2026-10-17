@@ -70,6 +70,10 @@ def main():
             sql(f"INSERT INTO toss_payments(id,order_id,request_key,amount,customer_key,status,payment_key,confirm_key,refund_key,payment_id,created_at,confirm_started_at,claim_id,next_check_at) VALUES ('{identity}',{int(order['orderId'])},'{uuid.uuid4()}',{int(order['totalAmount'])},'{uuid.uuid4()}','{status}',{key},'{uuid.uuid4()}','{uuid.uuid4()}',{payment},UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),'{uuid.uuid4()}',UTC_TIMESTAMP(6)+INTERVAL 1 HOUR)")
             fixtures.append(identity)
         state['tossFixtures']=fixtures
+        # Cart/recovery views include current inventory, so capture the final source snapshot.
+        state['savedCart']=client.request('/cart')
+        state['recovery']=client.request('/orders/cart/recovery')
+        state['media']['intents']=state['recovery']
         state["products"]=client.request("/products")
         # A real recovery must never resurrect a password-reset link consumed after the snapshot.
         sql(f"INSERT INTO password_resets(user_id,token_hash,auth_version,issued_at,expires_at,window_started_at,request_count) SELECT id,SHA2(UUID(),256),auth_version,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6)+INTERVAL 15 MINUTE,UTC_TIMESTAMP(6),1 FROM app_users WHERE id={user}")

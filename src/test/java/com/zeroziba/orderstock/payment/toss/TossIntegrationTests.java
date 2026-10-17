@@ -24,6 +24,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -72,6 +74,7 @@ class TossIntegrationTests {
                     body.put("paymentKey",paymentKey);body.put("currency","KRW");body.put("type","NORMAL");body.put("method","카드");
                     body.put("totalAmount",mode.get().equals("wrong-amount")?1:30000);body.put("balanceAmount",remote.get().equals("CANCELED")?0:30000);
                     body.put("status",mode.get().equals("partial")?"PARTIAL_CANCELED":remote.get());body.put("approvedAt","2026-10-18T09:00:00+09:00");
+                    if (Set.of("ABORTED","EXPIRED").contains(remote.get())) {body.put("method",null);body.put("approvedAt",null);}
                     body.put("cancels",List.of(Map.of("transactionKey","tx_fixture","cancelAmount",30000,"cancelStatus","DONE","canceledAt","2026-10-18T09:01:00+09:00")));
                     reply(exchange,200,JSON.writeValueAsString(body));
                 } catch (Exception error) { try { reply(exchange,500,"{}"); } catch(Exception ignored) {} }
@@ -88,6 +91,7 @@ class TossIntegrationTests {
     @Autowired ProductRepository products;
     @Autowired OrderService orders;
     @Autowired OrderExpirationProcessor expiration;
+    @Autowired OrderRepository orderRepository;
     @Autowired PaymentService mockPayments;
     @Autowired RefundService mockRefunds;
     @Autowired TossTransactions transactions;
@@ -185,9 +189,23 @@ class TossIntegrationTests {
         checkout();jdbc.update("UPDATE toss_payments SET status='UNKNOWN',outbound_disabled=TRUE WHERE id=?",merchant);due();
         assertThat(service.reconcile(owner,merchant).pending()).isTrue();assertThat(confirms.get()).isZero();assertThat(stock()).isEqualTo(8);
     }
+    @Test void protectedPendingOrderDoesNotStarveTheExpirationBatch() {
+        checkout();transactions.confirm(owner,merchant,paymentKey,30000);
+        long ordinary=orders.create(owner,new CreateOrderRequest(product,2)).orderId();
+        var future=Clock.offset(Clock.systemUTC(),Duration.ofDays(1));
+        var worker=new OrderExpirationService(orderRepository,expiration,new OrderExpirationProperties(false,Duration.ofMinutes(30),Duration.ofMinutes(1),1),future);
+        assertThat(worker.expireDueOrders()).isEqualTo(1);assertThat(orders.findById(owner,ordinary).status()).isEqualTo("EXPIRED");
+        assertThat(orders.findById(owner,order).status()).isEqualTo("CREATED");assertThat(stock()).isEqualTo(8);
+    }
     @Test void mutationIsNotRetriedBeyondTwentyFourHours() {
         checkout();transactions.confirm(owner,merchant,paymentKey,30000);jdbc.update("UPDATE toss_payments SET confirm_started_at=UTC_TIMESTAMP(6)-INTERVAL 25 HOUR WHERE id=?",merchant);due();
         assertThat(service.reconcile(owner,merchant).pending()).isTrue();assertThat(confirms.get()).isZero();assertThat(lookups.get()).isEqualTo(1);
+    }
+    @ParameterizedTest @ValueSource(strings={"ABORTED","EXPIRED"})
+    void terminalFailureWithoutMethodClosesReservationGuard(String status) {
+        checkout();transactions.confirm(owner,merchant,paymentKey,30000);remote.set(status);due();
+        assertThat(service.reconcile(owner,merchant).status()).isEqualTo("FAILED");assertThat(confirms.get()).isZero();
+        assertThat(expiration.expire(order,LocalDateTime.now(ZoneOffset.UTC).plusDays(1))).isTrue();assertThat(stock()).isEqualTo(10);
     }
     @Test void declineAllowsNewCheckoutWithMonotonicLatestSelection() {
         checkout();String old=merchant;mode.set("decline");assertThat(confirm().status()).isEqualTo("FAILED");

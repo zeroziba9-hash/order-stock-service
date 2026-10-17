@@ -50,11 +50,15 @@ public class TossApiClient {
             }
             if (!row.id().equals(data.path("orderId").asString("")) || (row.paymentKey()!=null && !row.paymentKey().equals(data.path("paymentKey").asString(""))) || !data.path("paymentKey").asString("").matches("[A-Za-z0-9_.=-]{1,200}")
                     || !"KRW".equals(data.path("currency").asString("")) || !"NORMAL".equals(data.path("type").asString(""))
-                    || !data.path("totalAmount").isIntegralNumber() || data.path("totalAmount").asLong() != row.amount()
-                    || !Set.of("카드", "간편결제").contains(data.path("method").asString(""))
-                    || !data.path("virtualAccount").isNull() && !data.path("virtualAccount").isMissingNode())
+                    || !data.path("totalAmount").isIntegralNumber() || data.path("totalAmount").asLong() != row.amount())
                 return new Result(Outcome.REVIEW, null);
             String status = data.path("status").asString("");
+            // A failed/expired authentication may have no method. A previous approval must never be downgraded.
+            if (Set.of("ABORTED", "EXPIRED").contains(status)) return new Result(
+                    data.path("approvedAt").isNull() || data.path("approvedAt").isMissingNode()?Outcome.REJECTED:Outcome.REVIEW,null);
+            if (!Set.of("카드", "간편결제").contains(data.path("method").asString(""))
+                    || (!data.path("virtualAccount").isNull() && !data.path("virtualAccount").isMissingNode()))
+                return new Result(Outcome.REVIEW, null);
             if (status.equals("DONE")) {
                 if (!data.path("balanceAmount").isIntegralNumber() || data.path("balanceAmount").asLong()!=row.amount()) return new Result(Outcome.REVIEW,null);
                 return new Result(Outcome.APPROVED, utc(data.path("approvedAt").asString()), utc(data.path("approvedAt").asString()), data.path("paymentKey").asString());
@@ -75,7 +79,6 @@ public class TossApiClient {
                     return new Result(Outcome.CANCELED, latest, utc(data.path("approvedAt").asString()), data.path("paymentKey").asString());
                 return new Result(Outcome.REVIEW, null);
             }
-            if (Set.of("ABORTED", "EXPIRED").contains(status)) return new Result(Outcome.REJECTED, null);
             if (status.equals("PARTIAL_CANCELED")) return new Result(Outcome.REVIEW, null);
             return Result.unknown();
         } catch (InterruptedException interrupted) {

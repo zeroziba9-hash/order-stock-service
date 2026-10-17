@@ -38,7 +38,13 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
     @Query("select o from PurchaseOrder o where o.id = :id and o.userId = :userId")
     Optional<PurchaseOrder> findByIdForUpdate(@Param("id") long id, @Param("userId") long userId);
 
-    @Query("select o.id from PurchaseOrder o where o.status = 'CREATED' and o.expiresAt <= :now order by o.expiresAt, o.id")
+    // Filter protected PG orders before applying the batch limit, so they cannot starve other expirations.
+    @Query("""
+            select o.id from PurchaseOrder o where o.status='CREATED' and o.expiresAt<=:now
+            and not exists (select p.id from TossPaymentIndex p where p.orderId=o.id
+                and p.status in ('CONFIRMING','UNKNOWN','CANCELING'))
+            order by o.expiresAt,o.id
+            """)
     List<Long> findDueIds(@Param("now") LocalDateTime now, Pageable pageable);
 
     // Internal expiration worker only; HTTP endpoints always use the owner-scoped lookup above.
