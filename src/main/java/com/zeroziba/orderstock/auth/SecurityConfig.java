@@ -51,10 +51,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/reset.html", "/assets/**", "/storefront/config", "/products", "/actuator/health", "/actuator/health/liveness",
-                                "/actuator/health/readiness", "/auth/csrf", "/products/search", "/products/{id}", "/products/{id}/image", "/auth/password-reset/config").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login", "/auth/password-reset/request", "/auth/password-reset/confirm").permitAll()
+                                "/actuator/health/readiness", "/auth/csrf", "/products/search", "/products/{id}", "/products/{id}/image", "/auth/password-reset/config", "/payments/toss/config", "/payment-result.html").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login", "/auth/password-reset/request", "/auth/password-reset/confirm", "/webhooks/toss/payment").permitAll()
                         .requestMatchers("/admin/**", "/admin.html", "/catalog.html").hasRole("ADMIN")
                         .anyRequest().authenticated())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/webhooks/toss/payment"))
                 .requestCache(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(form -> form.loginProcessingUrl("/auth/login").usernameParameter("email")

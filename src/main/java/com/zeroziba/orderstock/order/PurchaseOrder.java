@@ -126,6 +126,12 @@ public class PurchaseOrder {
         this.paidAt = paidAt;
     }
 
+    public void markGatewayPaid(LocalDateTime paidAt) {
+        if (status != Status.CREATED || paidAt == null) throw new ApiException(HttpStatus.CONFLICT, "PAYMENT_STATE_CONFLICT", "결제 결과와 주문 상태를 확인해야 합니다.");
+        this.status = Status.PAID;
+        this.paidAt = paidAt.truncatedTo(ChronoUnit.MICROS);
+    }
+
     public void requireRefundable() {
         if (status != Status.PAID) {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_NOT_REFUNDABLE", "결제 완료 상태의 주문만 환불할 수 있습니다.");

@@ -44,6 +44,11 @@ public class RefundAttempt {
         this.createdAt = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
     }
 
+    public static RefundAttempt approved(long orderId, long paymentId, String key, long amount, LocalDateTime at) {
+        var refund = new RefundAttempt(); refund.orderId=orderId; refund.paymentId=paymentId; refund.requestKey=key;
+        refund.amount=amount; refund.status=Status.SUCCEEDED; refund.createdAt=at.truncatedTo(ChronoUnit.MICROS); return refund;
+    }
+
     public Long getId() { return id; }
     public long getOrderId() { return orderId; }
     public long getPaymentId() { return paymentId; }

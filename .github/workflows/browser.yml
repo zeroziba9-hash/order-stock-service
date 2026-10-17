@@ -67,6 +67,14 @@ jobs:
         env:
           E2E_AUTH_LIMITS: 'true'
         run: npm test
+      - name: Start disposable Toss HTTP contract fixture
+        # Synthetic SDK and an isolated HTTP provider; no external keys or charges.
+        run: docker compose -f compose.yaml -f .github/compose.browser-test.yaml -f compose.mail-test.yaml -f .github/compose.toss-test.yaml up --no-build --wait --wait-timeout 120
+      - name: Verify test checkout approval, recovery and full refund
+        working-directory: e2e
+        env:
+          E2E_TOSS: 'true'
+        run: npm test
       - name: Upload browser report without network traces
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -79,6 +87,8 @@ jobs:
             e2e/expiration-results/**/*.png
             e2e/playwright-auth-report/
             e2e/auth-results/**/*.png
+            e2e/playwright-toss-report/
+            e2e/toss-results/**/*.png
           if-no-files-found: ignore
           retention-days: 7
       - name: Show failure logs

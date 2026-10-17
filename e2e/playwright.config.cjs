@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:18083';
 const target = new URL(baseURL);
-const phase = process.env.E2E_AUTH_LIMITS === 'true' ? 'auth' : process.env.E2E_EXPIRATION === 'true' ? 'expiration' : 'normal';
+const phase = process.env.E2E_TOSS === 'true' ? 'toss' : process.env.E2E_AUTH_LIMITS === 'true' ? 'auth' : process.env.E2E_EXPIRATION === 'true' ? 'expiration' : 'normal';
 const engine = process.env.E2E_ENGINE || 'chromium';
 if (!['chromium','firefox','webkit'].includes(engine)) throw new Error('Unsupported browser engine');
 if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
@@ -13,7 +13,7 @@ if (process.env.E2E_DISPOSABLE !== 'true' || target.protocol !== 'http:'
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: phase === 'auth' ? '**/auth-limits.spec.cjs' : phase === 'expiration' ? '**/expiration.spec.cjs' : ['**/accessibility.spec.cjs','**/storefront.spec.cjs','**/admin.spec.cjs','**/account.spec.cjs','**/expansion.spec.cjs','**/checkout.spec.cjs','**/product-detail.spec.cjs','**/media-recovery.spec.cjs','**/password-reset.spec.cjs'],
+  testMatch: phase === 'toss' ? '**/toss.spec.cjs' : phase === 'auth' ? '**/auth-limits.spec.cjs' : phase === 'expiration' ? '**/expiration.spec.cjs' : ['**/accessibility.spec.cjs','**/storefront.spec.cjs','**/admin.spec.cjs','**/account.spec.cjs','**/expansion.spec.cjs','**/checkout.spec.cjs','**/product-detail.spec.cjs','**/media-recovery.spec.cjs','**/password-reset.spec.cjs'],
   outputDir: phase === 'normal' ? 'test-results' : `${phase}-results`,
   fullyParallel: false,
   workers: 1,

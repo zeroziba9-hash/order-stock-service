@@ -8,6 +8,7 @@
 
 구현 범위는 최대 20종의 여러 상품 주문·전액 모의 환불·단일 앱 인스턴스입니다.
 실제 PG·배송·다중 인스턴스 운영 검증은 포함하지 않습니다. 관리자 상품 등록·수정·판매 중지와 전체 재고 이동 원장을 제공합니다.
+토스 카드 테스트 결제·전액 환불은 별도 비활성 기능으로 구현하며, [가짜 HTTP PG 검증과 설정](toss-test-payments.md)을 제공합니다. 실제 토스 키 검증은 남아 있습니다.
 공개 서버·도메인은 아직 연결하지 않았습니다.
 
 ## 아키텍처
@@ -20,14 +21,14 @@ flowchart LR
     Security --> Service["Service: 트랜잭션 / 상태 전이"]
     Service --> Repository["JPA / JdbcTemplate"]
     Repository --> DB[("MySQL 8.4 / InnoDB")]
-    Flyway["Flyway V1~V22"] --> DB
+    Flyway["Flyway V1~V23"] --> DB
 ```
 
 로컬 Compose는 앱의 18080 포트로 접속합니다. 운영 Compose는 Caddy의 80·443만 공개하고 앱·DB를 내부 네트워크에 둡니다.
 같은 출처에서 정적 프론트와 API를 제공해 별도의 프론트 배포나 교차 출처 인증 설정 없이 세션 로그인을 사용합니다.
 핵심 테이블은 `products`, `app_users`, `purchase_orders`, `order_items`, `order_requests`, `order_request_completions`,
 `payment_attempts`, `refund_attempts`, `inventory_adjustments`, `inventory_adjustment_requests`,
-`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`, `saved_carts`, `saved_cart_items`, `checkout_quotes`, `checkout_quote_items`, `product_content`, `product_content_changes`, `product_images`, `product_image_changes`입니다.
+`inventory_movements`, `catalog_creation_requests`, `catalog_changes`, `app_sessions`, `app_sessions_ATTRIBUTES`, `saved_carts`, `saved_cart_items`, `checkout_quotes`, `checkout_quote_items`, `product_content`, `product_content_changes`, `product_images`, `product_image_changes`, `password_resets`, `toss_payments`입니다.
 주문 항목은 당시 상품명·가격을, 수동 조정은 실행자·사유·당시 상품명·변경 전후 수량을 보관합니다.
 
 ## 설계 선택
@@ -174,7 +175,7 @@ Java 17·MySQL 8.4, Docker가 보고한 CPU 16개·메모리 약 15.4 GiB 환경
 실제 서버·도메인에서 공개 HTTPS와 서버 밖 백업을 확인합니다.
 성능 후속 검증은 독립된 부하 발생기·더 긴 측정·클라이언트 및 서버 계측으로 병목과 변동 원인을 분리합니다.
 공개 환경의 모니터링 인증·알림·장기 저장과 만료 스케줄러 전체 건강 상태 점검은 후속 범위입니다.
-실제 결제 연동은 웹훅·승인 조회·결제사 멱등 보장·실패 보상 설계를 포함한 별도 범위입니다.
+테스트 PG의 웹훅 힌트·승인 조회·고정 멱등 키·실패 복구는 [카드 테스트 결제](toss-test-payments.md)에 구현했습니다. 실제 과금·정산·부분 취소·다중 인스턴스 운영은 별도 범위입니다.
 변경은 [기능 브랜치·PR 규칙](development-workflow.md)에 따라 검토합니다.
 
 통합 테스트의 Spring 컨텍스트 캐시는 최대 8개로 제한합니다. 컨텍스트별 DB 풀을 유지한 채 캐시가 누적되어 MySQL 연결 한도를 소진하지 않게 오래된 컨텍스트를 닫으며, 개별 테스트의 풀 크기·동시 요청 수는 줄이지 않습니다. [Spring 컨텍스트 캐시 안내](https://docs.spring.io/spring-framework/reference/testing/testcontext-framework/ctx-management/caching.html)를 따릅니다.

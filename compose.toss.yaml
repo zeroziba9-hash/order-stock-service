@@ -1,0 +1,5 @@
+# Optional local Toss test integration. Keys are read from an ignored private file.
+services:
+  app:
+    env_file:
+      - .local/toss-test.env

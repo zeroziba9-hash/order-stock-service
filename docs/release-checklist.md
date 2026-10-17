@@ -21,13 +21,15 @@ python3 scripts/release-manifest.py --version v0.1.0-rc.1 --image stockroom:0.1.
 로컬 후보 기록 도구는 미커밋 변경과 HEAD가 다른 이미지 revision 라벨을 거부합니다.
 기록에는 식별 정보만 넣으며 테스트 통과나 배포 완료를 라벨로 추정하지 않습니다.
 위 빌드 예는 Linux shell 기준입니다. 이미지를 배포 후 다른 코드로 같은 태그에 덮어쓰지 않습니다.
-현재 런타임은 Java 17·MySQL 8.4이고 마지막 스키마는 V22입니다.
-이번 접근성·실행 도구 변경에는 DB 마이그레이션이 없습니다.
+현재 런타임은 Java 17·MySQL 8.4이고 마지막 스키마는 V23입니다.
+V23은 카드 테스트 결제의 상태·작업 임대·PG 멱등 키를 저장하는 `toss_payments`를 추가합니다.
+키 미설정 시 기능은 비활성화하며 기존 주문·회원·상품을 변경하지 않습니다.
 
 ## 2. 로컬에서 확인할 항목
 
 - 두 재고 차감 방식의 백엔드 CI·REST Docs와 Compose·HTTPS·백업·복구 CI 통과.
 - Chromium·Firefox·WebKit의 주문·만료·인증 제한과 접근성 검사 통과.
+- 가짜 SDK·HTTP PG의 카드 승인·전액 환불·응답 유실 복구와 복원 후 조회 전용 전환 확인.
 - 실제 데모의 상품·회원·주문·원장 보존. 기능 검사는 별도의 일회용 DB에서 수행.
 - Windows PowerShell 5.1에서 시작·상태·중지·재시작, 없는 볼륨의 시작 차단 확인.
 - 320 CSS px 배치·텍스트 확대, 키보드 탐색과 팝업 복귀 확인.
@@ -44,6 +46,7 @@ Playwright WebKit은 실제 iPhone Safari와 다릅니다.
 | 서버·도메인·DNS | [운영 사전 검사](production-readiness.md), 실제 서버 OS·할당 자원·도메인 기록 |
 | 외부 HTTPS | `verify-deployment.py`를 외부 네트워크에서 실행, 인증서·리다이렉트·권한·prod 모의 차단 확인 |
 | 외부 메일 | [SMTP 설정](password-recovery.md), 실제 수신·링크·한 번만 변경·기존 세션 종료 확인 |
+| 토스 테스트 결제 | [테스트 키 설정](toss-test-payments.md), 실제 결제창 인증·승인 조회·전액 취소 확인. 실제 과금·prod 활성화와 별개 |
 | 서버 밖 복구 | [백업·복원](backup-restore.md), 원본과 분리한 새 DB에서 업무 데이터·이미지·원장·세션 무효화 확인 |
 | 장치 확인 | 실제 iPhone Safari의 로그인·주문·복구·파일 선택과 화면 확대 확인 |
 | 운영 관측 | 경고 수신 경로·대응 담당·백업 주기와 보관·실제 장애 복구 시간 기록 |

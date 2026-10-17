@@ -6,6 +6,7 @@ import com.zeroziba.orderstock.product.ProductRepository;
 import com.zeroziba.orderstock.monitoring.OrderMetrics;
 import com.zeroziba.orderstock.inventory.InventoryLedger;
 import org.springframework.stereotype.Service;
+import com.zeroziba.orderstock.payment.toss.TossPaymentGuard;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +17,10 @@ public class OrderExpirationProcessor {
     private final OrderMetrics metrics;
     private final InventoryLedger ledger;
 
-    public OrderExpirationProcessor(OrderRepository orders, ProductRepository products, OrderMetrics metrics, InventoryLedger ledger) {
+    private final TossPaymentGuard toss;
+
+    public OrderExpirationProcessor(OrderRepository orders, ProductRepository products, OrderMetrics metrics, InventoryLedger ledger, TossPaymentGuard toss) {
+        this.toss=toss;
         this.orders = orders;
         this.products = products;
         this.metrics = metrics;
@@ -28,9 +32,10 @@ public class OrderExpirationProcessor {
         metrics.trackExpirationRollback();
         var order = orders.findByIdForExpiration(orderId).orElse(null);
         // Candidate IDs can become stale while a payment, cancellation or another worker commits.
-        if (order == null || !order.expireIfDue(now)) {
+        if (order == null || toss.pending(orderId) || !order.expireIfDue(now)) {
             return false;
         }
+        toss.closeUnused(orderId, now);
         for (var item : order.getItems().stream().sorted(Comparator.comparing(OrderItem::getProductId)).toList()) {
             var product = products.findByIdForUpdate(item.getProductId())
                     .orElseThrow(() -> new IllegalStateException("Expiration product is missing"));
