@@ -10,6 +10,8 @@ docker version
 docker compose version
 ```
 
+Windows에서 기존 서버를 간단히 켜고 끄려면 [로컬 실행 도구](local-launcher.md)를 사용할 수 있습니다. 최초 설치의 환경 파일은 아래 절차로 준비합니다.
+
 ## 처음 실행
 
 저장소 루트에서 환경 파일을 복사합니다. 이미 `.env`가 있으면 덮어쓰지 마세요.

@@ -29,11 +29,12 @@
 | `feat/storefront-product-details` | 상품 탐색 배치·가독성·상세 화면·설명 편집과 이력 | [PR #19](https://github.com/zeroziba9-hash/order-stock-service/pull/19) |
 | `feat/catalog-media-and-order-recovery` | 상품 이미지·버전/변경 이력·서버 주문 복구·이미지 포함 백업 검증·오류 안내 | [PR #20](https://github.com/zeroziba9-hash/order-stock-service/pull/20) |
 
-현재 `feat/catalog-media-and-order-recovery`에서 상품 이미지 관리·서버 주문 복구와 화면 오류 처리를 검증합니다.
-PR #19 병합 후 최신 main에서 분기했으며, 화면·API·V20~V22 마이그레이션과 이미지 포함 백업 복원·이메일 복구·세 엔진 화면 검증을 통합 검증합니다.
+현재 `feat/accessibility-and-local-launcher`는 PR #20이 병합된 최신 main에서 분기했습니다.
+화면 접근성·키보드 흐름, 기존 Compose 서버의 Windows 실행 도구와 릴리스 확인 절차를 다룹니다.
+DB 마이그레이션은 추가하지 않습니다.
 PR #13은 PR #11까지 병합된 main에서 시작했으며, PR #12 병합 후 최신 main을 기능 브랜치에 병합해 문서 충돌을 해결했습니다.
 
-위 PR #1~#19는 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
+위 PR #1~#20은 main에 병합됐습니다. 초기 #1~#4는 같은 main 커밋에서 독립적으로 시작했고,
 이후 기능도 최신 병합 main에서 분기합니다. 미병합 코드를 다음 기능에 섞지 않습니다.
 PR #8은 PR #6 기준으로 시작했으며, PR #7 병합 후 최신 main을 기능 브랜치에 병합해 충돌을 해결했습니다.
 

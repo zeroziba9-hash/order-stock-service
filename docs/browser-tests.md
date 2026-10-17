@@ -109,3 +109,11 @@ HTML 보고서와 실패 화면만 7일 보관합니다. 비밀번호·세션 �
 Firefox의 모바일 프로젝트는 작은 viewport이며 `isMobile` 에뮬레이션은 사용하지 않습니다. Windows에서는 WinCairo WebKit, Linux CI에서는 해당 플랫폼의 WebKit을 사용합니다. 실제 iOS Safari·Android 기기 검증을 뜻하지 않습니다. [Playwright 브라우저 안내](https://playwright.dev/docs/browsers)를 참고하세요.
 
 메일 수신함은 기본 loopback 18025입니다. 다른 테스트 수신함을 쓰면 `MAIL_PORT`와 `E2E_MAIL_URL`을 함께 지정합니다. Mailpit API 대상도 loopback 18025·18026만 허용합니다. [복구 정책](password-recovery.md)을 참고하세요.
+
+## 접근성 검사
+
+`accessibility.spec.cjs`는 고정 버전 `@axe-core/playwright`로 WCAG 2 A·AA 및 2.1 AA 태그의 자동 검사를 실행합니다.
+상품·로그인·계정·장바구니·관리자·비밀번호 복구 화면의 레이블·대비를 확인하고,
+본문 바로가기·제목 포커스·Tab 순환·Escape·호출 버튼 복귀·320 CSS px 배치와 텍스트 확대를 검사합니다.
+일회용 관리자 계정을 사용하며 확인창은 취소해 재고·가격을 변경하지 않습니다.
+검사 통과는 전체 WCAG 준수 인증이나 실제 보조 기술·기기에서의 검증을 뜻하지 않습니다.

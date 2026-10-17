@@ -186,7 +186,8 @@
     }
   }
 
-  function route() {
+  function route(event) {
+    const target = { "#orders": "#orders-title", "#cart": "#cart-title", "#account": "#account-title", "#collection": "#collection-title" }[location.hash];
     for (const id of ["#purchase-dialog","#detail-dialog"]) if ($(id).open && !$(id).dataset.busy) $(id).close();
     const orders = location.hash === "#orders";
     const account = location.hash === "#account";
@@ -201,6 +202,11 @@
     if (account) { renderProfile(); loadSessions(); }
     if (basket) { renderCart(); if (state.user) loadCart(); }
     if (product) loadProductDetail(); else { productDetailRequest++; selectedProduct = null; }
+    document.title = `${orders ? "내 주문" : account ? "내 계정" : basket ? "장바구니" : product ? "상품 상세" : "작은 취향을 담는 곳"} — STOCKROOM`;
+    if (event && !document.querySelector("dialog[open]")) {
+      const heading = target ? $(target) : !product ? $("#shop-view h1") : null;
+      if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); if (!target || location.hash !== "#collection") window.scrollTo(0, 0); }
+    }
   }
 
   async function loadProductDetail() {
@@ -224,10 +230,11 @@
       $("#product-quantity").disabled = product.stock < 1; $("#product-action-status").textContent = "";
       $("#product-content").hidden = false; updateProductSubtotal(); syncProductActions();
       // A detail hash has no native anchor: do not inherit scroll from a lower catalog row.
-      $("#product-title").focus({ preventScroll: true }); window.scrollTo(0,0);
+      document.title = `${product.name} — STOCKROOM`;
+      if (!document.querySelector("dialog[open]")) { $("#product-title").focus({ preventScroll: true }); window.scrollTo(0,0); }
     } catch (error) {
       if (request !== productDetailRequest || location.hash !== routeHash) return;
-      $("#product-error-message").textContent = error.message; $("#product-error").hidden = false;
+      $("#product-error-message").textContent = error.message; $("#product-error").hidden = false; if (!document.querySelector("dialog[open]")) $("#product-error").focus();
     } finally { if (request === productDetailRequest && location.hash === routeHash) $("#product-loading").hidden = true; }
   }
   function updateProductSubtotal() {
@@ -532,7 +539,7 @@
 
   function showAuth(callback) {
     afterLogin = callback; state.register = false; renderAuth(); $("#auth-form").reset();
-    $("#auth-dialog").showModal();
+    StockroomFocus.open($("#auth-dialog"), "#email");
   }
 
   function renderAuth() {
@@ -566,7 +573,7 @@
     $("#quantity").value = saved?.quantity || initialQuantity; $("#quantity").max = Math.min(product.stock, 2147483647);
     for (const selector of ["#quantity","#quantity-minus","#quantity-plus"]) $(selector).disabled = Boolean(waiting);
     $("#purchase-error").textContent = readPending("direct") ? "이전 주문 결과를 먼저 확인해요. 같은 요청으로 다시 확인하면 중복 주문되지 않아요." : "";
-    updateTotal(); $("#purchase-dialog").showModal();
+    updateTotal(); StockroomFocus.open($("#purchase-dialog"), "#quantity");
   }
 
   function updateTotal() {
@@ -587,7 +594,7 @@
     const epoch = state.epoch; const requestId = ++detailRequest;
     $("#detail-title").textContent = `주문 #${orderId}`; $("#detail-error").textContent = "";
     $("#order-detail").innerHTML = '<p class="history-empty">주문을 불러오고 있어요.</p>';
-    if (!$("#detail-dialog").open) $("#detail-dialog").showModal();
+    if (!$("#detail-dialog").open) StockroomFocus.open($("#detail-dialog"));
     try {
       const [order, payments, refunds] = await Promise.all([api(`/orders/${orderId}`), api(`/orders/${orderId}/payments`), api(`/orders/${orderId}/refunds`)]);
       if (epoch !== state.epoch || requestId !== detailRequest || !$("#detail-dialog").open) return;
@@ -602,7 +609,7 @@
     $("#confirm-message").textContent = message; dialog.returnValue = "no";
     return new Promise((resolve) => {
       dialog.addEventListener("close", () => resolve(dialog.returnValue === "yes"), { once: true });
-      dialog.showModal();
+      StockroomFocus.open(dialog);
     });
   }
 

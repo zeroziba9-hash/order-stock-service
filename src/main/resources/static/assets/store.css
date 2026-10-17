@@ -713,7 +713,7 @@ footer p {
 
 footer>span {
   margin-left:auto;
-  color:#8a8c80;
+  color:var(--muted);
   font-size:9px;
   letter-spacing:1px
 }

@@ -8,16 +8,16 @@
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/store.css">
   <link rel="stylesheet" href="/assets/admin.css">
-  <script src="/assets/admin.js" defer></script>
+  <script src="/assets/accessibility.js" defer></script><script src="/assets/admin.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <a class="skip-link" href="#main" tabindex="0">본문으로 건너뛰기</a>
   <header class="header">
     <a class="brand" href="/" aria-label="Stockroom 홈"><span class="brand-icon" aria-hidden="true">s<span>r</span></span>STOCKROOM<span class="brand-dot">®</span></a>
     <nav aria-label="관리 메뉴"><a href="/">컬렉션으로 ↗</a><a href="/catalog.html">상품 관리 ↗</a><span class="admin-badge">ADMIN</span></nav>
     <span class="account-email" id="admin-account"></span>
   </header>
-  <main id="main" class="admin-main">
+  <main tabindex="-1" id="main" class="admin-main">
     <div class="admin-intro"><div><p class="eyebrow"><span class="live-dot"></span> STOCK & OPERATIONS</p><h1>재고의 흐름을,<br>명확하게<span class="period">.</span></h1><p class="muted">입고부터 주문과 복구까지. 재고의 변화를 확인하세요.</p></div><div class="admin-intro-note"><span>STOCKROOM / OPERATIONS</span><strong>작은 변화도<br>기록에 남도록.</strong><p>수동 조정과 전체 재고 변동을 확인해요.<br>현재 재고와 기록 합계를 함께 비교해요.</p></div></div>
     <p id="admin-status" class="admin-message" role="status" aria-live="polite">관리자 권한을 확인하고 있어요.</p>
     <div id="admin-workspace" hidden>

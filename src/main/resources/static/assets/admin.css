@@ -78,3 +78,5 @@ button.admin-product[aria-pressed="true"] { border-color:#78944f; background:#f0
 #catalog-products .admin-product { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 16px; }
 #catalog-products .admin-product small { max-width:none; }
 #catalog-products .admin-product .content-readiness { grid-column:1 / -1; text-align:left; color:#705526; }
+
+#content-history:focus-visible, .admin-table-wrap:focus-visible { outline:3px solid #6d8b3a; outline-offset:4px; }
