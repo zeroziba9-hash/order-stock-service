@@ -90,8 +90,9 @@ def main():
         assert client.request("/orders/cart/recovery")==media["intents"]
         assert sql('SELECT COUNT(*) FROM password_resets')=='0'
         assert sql('SELECT COUNT(*) FROM toss_payments')=='3'
-        for identity,status in zip(state['tossFixtures'],('UNKNOWN','UNKNOWN','PAID')):
-            assert sql(f"SELECT CONCAT(status,':',outbound_disabled,':',claim_id IS NULL,':',next_check_at IS NOT NULL) FROM toss_payments WHERE id='{identity}'")==status+':1:1:1'
+        for identity,status in zip(state['tossFixtures'],('UNKNOWN','CONFIRMING','PAID')):
+            flags=sql(f"SELECT CONCAT(status,':',outbound_disabled,':',claim_id IS NULL,':',next_check_at IS NOT NULL) FROM toss_payments WHERE id='{identity}'")
+            assert flags==status+':1:1:1',f'Unexpected restored PG status/flags: {flags}'
         print("PASS: exact normalized image bytes, image revisions/audit and unsubmitted checkout intent restored")
         print("PASS: restored READY, in-flight and PAID provider rows are fenced and query-only")
 
