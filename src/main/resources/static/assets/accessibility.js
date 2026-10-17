@@ -2,9 +2,15 @@
 
 (() => {
   let lastFocus;
+  let activation;
   document.addEventListener("focusin", event => {
     if (event.target !== document.body) lastFocus = event.target;
+    activation = null;
   });
+  document.addEventListener("click", event => {
+    // WebKit does not necessarily focus a button when it is clicked.
+    activation = event.target.closest('button, a[href], [tabindex]');
+  }, true);
   const canFocus = element => element?.isConnected && !element.disabled &&
     !element.closest("[hidden], [inert]") && element.getClientRects().length > 0;
   document.addEventListener("click", event => {
@@ -33,13 +39,14 @@
   window.StockroomFocus = {
     open(dialog, initial) {
       if (dialog.open) return;
-      const opener = document.activeElement === document.body ? lastFocus : document.activeElement;
+      const opener = activation?.isConnected ? activation : document.activeElement === document.body ? lastFocus : document.activeElement;
+      const openedRoute = location.hash;
       dialog.addEventListener("close", () => requestAnimationFrame(() => {
         // A nested confirmation can close while its parent dialog stays open.
         const activeDialog = document.querySelector("dialog[open]");
         if (activeDialog && !activeDialog.contains(opener)) return;
         const current = document.activeElement;
-        if (current !== document.body && current !== dialog && !dialog.contains(current) && canFocus(current)) return;
+        if (location.hash !== openedRoute && current !== document.body && !dialog.contains(current) && canFocus(current)) return;
         if (canFocus(opener)) opener.focus({ preventScroll: true });
         else if (!activeDialog && (!canFocus(document.activeElement) || document.activeElement === document.body)) {
           const target = [...document.querySelectorAll("main h1, main h2")].find(canFocus) || document.querySelector("main");
