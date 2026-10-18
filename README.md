@@ -8,7 +8,7 @@
 [Backend CI 실행 내역](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/ci.yml) ·
 [Docker Compose CI](https://github.com/zeroziba9-hash/order-stock-service/actions/workflows/docker.yml)
 
-![STOCKROOM 데스크톱 상품 화면](docs/images/storefront.jpg)
+![STOCKROOM 컬렉션 첫 화면](docs/images/storefront.jpg)
 
 ## 핵심 설계와 검증
 

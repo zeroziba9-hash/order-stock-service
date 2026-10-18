@@ -72,6 +72,20 @@ test('public catalog, guest order gate and responsive layout', async ({ page }) 
   await expect(page.locator('#auth-dialog')).toBeVisible();
 });
 
+test('collection links restore the visible list and focus after leaving the shop', async ({ page }) => {
+  await page.locator('.landscape-cta').click();
+  await expect(page.locator('#collection-title')).toBeFocused();
+  for (const route of ['#cart', '#orders', '#account']) {
+    await page.locator(`.store-footer a[href="${route}"]`).click();
+    await expect(page.locator('#shop-view')).toBeHidden();
+    await page.locator('.store-footer a[href="#collection"]').click();
+    await expect(page.locator('#shop-view')).toBeVisible();
+    await expect(page.locator('#collection-title')).toBeFocused();
+    await expect.poll(async () => (await page.locator('#collection').boundingBox()).y).toBeLessThan(100);
+    expect((await page.locator('#collection').boundingBox()).y).toBeGreaterThanOrEqual(0);
+  }
+});
+
 test('registration, quantity pricing, cancellation confirmation and stock restoration', async ({ page }) => {
   await registerAndLogin(page);
   const product = (await products(page))[0];
