@@ -19,7 +19,7 @@ async function registerAndLogin(page) {
 async function products(page) { return (await page.request.get('/products')).json(); }
 async function stock(page, productId) { return (await products(page)).find(p => p.id === productId).stock; }
 async function openPurchase(page, productId, quantity = 1) {
-  await page.getByRole('link', { name: '컬렉션', exact: true }).click();
+  await page.getByRole('navigation', { name: '주 메뉴', exact: true }).getByRole('link', { name: '컬렉션', exact: true }).click();
   await page.locator(`[data-buy="${productId}"]`).click();
   await expect(page.locator('#purchase-dialog')).toBeVisible();
   await page.getByLabel('수량', { exact: true }).fill(String(quantity));
@@ -133,7 +133,7 @@ test('other accounts cannot read an order or its histories', async ({ page, brow
     const other = await otherContext.newPage();
     await other.goto('/');
     await registerAndLogin(other);
-    await other.getByRole('link', { name: /^내 주문/ }).click();
+    await other.getByRole('navigation', { name: '주 메뉴', exact: true }).getByRole('link', { name: /^내 주문/ }).click();
     await expect(other.locator('#orders')).toContainText('아직 담아 둔 취향이 없네요.');
     expect(await (await other.request.get('/orders')).json()).toEqual({ orders: [], nextBeforeId: null });
     for (const suffix of ['', '/payments', '/refunds']) {
@@ -171,7 +171,7 @@ test('lost order response retries the same key and creates one order', async ({ 
 
 test('expired session returns to the login gate', async ({ page }) => {
   await registerAndLogin(page);
-  await page.getByRole('link', { name: /^내 주문/ }).click();
+  await page.getByRole('navigation', { name: '주 메뉴', exact: true }).getByRole('link', { name: /^내 주문/ }).click();
   const csrf = await (await page.request.get('/auth/csrf')).json();
   expect((await page.request.post('/auth/logout', { headers: { [csrf.headerName]: csrf.token } })).status()).toBe(204);
   await page.locator('#refresh-orders').click();
