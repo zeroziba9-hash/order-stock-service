@@ -23,7 +23,7 @@ async function login(page,admin=false){
 async function confirm(page){await page.locator('#confirm-dialog').getByRole('button',{name:'확인하고 진행',exact:true}).click();}
 async function fillCart(page,products){
   for(const product of products)await page.locator(`[data-add-cart="${product.id}"]`).click();
-  await page.getByRole('link',{name:/^장바구니/}).click();await expect(page.locator('.cart-row')).toHaveCount(products.length);
+  await page.getByRole('navigation',{name:'주 메뉴',exact:true}).getByRole('link',{name:/^장바구니/}).click();await expect(page.locator('.cart-row')).toHaveCount(products.length);
 }
 test.afterEach(async({page})=>{
   await page.unrouteAll({behavior:'ignoreErrors'});

@@ -213,7 +213,13 @@
     document.title = `${orders ? "내 주문" : account ? "내 계정" : basket ? "장바구니" : product ? "상품 상세" : "작은 취향을 담는 곳"} — STOCKROOM`;
     if (event && !document.querySelector("dialog[open]")) {
       const heading = target ? $(target) : !product ? $("#shop-view h1") : null;
-      if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); if (!target || location.hash !== "#collection") window.scrollTo(0, 0); }
+      if (heading) {
+        heading.tabIndex = -1;
+        heading.focus({ preventScroll: true });
+        // A fragment target can be hidden when navigating back from another view.
+        if (location.hash === "#collection") $("#collection").scrollIntoView({ block: "start" });
+        else window.scrollTo(0, 0);
+      }
     }
   }
 
